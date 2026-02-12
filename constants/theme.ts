@@ -1,28 +1,37 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Soul Surf - Paleta de Cores
+ * 
+ * Tema Claro:
+ * - Fundo (Areia): #FAF5E8
+ * - Primária (Azul Oceano): #5D9AB6
+ * - Texto (Azul Profundo): #2A4B7C
+ * 
+ * Tema Escuro:
+ * - Fundo (Azul Profundo): #2A4B7C
+ * - Primária (Azul Oceano): #5D9AB6
+ * - Texto (Areia): #FAF5E8
  */
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+const tintColorLight = '#5D9AB6'; // Azul Oceano
+const tintColorDark = '#5D9AB6';  // Azul Oceano
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    text: '#2A4B7C',           // Azul Profundo
+    background: '#FAF5E8',     // Areia
+    tint: tintColorLight,      // Azul Oceano
+    icon: '#5D9AB6',           // Azul Oceano
+    tabIconDefault: '#2A4B7C', // Azul Profundo
     tabIconSelected: tintColorLight,
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    text: '#FAF5E8',           // Areia
+    background: '#2A4B7C',     // Azul Profundo
+    tint: tintColorDark,       // Azul Oceano
+    icon: '#5D9AB6',           // Azul Oceano
+    tabIconDefault: '#FAF5E8', // Areia
     tabIconSelected: tintColorDark,
   },
 };
