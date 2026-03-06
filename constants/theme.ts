@@ -36,6 +36,51 @@ export const Colors = {
   },
 };
 
+export const SOUL_SURF_MAP_STYLE = {
+  version: 8,
+  sources: {
+    "openfreemap": {
+      type: "vector",
+      url: "https://tiles.openfreemap.org/planet"
+    }
+  },
+  layers: [
+    // Fundo geral → Areia
+    {
+      id: "background",
+      type: "background",
+      paint: { "background-color": "#FAF5E8" }
+    },
+    // Oceano/água → Azul Oceano
+    {
+      id: "water",
+      type: "fill",
+      source: "openfreemap",
+      "source-layer": "water",
+      paint: { "fill-color": "#5D9AB6" }
+    },
+    // Terra → Areia clara
+    {
+      id: "landcover",
+      type: "fill",
+      source: "openfreemap",
+      "source-layer": "landcover",
+      paint: { "fill-color": "#F0E8D0" }
+    },
+    // Estradas → Azul Profundo suave
+    {
+      id: "roads",
+      type: "line",
+      source: "openfreemap",
+      "source-layer": "transportation",
+      paint: {
+        "line-color": "#2A4B7C",
+        "line-opacity": 0.3,
+        "line-width": 1
+      }
+    }
+  ]
+};
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

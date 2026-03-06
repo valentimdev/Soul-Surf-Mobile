@@ -20,7 +20,8 @@
       "output": "static"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true,
