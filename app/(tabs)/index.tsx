@@ -1,21 +1,22 @@
 import { StyleSheet } from 'react-native';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { MapView, Camera } from '@maplibre/maplibre-react-native';
 
 export default function HomeScreen() {
   return (
-    <ThemedView style={styles.container}>
-      <ThemedText type="title">Home</ThemedText>
-      <ThemedText>Comece a desenvolver sua aplicação aqui!</ThemedText>
-    </ThemedView>
+    <MapView
+      style={styles.map}
+      mapStyle="https://tiles.openfreemap.org/styles/liberty"
+    >
+      <Camera
+        zoomLevel={12}
+        centerCoordinate={[-38.5016, -3.7172]}
+      />
+    </MapView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  map: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 16,
   },
 });
