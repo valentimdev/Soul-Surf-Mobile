@@ -5,7 +5,7 @@ import { ThemedView } from '@/components/themed-view';
 export default function ExploreScreen() {
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">Explorar</ThemedText>
+      <ThemedText type="title">Tela de perfil</ThemedText>
       <ThemedText>Segunda tela do app</ThemedText>
     </ThemedView>
   );
