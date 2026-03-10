@@ -1,10 +1,19 @@
 import BottomSheet from '@/components/BottomSheet';
+import SpotSheet from '@/components/sheets/SpotSheet';
 import { Colors } from '@/constants/theme';
+import { SurfSpot } from '@/types';
 import { Camera, MapView, MarkerView } from '@maplibre/maplibre-react-native';
 import { GraduationCap, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+const DEMO_SPOT: SurfSpot = {
+    id: '1',
+    name: 'Praia do Futuro',
+    type: 'pico',
+    coordinate: [-38.5016, -3.7172],
+};
 
 export default function MapScreen() {
     const [sheetVisible, setSheetVisible] = useState(false);
@@ -78,7 +87,7 @@ export default function MapScreen() {
                     visible={sheetVisible}
                     onClose={handleCloseSheet}
                 >
-                    {/* Conteúdo do modal — preencha aqui */}
+                    <SpotSheet spot={DEMO_SPOT} />
                 </BottomSheet>
             </View>
         </GestureHandlerRootView>
