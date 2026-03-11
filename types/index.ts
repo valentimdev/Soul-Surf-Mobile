@@ -5,6 +5,10 @@ export interface MapPin {
     coordinate: [number, number];
     type: SpotType;
     name: string;
+    imageUrl?: string;
+    address?: string;
+    instagram?: string;
+    whatsapp?: string;
 }
 
 export interface SurfSpot extends MapPin {

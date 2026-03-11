@@ -1,29 +1,70 @@
 import BottomSheet from '@/components/BottomSheet';
-import SpotSheet from '@/components/sheets/SpotSheet';
+import PinSheet from '@/components/sheets/PinSheet';
 import { Colors } from '@/constants/theme';
-import { SurfSpot } from '@/types';
+import { MapPin } from '@/types';
 import { Camera, MapView, MarkerView } from '@maplibre/maplibre-react-native';
 import { GraduationCap, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-const DEMO_SPOT: SurfSpot = {
-    id: '1',
-    name: 'Praia do Futuro',
-    type: 'pico',
-    coordinate: [-38.5016, -3.7172],
+const DEMO_PINS: MapPin[] = [
+    {
+        id: '1',
+        name: 'Praia do Futuro',
+        type: 'pico',
+        coordinate: [-38.5016, -3.7172],
+        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
+        address: 'Praia do Futuro, Fortaleza - CE',
+    },
+    {
+        id: '2',
+        name: 'Soul Surf Escola',
+        type: 'escolinha',
+        coordinate: [-38.4950, -3.7200],
+        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
+        address: 'Av. Zezé Diogo, 3500 - Praia do Futuro, Fortaleza - CE',
+        instagram: 'soulsurfescola',
+        whatsapp: '5585999999999',
+    },
+    {
+        id: '3',
+        name: 'Ding Repair CE',
+        type: 'reparo',
+        coordinate: [-38.5080, -3.7140],
+        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
+        address: 'R. Silva Jatahy, 1200 - Meireles, Fortaleza - CE',
+        instagram: 'dingrepairce',
+        whatsapp: '5585988888888',
+    },
+    {
+        id: '4',
+        name: 'Wave Store',
+        type: 'loja',
+        coordinate: [-38.5100, -3.7250],
+        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
+        address: 'Av. Beira Mar, 2500 - Meireles, Fortaleza - CE',
+        instagram: 'wavestore',
+        whatsapp: '5585977777777',
+    },
+];
+
+const PIN_ICONS: Record<MapPin['type'], React.ComponentType<any>> = {
+    pico: Waves,
+    escolinha: GraduationCap,
+    reparo: Wrench,
+    loja: Store,
 };
 
 export default function MapScreen() {
-    const [sheetVisible, setSheetVisible] = useState(false);
+    const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
 
-    const handlePinPress = useCallback(() => {
-        setSheetVisible(true);
+    const handlePinPress = useCallback((pin: MapPin) => {
+        setSelectedPin(pin);
     }, []);
 
     const handleCloseSheet = useCallback(() => {
-        setSheetVisible(false);
+        setSelectedPin(null);
     }, []);
 
     return (
@@ -40,17 +81,26 @@ export default function MapScreen() {
                         }}
                     />
 
-                    <MarkerView coordinate={[-38.5016, -3.7172]} anchor={{ x: 0.5, y: 1 }}>
-                        <TouchableOpacity
-                            style={styles.pinContainer}
-                            onPress={handlePinPress}
-                        >
-                            <View style={styles.pinBubble}>
-                                <Waves size={20} color={Colors.light.background} />
-                            </View>
-                            <View style={styles.pinArrow} />
-                        </TouchableOpacity>
-                    </MarkerView>
+                    {DEMO_PINS.map((pin) => {
+                        const IconComponent = PIN_ICONS[pin.type];
+                        return (
+                            <MarkerView
+                                key={pin.id}
+                                coordinate={pin.coordinate}
+                                anchor={{ x: 0.5, y: 1 }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.pinContainer}
+                                    onPress={() => handlePinPress(pin)}
+                                >
+                                    <View style={styles.pinBubble}>
+                                        <IconComponent size={20} color={Colors.light.background} />
+                                    </View>
+                                    <View style={styles.pinArrow} />
+                                </TouchableOpacity>
+                            </MarkerView>
+                        );
+                    })}
                 </MapView>
 
                 <View style={styles.overlayContainer}>
@@ -84,10 +134,10 @@ export default function MapScreen() {
                 </View>
 
                 <BottomSheet
-                    visible={sheetVisible}
+                    visible={selectedPin !== null}
                     onClose={handleCloseSheet}
                 >
-                    <SpotSheet spot={DEMO_SPOT} />
+                    {selectedPin && <PinSheet pin={selectedPin} />}
                 </BottomSheet>
             </View>
         </GestureHandlerRootView>
@@ -150,7 +200,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     pinBubble: {
-        backgroundColor: Colors.light.icon,
+        backgroundColor: Colors.light.text,
         width: 40,
         height: 40,
         borderRadius: 20,
@@ -170,7 +220,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 10,
         borderLeftColor: 'transparent',
         borderRightColor: 'transparent',
-        borderTopColor: Colors.light.icon,
-        marginTop: -1,
+        borderTopColor: Colors.light.text,
+        marginTop: -2,
     },
 });
