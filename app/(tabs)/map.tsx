@@ -1,53 +1,146 @@
+import BottomSheet from '@/components/BottomSheet';
+import PinSheet from '@/components/sheets/PinSheet';
 import { Colors } from '@/constants/theme';
-import { Camera, MapView } from '@maplibre/maplibre-react-native';
+import { MapPin } from '@/types';
+import { Camera, MapView, MarkerView } from '@maplibre/maplibre-react-native';
 import { GraduationCap, Search, Store, Waves, Wrench } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+const DEMO_PINS: MapPin[] = [
+    {
+        id: '1',
+        name: 'Praia do Futuro',
+        type: 'pico',
+        coordinate: [-38.5016, -3.7172],
+        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
+        address: 'Praia do Futuro, Fortaleza - CE',
+    },
+    {
+        id: '2',
+        name: 'Soul Surf Escola',
+        type: 'escolinha',
+        coordinate: [-38.4950, -3.7200],
+        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
+        address: 'Av. Zezé Diogo, 3500 - Praia do Futuro, Fortaleza - CE',
+        instagram: 'soulsurfescola',
+        whatsapp: '5585999999999',
+    },
+    {
+        id: '3',
+        name: 'Ding Repair CE',
+        type: 'reparo',
+        coordinate: [-38.5080, -3.7140],
+        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
+        address: 'R. Silva Jatahy, 1200 - Meireles, Fortaleza - CE',
+        instagram: 'dingrepairce',
+        whatsapp: '5585988888888',
+    },
+    {
+        id: '4',
+        name: 'Wave Store',
+        type: 'loja',
+        coordinate: [-38.5100, -3.7250],
+        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
+        address: 'Av. Beira Mar, 2500 - Meireles, Fortaleza - CE',
+        instagram: 'wavestore',
+        whatsapp: '5585977777777',
+    },
+];
+
+const PIN_ICONS: Record<MapPin['type'], React.ComponentType<any>> = {
+    pico: Waves,
+    escolinha: GraduationCap,
+    reparo: Wrench,
+    loja: Store,
+};
+
 export default function MapScreen() {
+    const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
+
+    const handlePinPress = useCallback((pin: MapPin) => {
+        setSelectedPin(pin);
+    }, []);
+
+    const handleCloseSheet = useCallback(() => {
+        setSelectedPin(null);
+    }, []);
+
     return (
-        <View style={{ flex: 1 }}>
-            <MapView
-                style={styles.map}
-                mapStyle="https://tiles.openfreemap.org/styles/positron"
-            >
-                <Camera
-                    zoomLevel={12}
-                    centerCoordinate={[-38.5016, -3.7172]}
-                />
-
-            </MapView>
-            <View style={styles.overlayContainer}>
-                <View style={styles.topOverlay}>
-                    <TextInput
-                        placeholder="Buscar picos, lojas, escolas..."
-                        placeholderTextColor={Colors.light.text}
-                        style={styles.searchInput}
+        <GestureHandlerRootView style={{ flex: 1 }}>
+            <View style={{ flex: 1 }}>
+                <MapView
+                    style={styles.map}
+                    mapStyle="https://tiles.openfreemap.org/styles/positron"
+                >
+                    <Camera
+                        defaultSettings={{
+                            zoomLevel: 12,
+                            centerCoordinate: [-38.5016, -3.7172],
+                        }}
                     />
-                    <Search size={20} color={Colors.light.icon} />
+
+                    {DEMO_PINS.map((pin) => {
+                        const IconComponent = PIN_ICONS[pin.type];
+                        return (
+                            <MarkerView
+                                key={pin.id}
+                                coordinate={pin.coordinate}
+                                anchor={{ x: 0.5, y: 1 }}
+                            >
+                                <TouchableOpacity
+                                    style={styles.pinContainer}
+                                    onPress={() => handlePinPress(pin)}
+                                >
+                                    <View style={styles.pinBubble}>
+                                        <IconComponent size={20} color={Colors.light.background} />
+                                    </View>
+                                    <View style={styles.pinArrow} />
+                                </TouchableOpacity>
+                            </MarkerView>
+                        );
+                    })}
+                </MapView>
+
+                <View style={styles.overlayContainer}>
+                    <View style={styles.topOverlay}>
+                        <TextInput
+                            placeholder="Buscar picos, lojas, escolas..."
+                            placeholderTextColor={Colors.light.text}
+                            style={styles.searchInput}
+                        />
+                        <Search size={20} color={Colors.light.icon} />
+                    </View>
+
+                    <View style={styles.filterRow}>
+                        <TouchableOpacity style={styles.filterButton}>
+                            <Waves size={18} color={Colors.light.background} />
+                            <Text style={styles.filterText}>Picos</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.filterButton}>
+                            <GraduationCap size={18} color={Colors.light.background} />
+                            <Text style={styles.filterText}>Escolinhas</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.filterButton}>
+                            <Wrench size={18} color={Colors.light.background} />
+                            <Text style={styles.filterText}>Reparos</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.filterButton}>
+                            <Store size={18} color={Colors.light.background} />
+                            <Text style={styles.filterText}>Lojas</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
-                <View style={styles.filterRow}>
-                    <TouchableOpacity style={styles.filterButton}>
-                        <Waves size={18} color={Colors.light.background} />
-                        <Text style={styles.filterText}>Picos</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.filterButton}>
-                        <GraduationCap size={18} color={Colors.light.background} />
-                        <Text style={styles.filterText}>Escolinhas</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.filterButton}>
-                        <Wrench size={18} color={Colors.light.background} />
-                        <Text style={styles.filterText}>Reparos</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.filterButton}>
-                        <Store size={18} color={Colors.light.background} />
-                        <Text style={styles.filterText}>Lojas</Text>
-                    </TouchableOpacity>
-                </View>
+                <BottomSheet
+                    visible={selectedPin !== null}
+                    onClose={handleCloseSheet}
+                >
+                    {selectedPin && <PinSheet pin={selectedPin} />}
+                </BottomSheet>
             </View>
-
-        </View>
-
+        </GestureHandlerRootView>
     );
 }
 
@@ -96,11 +189,38 @@ const styles = StyleSheet.create({
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 2
+        gap: 2,
     },
     filterText: {
         fontSize: 13,
         color: Colors.light.background,
         fontWeight: '500',
+    },
+    pinContainer: {
+        alignItems: 'center',
+    },
+    pinBubble: {
+        backgroundColor: Colors.light.text,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#2A4B7C',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 6,
+    },
+    pinArrow: {
+        width: 0,
+        height: 0,
+        borderLeftWidth: 8,
+        borderRightWidth: 8,
+        borderTopWidth: 10,
+        borderLeftColor: 'transparent',
+        borderRightColor: 'transparent',
+        borderTopColor: Colors.light.text,
+        marginTop: -2,
     },
 });
