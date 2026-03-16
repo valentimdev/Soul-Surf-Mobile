@@ -1,5 +1,5 @@
 import { api } from '../api';
-import { PageResponse, PostDTO } from '../../types/api';
+import { PageResponse, PostDTO, MessageResponse } from '../../types/api';
 
 export const postService = {
   // Feed Público
@@ -27,6 +27,32 @@ export const postService = {
   // Dar ou Tirar Like
   toggleLike: async (postId: number): Promise<{ liked: boolean }> => {
     const response = await api.post(`/api/posts/${postId}/likes`);
+    return response.data;
+  },
+
+  // Verificar se o usuário curtiu o post
+  getLikeStatus: async (postId: number): Promise<{ liked: boolean }> => {
+    const response = await api.get(`/api/posts/${postId}/likes/status`);
+    return response.data;
+  },
+
+  // Contagem de likes
+  getLikesCount: async (postId: number): Promise<{ count: number }> => {
+    const response = await api.get(`/api/posts/${postId}/likes/count`);
+    return response.data;
+  },
+
+  // Editar Post
+  updatePost: async (postId: number, descricao: string): Promise<MessageResponse> => {
+    const response = await api.put(`/api/posts/${postId}`, null, {
+      params: { descricao }
+    });
+    return response.data;
+  },
+
+  // Excluir Post
+  deletePost: async (postId: number): Promise<MessageResponse> => {
+    const response = await api.delete(`/api/posts/${postId}`);
     return response.data;
   },
 
