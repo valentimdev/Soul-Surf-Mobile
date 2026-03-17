@@ -16,13 +16,10 @@ export default function ForgotPasswordScreen() {
     setIsLoading(true);
 
     try {
-      // Faz a requisição para a rota do backend responsável por esqueci a senha
       const response = await api.post('/auth/forgot-password', {
         email: email
       });
 
-      // Em sistemas de recuperação de senha, o status 200 costuma ser retornado
-      // mesmo que o e-mail não exista, por questões de segurança.
       if (response.status === 200 || response.status === 201) {
         Alert.alert(
           'Email Enviado',
@@ -91,7 +88,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 240,
     height: 140,
-    resizeMode: 'contain', // Ajustado um pequeno typo que estava no seu código original (resizeMod)
+    resizeMode: 'contain',
     marginBottom: 20,
   },
   title: {
