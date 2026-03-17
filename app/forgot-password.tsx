@@ -1,11 +1,38 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, SafeAreaView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
+import api from '../services/api'; // Importando a nossa instância configurada
 
 export default function ForgotPasswordScreen() {
-  const handleRecover = () => {
-    console.log('Link de recuperação enviado');
-    router.back();
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRecover = async () => {
+    if (!email) {
+      Alert.alert('Aviso', 'Por favor, insira o seu e-mail cadastrado.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await api.post('/auth/forgot-password', {
+        email: email
+      });
+
+      if (response.status === 200 || response.status === 201) {
+        Alert.alert(
+          'Email Enviado',
+          'Se o e-mail constar em nossa base de dados, enviaremos as instruções para redefinição de senha.',
+          [{ text: 'Voltar ao Login', onPress: () => router.back() }]
+        );
+      }
+    } catch (error: any) {
+      console.error('Erro ao solicitar recuperação:', error);
+      Alert.alert('Erro', 'Ocorreu um problema ao tentar enviar a solicitação. Verifique sua conexão e tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -27,10 +54,16 @@ export default function ForgotPasswordScreen() {
           placeholderTextColor="#8C8A80"
           keyboardType="email-address"
           autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleRecover}>
-          <Text style={styles.buttonText}>Enviar Link</Text>
+        <TouchableOpacity style={styles.button} onPress={handleRecover} disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Enviar Link</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
