@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, View, Text, Image, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
-// Dados fictícios para simular o banco de dados
 const MOCK_CONTRIBUTIONS = [
   {
     id: '1',
@@ -32,14 +32,13 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
 
-        {/* Ícone de Configurações no topo direito */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => console.log('Configurações')}>
-            <Ionicons name="settings-outline" size={28} color="#5C9DB8" />
-          </TouchableOpacity>
+                  {/* Altere o onPress para navegar para a nova tela */}
+                  <TouchableOpacity onPress={() => router.push('/settings')}>
+                    <Ionicons name="settings-outline" size={28} color="#5C9DB8" />
+                  </TouchableOpacity>
         </View>
 
-        {/* Informações do Usuário (Sem o Banner) */}
         <View style={styles.userInfoSection}>
           <Image
             source={{ uri: 'https://randomuser.me/api/portraits/men/32.jpg' }} // Avatar genérico
