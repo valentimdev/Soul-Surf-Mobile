@@ -30,6 +30,12 @@
             "usesCleartextTraffic": true
           }
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Permitir que o Soul Surf use sua localização."
+        }
       ]
     ],
     "experiments": {
