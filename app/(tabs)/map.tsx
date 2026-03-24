@@ -2,9 +2,10 @@ import BottomSheet from '@/components/BottomSheet';
 import PinSheet from '@/components/sheets/PinSheet';
 import { Colors } from '@/constants/theme';
 import { MapPin } from '@/types';
-import { Camera, MapView, MarkerView } from '@maplibre/maplibre-react-native';
-import { GraduationCap, Search, Store, Waves, Wrench } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import { Camera, CameraRef, MapView, MarkerView } from '@maplibre/maplibre-react-native';
+import * as Location from 'expo-location';
+import { GraduationCap, Locate, Search, Store, Waves, Wrench } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -58,6 +59,35 @@ const PIN_ICONS: Record<MapPin['type'], React.ComponentType<any>> = {
 
 export default function MapScreen() {
     const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
+    const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+    const cameraRef = useRef<CameraRef>(null);
+
+    useEffect(() => {
+        (async () => {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            if (status !== 'granted') return;
+
+            const location = await Location.getCurrentPositionAsync({});
+            setUserLocation([location.coords.longitude, location.coords.latitude]);
+
+            const subscription = await Location.watchPositionAsync(
+                { accuracy: Location.Accuracy.High, distanceInterval: 5 },
+                (loc: Location.LocationObject) => {
+                    setUserLocation([loc.coords.longitude, loc.coords.latitude]);
+                }
+            );
+            return () => subscription.remove();
+        })();
+    }, []);
+
+    const handleGoToMyLocation = useCallback(() => {
+        if (!userLocation || !cameraRef.current) return;
+        cameraRef.current.setCamera({
+            centerCoordinate: userLocation,
+            zoomLevel: 15,
+            animationDuration: 600,
+        });
+    }, [userLocation]);
 
     const handlePinPress = useCallback((pin: MapPin) => {
         setSelectedPin(pin);
@@ -75,6 +105,7 @@ export default function MapScreen() {
                     mapStyle="https://tiles.openfreemap.org/styles/positron"
                 >
                     <Camera
+                        ref={cameraRef}
                         defaultSettings={{
                             zoomLevel: 12,
                             centerCoordinate: [-38.5016, -3.7172],
@@ -101,6 +132,14 @@ export default function MapScreen() {
                             </MarkerView>
                         );
                     })}
+
+                    {userLocation && (
+                        <MarkerView coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
+                            <View style={styles.userLocationOuter}>
+                                <View style={styles.userLocationDot} />
+                            </View>
+                        </MarkerView>
+                    )}
                 </MapView>
 
                 <View style={styles.overlayContainer}>
@@ -133,6 +172,14 @@ export default function MapScreen() {
                     </View>
                 </View>
 
+                <TouchableOpacity
+                    style={styles.myLocationButton}
+                    onPress={handleGoToMyLocation}
+                    disabled={!userLocation}
+                >
+                    <Locate size={22} color={userLocation ? Colors.light.text : '#aaa'} />
+                </TouchableOpacity>
+
                 <BottomSheet
                     visible={selectedPin !== null}
                     onClose={handleCloseSheet}
@@ -147,6 +194,40 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
     map: {
         flex: 1,
+    },
+    userLocationOuter: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: 'rgba(37, 99, 235, 0.25)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1.5,
+        borderColor: 'rgba(37, 99, 235, 0.4)',
+    },
+    userLocationDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#2563EB',
+        borderWidth: 2,
+        borderColor: '#fff',
+    },
+    myLocationButton: {
+        position: 'absolute',
+        bottom: 32,
+        right: 16,
+        backgroundColor: Colors.light.background,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
     },
     overlayContainer: {
         position: 'absolute',
