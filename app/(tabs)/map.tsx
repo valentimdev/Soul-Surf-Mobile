@@ -4,9 +4,9 @@ import { Colors } from '@/constants/theme';
 import { MapPin } from '@/types';
 import { Camera, CameraRef, MapView, MarkerView } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
-import { GraduationCap, Locate, Search, Store, Waves, Wrench } from 'lucide-react-native';
+import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const DEMO_PINS: MapPin[] = [
@@ -60,7 +60,15 @@ const PIN_ICONS: Record<MapPin['type'], React.ComponentType<any>> = {
 export default function MapScreen() {
     const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+    const [pickingLocation, setPickingLocation] = useState(false);
+    const [pendingCoord, setPendingCoord] = useState<[number, number] | null>(null);
+    const [showPoiModal, setShowPoiModal] = useState(false);
     const cameraRef = useRef<CameraRef>(null);
+
+    const GOOGLE_FORMS_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeV87FW1Ut1h5b91oGwOcvndbESRr-I4JTfFirj-MU03ivCRg/viewform';
+
+    const LAT_ENTRY = 'entry.1566997971';
+    const LNG_ENTRY = 'entry.1252285469';
 
     useEffect(() => {
         (async () => {
@@ -89,6 +97,38 @@ export default function MapScreen() {
         });
     }, [userLocation]);
 
+    const handleTogglePickingMode = useCallback(() => {
+        setPickingLocation((prev) => {
+            if (prev) setPendingCoord(null); // cancelar
+            return !prev;
+        });
+    }, []);
+
+    const handleMapPress = useCallback((e: any) => {
+        if (!pickingLocation) return;
+        const coords: [number, number] = e.geometry.coordinates;
+        setPendingCoord(coords);
+        setShowPoiModal(true);
+    }, [pickingLocation]);
+
+    const handleConfirmPoi = useCallback(() => {
+        if (!pendingCoord) return;
+        setShowPoiModal(false);
+        setPickingLocation(false);
+        const [lng, lat] = pendingCoord;
+        const url = `${GOOGLE_FORMS_URL}?usp=pp_url&${LAT_ENTRY}=${lat.toFixed(6)}&${LNG_ENTRY}=${lng.toFixed(6)}`;
+        Linking.openURL(url).catch(() =>
+            Alert.alert('Erro', 'Não foi possível abrir o formulário.')
+        );
+        setPendingCoord(null);
+    }, [pendingCoord]);
+
+    const handleCancelPoi = useCallback(() => {
+        setShowPoiModal(false);
+        setPendingCoord(null);
+        setPickingLocation(false);
+    }, []);
+
     const handlePinPress = useCallback((pin: MapPin) => {
         setSelectedPin(pin);
     }, []);
@@ -103,6 +143,7 @@ export default function MapScreen() {
                 <MapView
                     style={styles.map}
                     mapStyle="https://tiles.openfreemap.org/styles/positron"
+                    onPress={handleMapPress}
                 >
                     <Camera
                         ref={cameraRef}
@@ -140,7 +181,20 @@ export default function MapScreen() {
                             </View>
                         </MarkerView>
                     )}
+                    {pendingCoord && (
+                        <MarkerView coordinate={pendingCoord} anchor={{ x: 0.5, y: 1 }}>
+                            <View style={styles.pendingPin} />
+                        </MarkerView>
+                    )}
                 </MapView>
+
+                {/* Banner modo de marcação */}
+                {pickingLocation && (
+                    <View style={styles.pickingBanner}>
+                        <MapPinIcon size={16} color='#fff' />
+                        <Text style={styles.pickingBannerText}>Toque no mapa para marcar o local</Text>
+                    </View>
+                )}
 
                 <View style={styles.overlayContainer}>
                     <View style={styles.topOverlay}>
@@ -172,6 +226,7 @@ export default function MapScreen() {
                     </View>
                 </View>
 
+                {/* Botão minha localização */}
                 <TouchableOpacity
                     style={styles.myLocationButton}
                     onPress={handleGoToMyLocation}
@@ -180,12 +235,46 @@ export default function MapScreen() {
                     <Locate size={22} color={userLocation ? Colors.light.text : '#aaa'} />
                 </TouchableOpacity>
 
+                {/* Botão marcar POI */}
+                <TouchableOpacity
+                    style={[styles.markPoiButton, pickingLocation && styles.markPoiButtonActive]}
+                    onPress={handleTogglePickingMode}
+                >
+                    <MapPinIcon size={22} color={pickingLocation ? '#fff' : Colors.light.text} />
+                </TouchableOpacity>
+
                 <BottomSheet
                     visible={selectedPin !== null}
                     onClose={handleCloseSheet}
                 >
                     {selectedPin && <PinSheet pin={selectedPin} />}
                 </BottomSheet>
+
+                {/* Modal de confirmação de POI */}
+                <Modal
+                    transparent
+                    visible={showPoiModal}
+                    animationType="fade"
+                    onRequestClose={handleCancelPoi}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalCard}>
+                            <MapPinIcon size={32} color={Colors.light.text} style={{ marginBottom: 12 }} />
+                            <Text style={styles.modalTitle}>Novo ponto de interesse</Text>
+                            <Text style={styles.modalBody}>
+                                Você quer adicionar um novo ponto de interesse nessa localização?
+                            </Text>
+                            <View style={styles.modalActions}>
+                                <TouchableOpacity style={styles.modalBtnOutline} onPress={handleCancelPoi}>
+                                    <Text style={styles.modalBtnOutlineText}>Não</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.modalBtnFill} onPress={handleConfirmPoi}>
+                                    <Text style={styles.modalBtnFillText}>Sim, abrir formulário</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
             </View>
         </GestureHandlerRootView>
     );
@@ -215,6 +304,22 @@ const styles = StyleSheet.create({
     },
     myLocationButton: {
         position: 'absolute',
+        bottom: 90,
+        right: 16,
+        backgroundColor: Colors.light.background,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 6,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+    },
+    markPoiButton: {
+        position: 'absolute',
         bottom: 32,
         right: 16,
         backgroundColor: Colors.light.background,
@@ -228,6 +333,101 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
+    },
+    markPoiButtonActive: {
+        backgroundColor: Colors.light.text,
+    },
+    pendingPin: {
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: '#E11D48',
+        borderWidth: 2.5,
+        borderColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 4,
+    },
+    pickingBanner: {
+        position: 'absolute',
+        bottom: 96,
+        alignSelf: 'center',
+        backgroundColor: Colors.light.text,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        elevation: 6,
+    },
+    pickingBannerText: {
+        color: '#fff',
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    modalCard: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 24,
+        width: '100%',
+        alignItems: 'center',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    modalTitle: {
+        fontSize: 17,
+        fontWeight: '700',
+        color: Colors.light.text,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    modalBody: {
+        fontSize: 14,
+        color: '#555',
+        textAlign: 'center',
+        lineHeight: 21,
+        marginBottom: 24,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        gap: 12,
+        width: '100%',
+    },
+    modalBtnOutline: {
+        flex: 1,
+        borderWidth: 1.5,
+        borderColor: Colors.light.text,
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    modalBtnOutlineText: {
+        color: Colors.light.text,
+        fontWeight: '600',
+    },
+    modalBtnFill: {
+        flex: 2,
+        backgroundColor: Colors.light.text,
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    modalBtnFillText: {
+        color: '#fff',
+        fontWeight: '600',
     },
     overlayContainer: {
         position: 'absolute',
