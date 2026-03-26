@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
-import api from '../services/api';
+import { authService } from '../services/auth/authService';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -17,24 +17,19 @@ export default function ForgotPasswordScreen() {
     setIsLoading(true);
 
     try {
-      // Fazendo a requisição exatamente como o Swagger pede
-      const response = await api.post('/auth/forgot-password', {
-        email: email
-      });
-
-      if (response.status === 200) {
-        // Mostra a mensagem de sucesso e já joga o usuário de volta para o Login
-        Alert.alert(
-          'E-mail Enviado',
-          response.data.message || 'Se o e-mail estiver cadastrado, você receberá um link de recuperação.',
-          [{ text: 'Voltar ao Login', onPress: () => router.replace('/login') }]
-        );
-      }
+      const response = await authService.forgotPassword(email);
+      Alert.alert(
+        'E-mail Enviado',
+        response.message || 'Se o e-mail estiver cadastrado, você receberá um link de recuperação.',
+        [{ text: 'Voltar ao Login', onPress: () => router.replace('/login') }]
+      );
     } catch (error: any) {
-      console.error('Erro ao solicitar recuperação:', error.message);
+      console.error('Erro ao solicitar recuperação:', error.response?.data || error.message);
 
       if (error.response?.status === 400) {
         Alert.alert('Erro', 'Formato de e-mail inválido.');
+      } else if (error.response?.status === 404) {
+        Alert.alert('Erro', 'Rota de recuperação não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
       } else {
         Alert.alert('Erro', 'Não foi possível solicitar a recuperação. Verifique sua conexão.');
       }
@@ -45,7 +40,6 @@ export default function ForgotPasswordScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Remove o cabeçalho padrão gerado pelo Expo Router */}
       <Stack.Screen options={{ headerShown: false }} />
 
       <View style={styles.content}>
@@ -77,7 +71,6 @@ export default function ForgotPasswordScreen() {
           )}
         </TouchableOpacity>
 
-        {/* Atualizado para router.replace('/login') para garantir que vá para a tela certa */}
         <TouchableOpacity onPress={() => router.replace('/login')} style={styles.backLink}>
           <Text style={styles.linkText}>Lembrou a senha? <Text style={styles.linkTextBold}>Voltar ao Login</Text></Text>
         </TouchableOpacity>
@@ -100,7 +93,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 240,
     height: 140,
-    resizeMode: 'contain', // Corrigido de resizeMod para resizeMode
+    resizeMode: 'contain',
     marginBottom: 20,
   },
   title: {
@@ -150,5 +143,5 @@ const styles = StyleSheet.create({
   linkTextBold: {
     color: '#5C9DB8',
     fontWeight: 'bold',
-  }
+  },
 });

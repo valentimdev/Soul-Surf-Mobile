@@ -1,54 +1,47 @@
 import BottomSheet from '@/components/BottomSheet';
 import PinSheet from '@/components/sheets/PinSheet';
 import { Colors } from '@/constants/theme';
-import { MapPin } from '@/types';
+import { beachService } from '@/services/beaches/beachService';
+import { PointOfInterestDTO, poiService } from '@/services/beaches/poiService';
+import { MapPin, SpotType } from '@/types';
+import { BeachDTO } from '@/types/api';
 import { Camera, CameraRef, MapView, MarkerView } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
 import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Linking, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-const DEMO_PINS: MapPin[] = [
-    {
-        id: '1',
-        name: 'Praia do Futuro',
+const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {
+    SURF_SCHOOL: 'escolinha',
+    SURF_SHOP: 'loja',
+    BOARD_REPAIR: 'reparo',
+    SWIMMING_SCHOOL: null,
+    TOURIST_SPOT: null,
+};
+
+function beachToPin(b: BeachDTO): MapPin {
+    return {
+        id: `beach-${b.id}`,
+        name: b.nome,
         type: 'pico',
-        coordinate: [-38.5016, -3.7172],
-        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
-        address: 'Praia do Futuro, Fortaleza - CE',
-    },
-    {
-        id: '2',
-        name: 'Soul Surf Escola',
-        type: 'escolinha',
-        coordinate: [-38.4950, -3.7200],
-        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
-        address: 'Av. Zezé Diogo, 3500 - Praia do Futuro, Fortaleza - CE',
-        instagram: 'soulsurfescola',
-        whatsapp: '5585999999999',
-    },
-    {
-        id: '3',
-        name: 'Ding Repair CE',
-        type: 'reparo',
-        coordinate: [-38.5080, -3.7140],
-        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
-        address: 'R. Silva Jatahy, 1200 - Meireles, Fortaleza - CE',
-        instagram: 'dingrepairce',
-        whatsapp: '5585988888888',
-    },
-    {
-        id: '4',
-        name: 'Wave Store',
-        type: 'loja',
-        coordinate: [-38.5100, -3.7250],
-        imageUrl: 'https://granmareiro.com.br/blog/wp-content/uploads/2024/10/praia-do-fututo.webp',
-        address: 'Av. Beira Mar, 2500 - Meireles, Fortaleza - CE',
-        instagram: 'wavestore',
-        whatsapp: '5585977777777',
-    },
-];
+        coordinate: [b.longitude, b.latitude],
+        address: b.localizacao,
+    };
+}
+
+function poiToPin(poi: PointOfInterestDTO): MapPin | null {
+    const type = POI_TYPE_MAP[poi.categoria];
+    if (!type) return null;
+    return {
+        id: `poi-${poi.id}`,
+        name: poi.nome,
+        type,
+        coordinate: [poi.longitude, poi.latitude],
+        address: poi.descricao,
+        whatsapp: poi.telefone ? poi.telefone.replace(/\D/g, '') : undefined,
+    };
+}
 
 const PIN_ICONS: Record<MapPin['type'], React.ComponentType<any>> = {
     pico: Waves,
@@ -57,7 +50,12 @@ const PIN_ICONS: Record<MapPin['type'], React.ComponentType<any>> = {
     loja: Store,
 };
 
+const ALL_TYPES: SpotType[] = ['pico', 'escolinha', 'reparo', 'loja'];
+
 export default function MapScreen() {
+    const [allPins, setAllPins] = useState<MapPin[]>([]);
+    const [activeFilters, setActiveFilters] = useState<SpotType[]>([...ALL_TYPES]);
+    const [loading, setLoading] = useState(true);
     const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
     const [pickingLocation, setPickingLocation] = useState(false);
@@ -70,6 +68,23 @@ export default function MapScreen() {
     const LAT_ENTRY = 'entry.1566997971';
     const LNG_ENTRY = 'entry.1252285469';
 
+    // Buscar dados do backend
+    useEffect(() => {
+    (async () => {
+      try {
+        const beaches = await beachService.getAllBeaches();
+        const beachPins = beaches.map(beachToPin);
+        setAllPins(beachPins);
+      } catch (err) {
+        console.error('Erro ao carregar pins do mapa:', err);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  
+    // Localização do usuário
     useEffect(() => {
         (async () => {
             const { status } = await Location.requestForegroundPermissionsAsync();
@@ -87,6 +102,16 @@ export default function MapScreen() {
             return () => subscription.remove();
         })();
     }, []);
+
+    const toggleFilter = useCallback((type: SpotType) => {
+        setActiveFilters((prev) =>
+            prev.includes(type)
+                ? prev.filter((t) => t !== type)
+                : [...prev, type]
+        );
+    }, []);
+
+    const visiblePins = allPins.filter((p) => activeFilters.includes(p.type));
 
     const handleGoToMyLocation = useCallback(() => {
         if (!userLocation || !cameraRef.current) return;
@@ -153,7 +178,7 @@ export default function MapScreen() {
                         }}
                     />
 
-                    {DEMO_PINS.map((pin) => {
+                    {visiblePins.map((pin) => {
                         const IconComponent = PIN_ICONS[pin.type];
                         return (
                             <MarkerView
@@ -207,23 +232,35 @@ export default function MapScreen() {
                     </View>
 
                     <View style={styles.filterRow}>
-                        <TouchableOpacity style={styles.filterButton}>
-                            <Waves size={18} color={Colors.light.background} />
-                            <Text style={styles.filterText}>Picos</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.filterButton}>
-                            <GraduationCap size={18} color={Colors.light.background} />
-                            <Text style={styles.filterText}>Escolinhas</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.filterButton}>
-                            <Wrench size={18} color={Colors.light.background} />
-                            <Text style={styles.filterText}>Reparos</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.filterButton}>
-                            <Store size={18} color={Colors.light.background} />
-                            <Text style={styles.filterText}>Lojas</Text>
-                        </TouchableOpacity>
+                        {(
+                            [
+                                { type: 'pico' as SpotType, Icon: Waves, label: 'Picos' },
+                                { type: 'escolinha' as SpotType, Icon: GraduationCap, label: 'Escolinhas' },
+                                { type: 'reparo' as SpotType, Icon: Wrench, label: 'Reparos' },
+                                { type: 'loja' as SpotType, Icon: Store, label: 'Lojas' },
+                            ] as const
+                        ).map(({ type, Icon, label }) => {
+                            const isActive = activeFilters.includes(type);
+                            return (
+                                <TouchableOpacity
+                                    key={type}
+                                    style={[styles.filterButton, !isActive && styles.filterButtonInactive]}
+                                    onPress={() => toggleFilter(type)}
+                                >
+                                    <Icon size={18} color={isActive ? Colors.light.background : Colors.light.text} />
+                                    <Text style={[styles.filterText, !isActive && styles.filterTextInactive]}>{label}</Text>
+                                </TouchableOpacity>
+                            );
+                        })}
                     </View>
+
+                    {loading && (
+                        <ActivityIndicator
+                            size="small"
+                            color={Colors.light.text}
+                            style={{ alignSelf: 'center', marginTop: 4 }}
+                        />
+                    )}
                 </View>
 
                 {/* Botão minha localização */}
@@ -472,10 +509,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 2,
     },
+    filterButtonInactive: {
+        backgroundColor: Colors.light.background,
+        borderWidth: 1.5,
+        borderColor: Colors.light.text,
+        opacity: 0.7,
+    },
     filterText: {
         fontSize: 13,
         color: Colors.light.background,
         fontWeight: '500',
+    },
+    filterTextInactive: {
+        color: Colors.light.text,
     },
     pinContainer: {
         alignItems: 'center',

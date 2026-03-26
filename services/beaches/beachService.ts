@@ -1,4 +1,4 @@
-import { api } from '../api';
+import api from '../api';
 import { BeachDTO, PostDTO, PageResponse } from '../../types/api';
 
 export interface BeachMessageDTO {

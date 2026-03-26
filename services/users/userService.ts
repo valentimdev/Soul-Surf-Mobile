@@ -1,4 +1,4 @@
-import { api } from '../api';
+import api from '../api';
 import { UserDTO } from '../../types/api';
 
 export const userService = {
