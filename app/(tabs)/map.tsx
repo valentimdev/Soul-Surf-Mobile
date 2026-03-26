@@ -1,9 +1,42 @@
 import { Colors } from '@/constants/theme';
 import { Camera, MapView } from '@maplibre/maplibre-react-native';
+import * as Location from 'expo-location';
 import { GraduationCap, Search, Store, Waves, Wrench } from 'lucide-react-native';
-import React from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
 export default function MapScreen() {
+    const [locationStatus, setLocationStatus] = useState<'loading' | 'granted' | 'denied'>('loading');
+
+    useEffect(() => {
+        const requestLocationPermission = async () => {
+            const { status } = await Location.requestForegroundPermissionsAsync();
+            setLocationStatus(status === 'granted' ? 'granted' : 'denied');
+        };
+
+        requestLocationPermission();
+    }, []);
+
+    if (locationStatus === 'loading') {
+        return (
+            <View style={styles.statusContainer}>
+                <ActivityIndicator size="large" color={Colors.light.text} />
+                <Text style={styles.statusText}>Solicitando permissao de localizacao...</Text>
+            </View>
+        );
+    }
+
+    if (locationStatus === 'denied') {
+        return (
+            <View style={styles.statusContainer}>
+                <Text style={styles.statusTitle}>Permissao de localizacao negada</Text>
+                <Text style={styles.statusText}>
+                    Para usar o mapa completo, permita o acesso a localizacao nas configuracoes do dispositivo.
+                </Text>
+            </View>
+        );
+    }
+
     return (
         <View style={{ flex: 1 }}>
             <MapView
@@ -54,6 +87,25 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
     map: {
         flex: 1,
+    },
+    statusContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        gap: 12,
+        backgroundColor: Colors.light.background,
+    },
+    statusTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.light.text,
+        textAlign: 'center',
+    },
+    statusText: {
+        fontSize: 14,
+        color: Colors.light.text,
+        textAlign: 'center',
     },
     overlayContainer: {
         position: 'absolute',
