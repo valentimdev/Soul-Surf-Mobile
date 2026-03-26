@@ -7,11 +7,32 @@ import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View 
 
 export default function MapScreen() {
     const [locationStatus, setLocationStatus] = useState<'loading' | 'granted' | 'denied'>('loading');
+    const [userCoordinates, setUserCoordinates] = useState<[number, number] | null>(null);
 
     useEffect(() => {
         const requestLocationPermission = async () => {
             const { status } = await Location.requestForegroundPermissionsAsync();
-            setLocationStatus(status === 'granted' ? 'granted' : 'denied');
+
+            if (status !== 'granted') {
+                setLocationStatus('denied');
+                return;
+            }
+
+            setLocationStatus('granted');
+
+            try {
+                const currentPosition = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.High,
+                });
+
+                setUserCoordinates([
+                    currentPosition.coords.longitude,
+                    currentPosition.coords.latitude,
+                ]);
+            } catch {
+                // Mantem coordenadas padrao caso nao seja possivel obter GPS.
+                setUserCoordinates(null);
+            }
         };
 
         requestLocationPermission();
@@ -37,6 +58,8 @@ export default function MapScreen() {
         );
     }
 
+    const cameraCenterCoordinate = userCoordinates ?? [-38.5016, -3.7172];
+
     return (
         <View style={{ flex: 1 }}>
             <MapView
@@ -45,7 +68,7 @@ export default function MapScreen() {
             >
                 <Camera
                     zoomLevel={12}
-                    centerCoordinate={[-38.5016, -3.7172]}
+                    centerCoordinate={cameraCenterCoordinate}
                 />
 
             </MapView>
