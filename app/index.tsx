@@ -1,7 +1,6 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, SafeAreaView } from 'react-native';
 import { router } from 'expo-router';
-
+import React from 'react';
+import { Image, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 export default function LoginScreen() {
   const handleLogin = () => {
     router.replace('/(tabs)');
