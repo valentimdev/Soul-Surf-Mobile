@@ -1,15 +1,53 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, SafeAreaView } from 'react-native';
-import { router } from 'expo-router';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router, Stack } from 'expo-router';
+import api from '../services/api';
 
 export default function ForgotPasswordScreen() {
-  const handleRecover = () => {
-    console.log('Link de recuperação enviado');
-    router.back();
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRecover = async () => {
+    if (!email) {
+      Alert.alert('Aviso', 'Por favor, digite seu e-mail cadastrado.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Fazendo a requisição exatamente como o Swagger pede
+      const response = await api.post('/auth/forgot-password', {
+        email: email
+      });
+
+      if (response.status === 200) {
+        // Mostra a mensagem de sucesso e já joga o usuário de volta para o Login
+        Alert.alert(
+          'E-mail Enviado',
+          response.data.message || 'Se o e-mail estiver cadastrado, você receberá um link de recuperação.',
+          [{ text: 'Voltar ao Login', onPress: () => router.replace('/login') }]
+        );
+      }
+    } catch (error: any) {
+      console.error('Erro ao solicitar recuperação:', error.message);
+
+      if (error.response?.status === 400) {
+        Alert.alert('Erro', 'Formato de e-mail inválido.');
+      } else {
+        Alert.alert('Erro', 'Não foi possível solicitar a recuperação. Verifique sua conexão.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Remove o cabeçalho padrão gerado pelo Expo Router */}
+      <Stack.Screen options={{ headerShown: false }} />
+
       <View style={styles.content}>
         <Image
           source={require('../assets/images/soulsurf.jpg')}
@@ -27,13 +65,20 @@ export default function ForgotPasswordScreen() {
           placeholderTextColor="#8C8A80"
           keyboardType="email-address"
           autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleRecover}>
-          <Text style={styles.buttonText}>Enviar Link</Text>
+        <TouchableOpacity style={styles.button} onPress={handleRecover} disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Enviar Link</Text>
+          )}
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
+        {/* Atualizado para router.replace('/login') para garantir que vá para a tela certa */}
+        <TouchableOpacity onPress={() => router.replace('/login')} style={styles.backLink}>
           <Text style={styles.linkText}>Lembrou a senha? <Text style={styles.linkTextBold}>Voltar ao Login</Text></Text>
         </TouchableOpacity>
       </View>
@@ -55,7 +100,7 @@ const styles = StyleSheet.create({
   logo: {
     width: 240,
     height: 140,
-    resizeMod: 'contain',
+    resizeMode: 'contain', // Corrigido de resizeMod para resizeMode
     marginBottom: 20,
   },
   title: {

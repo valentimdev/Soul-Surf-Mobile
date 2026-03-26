@@ -1,10 +1,51 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+// 1. O SafeAreaView foi removido da linha abaixo para corrigir o Warning
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+// 2. Importado da biblioteca correta:
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import api from '../services/api';
 
 export default function RegisterScreen() {
-  const handleRegister = () => {
-    router.replace('/(tabs)');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!username || !email || !password) {
+      Alert.alert('Aviso', 'Por favor, preencha todos os campos.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Enviando estritamente os campos mapeados no seu Swagger
+      const response = await api.post('/auth/signup', {
+        email: email,
+        password: password,
+        username: username,
+      });
+
+      // O Swagger mostra que o sucesso retorna o código 201
+      if (response.status === 200 || response.status === 201) {
+        Alert.alert('Sucesso', 'Conta criada com sucesso!', [
+          { text: 'Ir para o Login', onPress: () => router.replace('/') }
+        ]);
+      }
+    } catch (error: any) {
+      console.log('Erro no cadastro:', error.response?.data);
+
+      // O Swagger mostra Erro 400 para e-mail já em uso
+      if (error.response?.status === 400) {
+        Alert.alert('Erro', 'O e-mail ou usuário já está em uso.');
+      } else {
+        Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -15,14 +56,40 @@ export default function RegisterScreen() {
           style={styles.logo}
         />
 
-        <TextInput style={styles.input} placeholder="Usuário" placeholderTextColor="#8C8A80" autoCapitalize="none" />
-        <TextInput style={styles.input} placeholder="E-mail" placeholderTextColor="#8C8A80" keyboardType="email-address" autoCapitalize="none" />
-        <TextInput style={styles.input} placeholder="Senha" placeholderTextColor="#8C8A80" secureTextEntry />
-        <TextInput style={styles.input} placeholder="Gênero" placeholderTextColor="#8C8A80" />
-        <TextInput style={styles.input} placeholder="Data de Nascimento (DD/MM/AAAA)" placeholderTextColor="#8C8A80" keyboardType="numeric" />
+        <TextInput
+          style={styles.input}
+          placeholder="Usuário"
+          placeholderTextColor="#8C8A80"
+          autoCapitalize="none"
+          value={username}
+          onChangeText={setUsername}
+        />
 
-        <TouchableOpacity style={styles.button} onPress={handleRegister}>
-          <Text style={styles.buttonText}>Cadastrar</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="E-mail"
+          placeholderTextColor="#8C8A80"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Senha"
+          placeholderTextColor="#8C8A80"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+
+        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Cadastrar</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.back()} style={styles.loginLink}>
