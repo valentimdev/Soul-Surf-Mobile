@@ -1,4 +1,4 @@
-import { api } from '../api';
+import api from '../api';
 import { CommentDTO, MessageResponse } from '../../types/api';
 
 export const commentService = {

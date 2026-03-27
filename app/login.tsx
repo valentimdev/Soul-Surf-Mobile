@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, Stack} from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import api from '../services/api';
+import { authService } from '../services/auth/authService';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -19,14 +19,11 @@ export default function LoginScreen() {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/auth/login', {
-        email: email,
-        password: password,
-      });
+      const response = await authService.login(email, password);
 
-      console.log('Resposta do backend:', response.data);
+      console.log('Resposta do backend:', response);
 
-      const token = response.data.token || response.data;
+      const token = response.token;
 
       if (token) {
         await SecureStore.setItemAsync('userToken', token);
@@ -35,14 +32,15 @@ export default function LoginScreen() {
       } else {
         Alert.alert('Erro', 'Autenticação falhou: Token não recebido do servidor.');
       }
-
     } catch (error: any) {
-      console.error('Detalhe do erro no login:', error.message);
+      console.error('Detalhe do erro no login:', error.response?.data || error.message);
 
       if (error.message === 'Network Error') {
-        Alert.alert('Erro de Rede', 'O servidor não respondeu. O Spring Boot está rodando?');
+        Alert.alert('Erro de Rede', 'O servidor não respondeu. Se estiver no Android/Expo Go, teste com HTTPS ou em um build nativo com cleartext HTTP habilitado.');
       } else if (error.response?.status === 401 || error.response?.status === 403) {
         Alert.alert('Erro', 'E-mail ou senha incorretos.');
+      } else if (error.response?.status === 404) {
+        Alert.alert('Erro', 'Rota de login não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
       } else if (error.response?.status === 400) {
         Alert.alert('Erro', 'Formato de dados inválido. Verifique o e-mail digitado.');
       } else {
@@ -55,7 +53,7 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-    <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.content}>
         <Image
           source={require('../assets/images/soulsurf.jpg')}
@@ -112,5 +110,5 @@ const styles = StyleSheet.create({
   buttonText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
   registerLink: { marginTop: 10 },
   linkText: { fontSize: 15, color: '#666666' },
-  linkTextBold: { color: '#5C9DB8', fontWeight: 'bold' }
+  linkTextBold: { color: '#5C9DB8', fontWeight: 'bold' },
 });

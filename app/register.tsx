@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-// 1. O SafeAreaView foi removido da linha abaixo para corrigir o Warning
 import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
-// 2. Importado da biblioteca correta:
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import api from '../services/api';
+import { authService } from '../services/auth/authService';
 
 export default function RegisterScreen() {
   const [username, setUsername] = useState('');
@@ -21,25 +19,17 @@ export default function RegisterScreen() {
     setIsLoading(true);
 
     try {
-      // Enviando estritamente os campos mapeados no seu Swagger
-      const response = await api.post('/auth/signup', {
-        email: email,
-        password: password,
-        username: username,
-      });
-
-      // O Swagger mostra que o sucesso retorna o código 201
-      if (response.status === 200 || response.status === 201) {
-        Alert.alert('Sucesso', 'Conta criada com sucesso!', [
-          { text: 'Ir para o Login', onPress: () => router.replace('/') }
-        ]);
-      }
+      await authService.signup(email, password, username);
+      Alert.alert('Sucesso', 'Conta criada com sucesso!', [
+        { text: 'Ir para o Login', onPress: () => router.replace('/') },
+      ]);
     } catch (error: any) {
-      console.log('Erro no cadastro:', error.response?.data);
+      console.log('Erro no cadastro:', error.response?.data || error.message);
 
-      // O Swagger mostra Erro 400 para e-mail já em uso
       if (error.response?.status === 400) {
         Alert.alert('Erro', 'O e-mail ou usuário já está em uso.');
+      } else if (error.response?.status === 404) {
+        Alert.alert('Erro', 'Rota de cadastro não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
       } else {
         Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor.');
       }
@@ -153,5 +143,5 @@ const styles = StyleSheet.create({
   linkTextBold: {
     color: '#5C9DB8',
     fontWeight: 'bold',
-  }
+  },
 });

@@ -1,4 +1,4 @@
-import { api } from '../api';
+import api from '../api';
 
 export const authService = {
   login: async (email: string, password: string): Promise<{ token: string }> => {
