@@ -495,6 +495,25 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: '600',
     },
+    statusContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        gap: 12,
+        backgroundColor: Colors.light.background,
+    },
+    statusTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.light.text,
+        textAlign: 'center',
+    },
+    statusText: {
+        fontSize: 14,
+        color: Colors.light.text,
+        textAlign: 'center',
+    },
     overlayContainer: {
         position: 'absolute',
         top: 56,
