@@ -56,6 +56,8 @@ export default function MapScreen() {
     const [allPins, setAllPins] = useState<MapPin[]>([]);
     const [activeFilters, setActiveFilters] = useState<SpotType[]>([...ALL_TYPES]);
     const [loading, setLoading] = useState(true);
+
+    const [isLocationReady, setIsLocationReady] = useState(false);
     const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
     const [pickingLocation, setPickingLocation] = useState(false);
@@ -68,39 +70,53 @@ export default function MapScreen() {
     const LAT_ENTRY = 'entry.1566997971';
     const LNG_ENTRY = 'entry.1252285469';
 
-    // Buscar dados do backend
-    useEffect(() => {
-    (async () => {
-      try {
-        const beaches = await beachService.getAllBeaches();
-        const beachPins = beaches.map(beachToPin);
-        setAllPins(beachPins);
-      } catch (err) {
-        console.error('Erro ao carregar pins do mapa:', err);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  
-    // Localização do usuário
     useEffect(() => {
         (async () => {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') return;
-
-            const location = await Location.getCurrentPositionAsync({});
-            setUserLocation([location.coords.longitude, location.coords.latitude]);
-
-            const subscription = await Location.watchPositionAsync(
-                { accuracy: Location.Accuracy.High, distanceInterval: 5 },
-                (loc: Location.LocationObject) => {
-                    setUserLocation([loc.coords.longitude, loc.coords.latitude]);
-                }
-            );
-            return () => subscription.remove();
+            try {
+                const beaches = await beachService.getAllBeaches();
+                const beachPins = beaches.map(beachToPin);
+                setAllPins(beachPins);
+            } catch (err) {
+                console.error('Erro ao carregar pins do mapa:', err);
+            } finally {
+                setLoading(false);
+            }
         })();
+    }, []);
+
+    useEffect(() => {
+        let subscription: Location.LocationSubscription | null = null;
+
+        (async () => {
+            try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status !== 'granted') {
+                    setIsLocationReady(true);
+                    return;
+                }
+
+                const location = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.High,
+                });
+                setUserLocation([location.coords.longitude, location.coords.latitude]);
+
+                setIsLocationReady(true);
+
+                subscription = await Location.watchPositionAsync(
+                    { accuracy: Location.Accuracy.High, distanceInterval: 5 },
+                    (loc: Location.LocationObject) => {
+                        setUserLocation([loc.coords.longitude, loc.coords.latitude]);
+                    }
+                );
+            } catch (error) {
+                console.error('Erro ao buscar localização inicial:', error);
+                setIsLocationReady(true);
+            }
+        })();
+
+        return () => {
+            if (subscription) subscription.remove();
+        };
     }, []);
 
     const toggleFilter = useCallback((type: SpotType) => {
@@ -124,7 +140,7 @@ export default function MapScreen() {
 
     const handleTogglePickingMode = useCallback(() => {
         setPickingLocation((prev) => {
-            if (prev) setPendingCoord(null); // cancelar
+            if (prev) setPendingCoord(null);
             return !prev;
         });
     }, []);
@@ -162,6 +178,19 @@ export default function MapScreen() {
         setSelectedPin(null);
     }, []);
 
+    if (!isLocationReady) {
+        return (
+            <View style={[styles.map, { alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.light.background }]}>
+                <ActivityIndicator size="large" color={Colors.light.text} />
+                <Text style={{ marginTop: 12, color: Colors.light.text, fontWeight: '500' }}>
+                    Buscando sua localização...
+                </Text>
+            </View>
+        );
+    }
+
+    const initialCameraCenter = userLocation ?? [-38.5016, -3.7172];
+
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <View style={{ flex: 1 }}>
@@ -174,7 +203,7 @@ export default function MapScreen() {
                         ref={cameraRef}
                         defaultSettings={{
                             zoomLevel: 12,
-                            centerCoordinate: [-38.5016, -3.7172],
+                            centerCoordinate: initialCameraCenter,
                         }}
                     />
 
@@ -206,6 +235,7 @@ export default function MapScreen() {
                             </View>
                         </MarkerView>
                     )}
+
                     {pendingCoord && (
                         <MarkerView coordinate={pendingCoord} anchor={{ x: 0.5, y: 1 }}>
                             <View style={styles.pendingPin} />
@@ -213,7 +243,6 @@ export default function MapScreen() {
                     )}
                 </MapView>
 
-                {/* Banner modo de marcação */}
                 {pickingLocation && (
                     <View style={styles.pickingBanner}>
                         <MapPinIcon size={16} color='#fff' />
@@ -465,6 +494,25 @@ const styles = StyleSheet.create({
     modalBtnFillText: {
         color: '#fff',
         fontWeight: '600',
+    },
+    statusContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        gap: 12,
+        backgroundColor: Colors.light.background,
+    },
+    statusTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: Colors.light.text,
+        textAlign: 'center',
+    },
+    statusText: {
+        fontSize: 14,
+        color: Colors.light.text,
+        textAlign: 'center',
     },
     overlayContainer: {
         position: 'absolute',
