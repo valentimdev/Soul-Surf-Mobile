@@ -25,7 +25,7 @@ export const notificationService = {
   // Pegar a quantidade de não lidas (Badge Count)
   getUnreadCount: async (): Promise<number> => {
     const response = await api.get('/api/notifications/count');
-    return response.data;
+    return Number(response.data?.count ?? 0);
   },
 
   // Marcar 1 notificação como lida

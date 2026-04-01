@@ -1,8 +1,13 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
+const rawBaseURL = process.env.EXPO_PUBLIC_API_URL?.trim();
+const API_BASE_URL = (rawBaseURL && rawBaseURL.length > 0
+  ? rawBaseURL
+  : 'http://147.15.58.134:8080').replace(/\/+$/, '');
+
 const api = axios.create({
-  baseURL: 'http://147.15.58.134:8080',
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

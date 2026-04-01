@@ -23,11 +23,8 @@ export default function SettingsScreen() {
                 await SecureStore.deleteItemAsync('userToken');
                 console.log('Token removido!');
 
-                // 2. Aguarda um instante para o Alert sumir da tela antes de navegar
-                setTimeout(() => {
-                  console.log('Redirecionando para o login...');
-                  router.replace('/login');
-                }, 150);
+                console.log('Redirecionando para o login...');
+                router.replace('/login');
 
               } catch (error) {
                 console.error('Erro ao fazer logout:', error);

@@ -24,6 +24,13 @@ export const postService = {
     return response.data;
   },
 
+  getPostsByUserEmail: async (email: string, page = 0, size = 20): Promise<PageResponse<PostDTO>> => {
+    const response = await api.get('/api/posts/user', {
+      params: { email, page, size },
+    });
+    return response.data;
+  },
+
   // Dar ou Tirar Like
   toggleLike: async (postId: number): Promise<{ liked: boolean }> => {
     const response = await api.post(`/api/posts/${postId}/likes`);

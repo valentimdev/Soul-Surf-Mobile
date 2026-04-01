@@ -27,6 +27,7 @@ function beachToPin(b: BeachDTO): MapPin {
         type: 'pico',
         coordinate: [b.longitude, b.latitude],
         address: b.localizacao,
+        imageUrl: b.caminhoFoto,
     };
 }
 
@@ -39,6 +40,7 @@ function poiToPin(poi: PointOfInterestDTO): MapPin | null {
         type,
         coordinate: [poi.longitude, poi.latitude],
         address: poi.descricao,
+        imageUrl: poi.caminhoFoto,
         whatsapp: poi.telefone ? poi.telefone.replace(/\D/g, '') : undefined,
     };
 }
@@ -73,9 +75,17 @@ export default function MapScreen() {
     useEffect(() => {
         (async () => {
             try {
-                const beaches = await beachService.getAllBeaches();
+                const [beaches, pois] = await Promise.all([
+                    beachService.getAllBeaches(),
+                    poiService.getMapPois(),
+                ]);
+
                 const beachPins = beaches.map(beachToPin);
-                setAllPins(beachPins);
+                const poiPins = pois
+                    .map(poiToPin)
+                    .filter((pin): pin is MapPin => pin !== null);
+
+                setAllPins([...beachPins, ...poiPins]);
             } catch (err) {
                 console.error('Erro ao carregar pins do mapa:', err);
             } finally {
