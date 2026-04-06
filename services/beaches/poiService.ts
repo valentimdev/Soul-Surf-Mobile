@@ -13,6 +13,17 @@ export interface PointOfInterestDTO {
   beach?: BeachDTO;
 }
 
+export interface CreatePoiRequest {
+  nome: string;
+  descricao: string;
+  categoria: PointOfInterestDTO['categoria'];
+  latitude: number;
+  longitude: number;
+  telefone?: string;
+  caminhoFoto?: string;
+  beachId: number;
+}
+
 export const poiService = {
   // Listar todos os pontos de interesse
   getAllPois: async (): Promise<PointOfInterestDTO[]> => {
@@ -39,5 +50,19 @@ export const poiService = {
     return all.filter((poi) =>
       ['SURF_SCHOOL', 'SURF_SHOP', 'BOARD_REPAIR'].includes(poi.categoria)
     );
+  },
+
+  createPoi: async (payload: CreatePoiRequest): Promise<PointOfInterestDTO> => {
+    const response = await api.post('/api/pois', {
+      nome: payload.nome,
+      descricao: payload.descricao,
+      categoria: payload.categoria,
+      latitude: payload.latitude,
+      longitude: payload.longitude,
+      telefone: payload.telefone,
+      caminhoFoto: payload.caminhoFoto,
+      beach: { id: payload.beachId },
+    });
+    return response.data;
   },
 };

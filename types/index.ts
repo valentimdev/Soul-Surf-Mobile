@@ -5,6 +5,11 @@ export interface MapPin {
     coordinate: [number, number];
     type: SpotType;
     name: string;
+    sourceType?: 'beach' | 'poi';
+    beachId?: number;
+    beachName?: string;
+    poiId?: number;
+    description?: string;
     imageUrl?: string;
     address?: string;
     instagram?: string;

@@ -22,6 +22,7 @@ import {
 
 interface PinSheetProps {
   pin: MapPin;
+  onOpenBeachDetails?: (pin: MapPin) => void;
 }
 
 const TYPE_LABELS: Record<MapPin['type'], string> = {
@@ -31,7 +32,7 @@ const TYPE_LABELS: Record<MapPin['type'], string> = {
   loja: 'Surf Shop',
 };
 
-export default function PinSheet({ pin }: PinSheetProps) {
+export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
   const isSpot = pin.type === 'pico';
   const isEstablishment = !isSpot;
 
@@ -82,6 +83,9 @@ export default function PinSheet({ pin }: PinSheetProps) {
     >
       <Text style={styles.label}>{TYPE_LABELS[pin.type]}</Text>
       <Text style={styles.name}>{pin.name}</Text>
+      {pin.beachName && pin.sourceType === 'poi' ? (
+        <Text style={styles.relatedBeach}>Praia: {pin.beachName}</Text>
+      ) : null}
 
       {pin.imageUrl && (
         <View style={styles.imageContainer}>
@@ -154,6 +158,19 @@ export default function PinSheet({ pin }: PinSheetProps) {
           <Text style={styles.addressText}>{pin.address}</Text>
         </View>
       )}
+
+      {pin.description ? (
+        <View style={styles.descriptionCard}>
+          <Text style={styles.descriptionTitle}>Descricao</Text>
+          <Text style={styles.descriptionText}>{pin.description}</Text>
+        </View>
+      ) : null}
+
+      {onOpenBeachDetails && pin.beachId ? (
+        <TouchableOpacity style={styles.beachDetailsButton} onPress={() => onOpenBeachDetails(pin)}>
+          <Text style={styles.beachDetailsButtonText}>Abrir detalhes da praia</Text>
+        </TouchableOpacity>
+      ) : null}
     </ScrollView>
   );
 }
@@ -173,6 +190,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.light.text,
     marginBottom: 6,
+  },
+  relatedBeach: {
+    fontSize: 13,
+    color: Colors.light.icon,
+    fontWeight: '600',
+    marginBottom: 10,
   },
   imageContainer: {
     borderRadius: 12,
@@ -265,5 +288,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     flex: 1,
+  },
+  descriptionCard: {
+    backgroundColor: '#F7F7F5',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  descriptionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.light.text,
+    marginBottom: 4,
+  },
+  descriptionText: {
+    fontSize: 13,
+    color: '#4B5563',
+    lineHeight: 18,
+  },
+  beachDetailsButton: {
+    borderRadius: 12,
+    backgroundColor: Colors.light.text,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  beachDetailsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
