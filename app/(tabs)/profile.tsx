@@ -29,13 +29,8 @@ export default function ProfileScreen() {
     try {
       const profile = await userService.getMyProfile();
       setUser(profile);
-
-      if (profile.email) {
-        const userPosts = await postService.getPostsByUserEmail(profile.email, 0, 20);
-        setPosts(userPosts.content || []);
-      } else {
-        setPosts([]);
-      }
+      const userPosts = await postService.getMyPosts(0, 20);
+      setPosts(userPosts.content || []);
     } catch (error: any) {
       console.error('Erro ao buscar perfil:', error.message);
       setUser(null);
