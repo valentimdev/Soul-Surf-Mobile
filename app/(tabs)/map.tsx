@@ -5,7 +5,7 @@ import { beachService } from '@/services/beaches/beachService';
 import { PointOfInterestDTO, poiService } from '@/services/beaches/poiService';
 import { MapPin, SpotType } from '@/types';
 import { BeachDTO } from '@/types/api';
-import { Camera, CameraRef, MapView, MarkerView } from '@maplibre/maplibre-react-native';
+import { Camera, CameraRef, MapView, MarkerView, PointAnnotation } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
 import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -70,12 +70,26 @@ export default function MapScreen() {
     const LAT_ENTRY = 'entry.1566997971';
     const LNG_ENTRY = 'entry.1252285469';
 
+    // CORREÇÃO 2: Buscando Praias e POIs de forma totalmente independente
     useEffect(() => {
         (async () => {
             try {
-                const beaches = await beachService.getAllBeaches();
-                const beachPins = beaches.map(beachToPin);
-                setAllPins(beachPins);
+                // Dispara as duas requisições ao mesmo tempo (se o nome do método no poiService for diferente, basta ajustar aqui)
+                const [beachesData, poisData] = await Promise.all([
+                    beachService.getAllBeaches(),
+                    poiService.getAllPois()
+                ]);
+
+                // Converte os dados em Pins
+                const beachPins = beachesData.map(beachToPin);
+
+                // Converte os POIs em Pins (e remove os nulos caso existam tipos não mapeados)
+                const poiPins = poisData
+                    .map(poiToPin)
+                    .filter((pin): pin is MapPin => pin !== null);
+
+                // Junta os dois arrays de forma independente
+                setAllPins([...beachPins, ...poiPins]);
             } catch (err) {
                 console.error('Erro ao carregar pins do mapa:', err);
             } finally {
@@ -207,27 +221,27 @@ export default function MapScreen() {
                         }}
                     />
 
+                    {/* CORREÇÃO 1: PointAnnotation no lugar do MarkerView */}
                     {visiblePins.map((pin) => {
                         const IconComponent = PIN_ICONS[pin.type];
                         return (
-                            <MarkerView
+                            <PointAnnotation
                                 key={pin.id}
+                                id={pin.id}
                                 coordinate={pin.coordinate}
-                                anchor={{ x: 0.5, y: 1 }}
+                                onSelected={() => handlePinPress(pin)}
                             >
-                                <TouchableOpacity
-                                    style={styles.pinContainer}
-                                    onPress={() => handlePinPress(pin)}
-                                >
+                                <View style={styles.pinContainer}>
                                     <View style={styles.pinBubble}>
                                         <IconComponent size={20} color={Colors.light.background} />
                                     </View>
                                     <View style={styles.pinArrow} />
-                                </TouchableOpacity>
-                            </MarkerView>
+                                </View>
+                            </PointAnnotation>
                         );
                     })}
 
+                    {/* MarkerViews de localização do usuário e de picking continuam iguais pois não precisam de eventos complexos de touch */}
                     {userLocation && (
                         <MarkerView coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
                             <View style={styles.userLocationOuter}>
@@ -292,7 +306,6 @@ export default function MapScreen() {
                     )}
                 </View>
 
-                {/* Botão minha localização */}
                 <TouchableOpacity
                     style={styles.myLocationButton}
                     onPress={handleGoToMyLocation}
@@ -301,7 +314,6 @@ export default function MapScreen() {
                     <Locate size={22} color={userLocation ? Colors.light.text : '#aaa'} />
                 </TouchableOpacity>
 
-                {/* Botão marcar POI */}
                 <TouchableOpacity
                     style={[styles.markPoiButton, pickingLocation && styles.markPoiButtonActive]}
                     onPress={handleTogglePickingMode}
@@ -316,7 +328,6 @@ export default function MapScreen() {
                     {selectedPin && <PinSheet pin={selectedPin} />}
                 </BottomSheet>
 
-                {/* Modal de confirmação de POI */}
                 <Modal
                     transparent
                     visible={showPoiModal}
@@ -573,6 +584,9 @@ const styles = StyleSheet.create({
     },
     pinContainer: {
         alignItems: 'center',
+        // O PointAnnotation precisa de largura e altura fixas para alinhar perfeitamente
+        width: 44,
+        height: 50,
     },
     pinBubble: {
         backgroundColor: Colors.light.text,
