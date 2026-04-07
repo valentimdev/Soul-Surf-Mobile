@@ -5,12 +5,20 @@ import { beachService } from '@/services/beaches/beachService';
 import { PointOfInterestDTO, poiService } from '@/services/beaches/poiService';
 import { MapPin, SpotType } from '@/types';
 import { BeachDTO } from '@/types/api';
-import { Camera, CameraRef, MapView, MarkerView, PointAnnotation } from '@maplibre/maplibre-react-native';
+import {
+    Camera,
+    CameraRef,
+    MapView,
+    MarkerView,
+    ShapeSource,
+    CircleLayer,
+    SymbolLayer
+} from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
 import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { ActivityIndicator, Alert, Linking, Modal, StyleSheet, Text, TextInput, View } from 'react-native';
+import { GestureHandlerRootView, TouchableOpacity } from 'react-native-gesture-handler';
 
 const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {
     SURF_SCHOOL: 'escolinha',
@@ -43,11 +51,12 @@ function poiToPin(poi: PointOfInterestDTO): MapPin | null {
     };
 }
 
-const PIN_ICONS: Record<MapPin['type'], React.ComponentType<any>> = {
-    pico: Waves,
-    escolinha: GraduationCap,
-    reparo: Wrench,
-    loja: Store,
+// Cores temáticas para os pontos no mapa
+const SPOT_COLORS: Record<MapPin['type'], string> = {
+    pico: '#0ea5e9',      // Azul
+    escolinha: '#10b981', // Verde
+    reparo: '#f59e0b',    // Laranja
+    loja: '#8b5cf6',      // Roxo
 };
 
 const ALL_TYPES: SpotType[] = ['pico', 'escolinha', 'reparo', 'loja'];
@@ -58,37 +67,30 @@ export default function MapScreen() {
     const [loading, setLoading] = useState(true);
 
     const [isLocationReady, setIsLocationReady] = useState(false);
-    const [selectedPin, setSelectedPin] = useState<MapPin | null>(null);
+    const [selectedPinData, setSelectedPinData] = useState<MapPin | null>(null);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
     const [pickingLocation, setPickingLocation] = useState(false);
     const [pendingCoord, setPendingCoord] = useState<[number, number] | null>(null);
     const [showPoiModal, setShowPoiModal] = useState(false);
     const cameraRef = useRef<CameraRef>(null);
-
+    const mapRef = useRef<MapView>(null);
     const GOOGLE_FORMS_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeV87FW1Ut1h5b91oGwOcvndbESRr-I4JTfFirj-MU03ivCRg/viewform';
-
     const LAT_ENTRY = 'entry.1566997971';
     const LNG_ENTRY = 'entry.1252285469';
 
-    // CORREÇÃO 2: Buscando Praias e POIs de forma totalmente independente
     useEffect(() => {
         (async () => {
             try {
-                // Dispara as duas requisições ao mesmo tempo (se o nome do método no poiService for diferente, basta ajustar aqui)
                 const [beachesData, poisData] = await Promise.all([
                     beachService.getAllBeaches(),
                     poiService.getAllPois()
                 ]);
 
-                // Converte os dados em Pins
                 const beachPins = beachesData.map(beachToPin);
-
-                // Converte os POIs em Pins (e remove os nulos caso existam tipos não mapeados)
                 const poiPins = poisData
                     .map(poiToPin)
                     .filter((pin): pin is MapPin => pin !== null);
 
-                // Junta os dois arrays de forma independente
                 setAllPins([...beachPins, ...poiPins]);
             } catch (err) {
                 console.error('Erro ao carregar pins do mapa:', err);
@@ -113,7 +115,6 @@ export default function MapScreen() {
                     accuracy: Location.Accuracy.High,
                 });
                 setUserLocation([location.coords.longitude, location.coords.latitude]);
-
                 setIsLocationReady(true);
 
                 subscription = await Location.watchPositionAsync(
@@ -140,8 +141,6 @@ export default function MapScreen() {
                 : [...prev, type]
         );
     }, []);
-
-    const visiblePins = allPins.filter((p) => activeFilters.includes(p.type));
 
     const handleGoToMyLocation = useCallback(() => {
         if (!userLocation || !cameraRef.current) return;
@@ -185,12 +184,34 @@ export default function MapScreen() {
     }, []);
 
     const handlePinPress = useCallback((pin: MapPin) => {
-        setSelectedPin(pin);
+        setSelectedPinData(pin);
     }, []);
 
     const handleCloseSheet = useCallback(() => {
-        setSelectedPin(null);
+        setSelectedPinData(null);
     }, []);
+
+    const visiblePins = allPins.filter((p) => activeFilters.includes(p.type));
+
+    // INJETAMOS CORES E TAMANHOS DIRETAMENTE NO GEOJSON PARA LER NO CIRCLELAYER
+    const pinsGeoJSON = useMemo(() => {
+        return {
+            type: 'FeatureCollection',
+            features: visiblePins.map((pin) => ({
+                type: 'Feature',
+                id: pin.id,
+                geometry: {
+                    type: 'Point',
+                    coordinates: pin.coordinate,
+                },
+                properties: {
+                    ...pin,
+                    color: SPOT_COLORS[pin.type],
+                    radius: selectedPinData?.id === pin.id ? 14 : 9,
+                },
+            })),
+        };
+    }, [visiblePins, selectedPinData]);
 
     if (!isLocationReady) {
         return (
@@ -209,6 +230,7 @@ export default function MapScreen() {
         <GestureHandlerRootView style={{ flex: 1 }}>
             <View style={{ flex: 1 }}>
                 <MapView
+                    ref={mapRef}
                     style={styles.map}
                     mapStyle="https://tiles.openfreemap.org/styles/positron"
                     onPress={handleMapPress}
@@ -221,27 +243,64 @@ export default function MapScreen() {
                         }}
                     />
 
-                    {/* CORREÇÃO 1: PointAnnotation no lugar do MarkerView */}
-                    {visiblePins.map((pin) => {
-                        const IconComponent = PIN_ICONS[pin.type];
-                        return (
-                            <PointAnnotation
-                                key={pin.id}
-                                id={pin.id}
-                                coordinate={pin.coordinate}
-                                onSelected={() => handlePinPress(pin)}
-                            >
-                                <View style={styles.pinContainer}>
-                                    <View style={styles.pinBubble}>
-                                        <IconComponent size={20} color={Colors.light.background} />
-                                    </View>
-                                    <View style={styles.pinArrow} />
-                                </View>
-                            </PointAnnotation>
-                        );
-                    })}
+                    <ShapeSource
+                        id="pinsSource"
+                        cluster={true}
+                        clusterRadius={40}
+                        clusterMaxZoom={14}
+                        shape={pinsGeoJSON as any}
+                        onPress={async (e) => {
+                            const feature = e.features[0];
+                            if (feature.properties?.cluster) {
+                                const currentZoom = await mapRef.current?.getZoom() || 12;
+                                cameraRef.current?.setCamera({
+                                    centerCoordinate: (feature.geometry as any).coordinates,
+                                    zoomLevel: currentZoom + 2,
+                                    animationDuration: 400,
+                                });
+                            } else {
+                                handlePinPress(feature.properties as any);
+                            }
+                        }}
+                    >
+                        <CircleLayer
+                            id="clusteredPoints"
+                            filter={['has', 'point_count']}
+                            style={{
+                                circleColor: Colors.light.text,
+                                circleRadius: 18,
+                                circleStrokeWidth: 2,
+                                circleStrokeColor: '#ffffff',
+                            }}
+                        />
 
-                    {/* MarkerViews de localização do usuário e de picking continuam iguais pois não precisam de eventos complexos de touch */}
+                        {/* NÚMEROS DO AGRUPAMENTO - SE DER 404 NO CONSOLE, BASTA APAGAR ESTE SYMBOL LAYER */}
+                        <SymbolLayer
+                            id="clusterCount"
+                            filter={['has', 'point_count']}
+                            style={{
+                                textField: '{point_count}',
+                                textSize: 13,
+                                textColor: '#ffffff',
+                                textAllowOverlap: true,
+                                textFont: ['Noto Sans Regular'],
+                            }}
+                        />
+
+                        {/* PONTOS INDIVIDUAIS COM AS CORES (ZOOM IN) */}
+                        <CircleLayer
+                            id="unclusteredPoints"
+                            filter={['!', ['has', 'point_count']]}
+                            style={{
+                                circleColor: ['get', 'color'],
+                                circleRadius: ['get', 'radius'],
+                                circleStrokeWidth: 2,
+                                circleStrokeColor: '#ffffff',
+                            }}
+                        />
+                    </ShapeSource>
+
+                    {/* LOCALIZAÇÃO DO USUÁRIO */}
                     {userLocation && (
                         <MarkerView coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
                             <View style={styles.userLocationOuter}>
@@ -250,6 +309,7 @@ export default function MapScreen() {
                         </MarkerView>
                     )}
 
+                    {/* PIN PENDENTE */}
                     {pendingCoord && (
                         <MarkerView coordinate={pendingCoord} anchor={{ x: 0.5, y: 1 }}>
                             <View style={styles.pendingPin} />
@@ -278,7 +338,7 @@ export default function MapScreen() {
                         {(
                             [
                                 { type: 'pico' as SpotType, Icon: Waves, label: 'Picos' },
-                                { type: 'escolinha' as SpotType, Icon: GraduationCap, label: 'Escolinhas' },
+                                { type: 'escolinha' as SpotType, Icon: GraduationCap, label: 'Escolas' },
                                 { type: 'reparo' as SpotType, Icon: Wrench, label: 'Reparos' },
                                 { type: 'loja' as SpotType, Icon: Store, label: 'Lojas' },
                             ] as const
@@ -290,7 +350,7 @@ export default function MapScreen() {
                                     style={[styles.filterButton, !isActive && styles.filterButtonInactive]}
                                     onPress={() => toggleFilter(type)}
                                 >
-                                    <Icon size={18} color={isActive ? Colors.light.background : Colors.light.text} />
+                                    <Icon size={16} color={isActive ? Colors.light.background : Colors.light.text} />
                                     <Text style={[styles.filterText, !isActive && styles.filterTextInactive]}>{label}</Text>
                                 </TouchableOpacity>
                             );
@@ -322,10 +382,10 @@ export default function MapScreen() {
                 </TouchableOpacity>
 
                 <BottomSheet
-                    visible={selectedPin !== null}
+                    visible={selectedPinData !== null}
                     onClose={handleCloseSheet}
                 >
-                    {selectedPin && <PinSheet pin={selectedPin} />}
+                    {selectedPinData && <PinSheet pin={selectedPinData} />}
                 </BottomSheet>
 
                 <Modal
@@ -506,25 +566,6 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontWeight: '600',
     },
-    statusContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 24,
-        gap: 12,
-        backgroundColor: Colors.light.background,
-    },
-    statusTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: Colors.light.text,
-        textAlign: 'center',
-    },
-    statusText: {
-        fontSize: 14,
-        color: Colors.light.text,
-        textAlign: 'center',
-    },
     overlayContainer: {
         position: 'absolute',
         top: 56,
@@ -541,6 +582,11 @@ const styles = StyleSheet.create({
         paddingLeft: 8,
         backgroundColor: Colors.light.background,
         borderRadius: 28,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     searchInput: {
         flex: 1,
@@ -550,13 +596,13 @@ const styles = StyleSheet.create({
     },
     filterRow: {
         flexDirection: 'row',
-        gap: 3,
+        gap: 5,
         justifyContent: 'center',
     },
     filterButton: {
         backgroundColor: Colors.light.text,
         paddingVertical: 8,
-        paddingHorizontal: 14,
+        paddingHorizontal: 12,
         borderRadius: 20,
         elevation: 4,
         shadowColor: '#2A4B7C',
@@ -566,50 +612,20 @@ const styles = StyleSheet.create({
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 2,
+        gap: 4,
     },
     filterButtonInactive: {
         backgroundColor: Colors.light.background,
         borderWidth: 1.5,
         borderColor: Colors.light.text,
-        opacity: 0.7,
+        opacity: 0.8,
     },
     filterText: {
-        fontSize: 13,
+        fontSize: 12,
         color: Colors.light.background,
-        fontWeight: '500',
+        fontWeight: '600',
     },
     filterTextInactive: {
         color: Colors.light.text,
-    },
-    pinContainer: {
-        alignItems: 'center',
-        // O PointAnnotation precisa de largura e altura fixas para alinhar perfeitamente
-        width: 44,
-        height: 50,
-    },
-    pinBubble: {
-        backgroundColor: Colors.light.text,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#2A4B7C',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 6,
-    },
-    pinArrow: {
-        width: 0,
-        height: 0,
-        borderLeftWidth: 8,
-        borderRightWidth: 8,
-        borderTopWidth: 10,
-        borderLeftColor: 'transparent',
-        borderRightColor: 'transparent',
-        borderTopColor: Colors.light.text,
-        marginTop: -2,
     },
 });
