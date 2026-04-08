@@ -1,7 +1,7 @@
 export interface UserDTO {
   id: number;
   username: string;
-  email: string;
+  email?: string;
   fotoPerfil: string;
   fotoCapa: string;
   bio: string;

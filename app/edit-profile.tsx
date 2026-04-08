@@ -4,7 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import api from '../services/api';
+import { userService } from '@/services/users/userService';
+
+const COVER_FALLBACK = 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=800';
+const AVATAR_FALLBACK = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300';
 
 export default function EditProfileScreen() {
   const params = useLocalSearchParams();
@@ -30,24 +33,18 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     setLoading(true);
-    const formData = new FormData();
-
-    if (profileImg) {
-      formData.append('fotoPerfil', { uri: profileImg.uri, name: 'p.jpg', type: 'image/jpeg' } as any);
-    }
-    if (coverImg) {
-      formData.append('fotoCapa', { uri: coverImg.uri, name: 'c.jpg', type: 'image/jpeg' } as any);
-    }
 
     try {
-      await api.put('/users/me/upload', formData, {
-        params: { username, bio }, // Envia na URL conforme o Swagger (Query Params)
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await userService.updateProfile(
+        bio || undefined,
+        username || undefined,
+        profileImg?.uri,
+        coverImg?.uri
+      );
 
       Alert.alert("Sucesso", "Perfil atualizado!");
       router.back();
-    } catch (error: any) {
+    } catch {
       Alert.alert("Erro", "Não foi possível salvar.");
     } finally {
       setLoading(false);
@@ -62,7 +59,7 @@ export default function EditProfileScreen() {
         {/* Preview da Capa */}
         <TouchableOpacity onPress={() => pickImage('cover')}>
            <Image
-            source={{ uri: coverImg?.uri || params.currentCover as string || 'https://via.placeholder.com/800x400' }}
+            source={{ uri: coverImg?.uri || (params.currentCover as string) || COVER_FALLBACK }}
             style={styles.coverPreview}
           />
           <View style={styles.overlay}><Text style={styles.overlayText}>Trocar Capa</Text></View>
@@ -71,7 +68,7 @@ export default function EditProfileScreen() {
         <View style={styles.avatarContainer}>
           <TouchableOpacity onPress={() => pickImage('profile')}>
             <Image
-              source={{ uri: profileImg?.uri || params.currentAvatar as string || 'https://via.placeholder.com/150' }}
+              source={{ uri: profileImg?.uri || (params.currentAvatar as string) || AVATAR_FALLBACK }}
               style={styles.avatarPreview}
             />
             <View style={styles.avatarOverlay}><Ionicons name="camera" size={20} color="#FFF" /></View>

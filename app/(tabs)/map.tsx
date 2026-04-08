@@ -17,7 +17,7 @@ import {
 import * as Location from 'expo-location';
 import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView, TouchableOpacity } from 'react-native-gesture-handler';
 
 const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {
@@ -28,13 +28,24 @@ const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {
     TOURIST_SPOT: null,
 };
 
+const SPOT_TO_POI_CATEGORY: Partial<Record<SpotType, PointOfInterestDTO['categoria']>> = {
+    escolinha: 'SURF_SCHOOL',
+    loja: 'SURF_SHOP',
+    reparo: 'BOARD_REPAIR',
+};
+
 function beachToPin(b: BeachDTO): MapPin {
     return {
         id: `beach-${b.id}`,
+        sourceType: 'beach',
+        beachId: b.id,
+        beachName: b.nome,
         name: b.nome,
         type: 'pico',
         coordinate: [b.longitude, b.latitude],
+        description: b.descricao,
         address: b.localizacao,
+        imageUrl: b.caminhoFoto,
     };
 }
 
@@ -43,10 +54,16 @@ function poiToPin(poi: PointOfInterestDTO): MapPin | null {
     if (!type) return null;
     return {
         id: `poi-${poi.id}`,
+        sourceType: 'poi',
+        poiId: poi.id,
+        beachId: poi.beach?.id,
+        beachName: poi.beach?.nome,
         name: poi.nome,
         type,
         coordinate: [poi.longitude, poi.latitude],
-        address: poi.descricao,
+        description: poi.descricao,
+        address: poi.beach?.localizacao || poi.descricao,
+        imageUrl: poi.caminhoFoto,
         whatsapp: poi.telefone ? poi.telefone.replace(/\D/g, '') : undefined,
     };
 }
@@ -61,9 +78,54 @@ const SPOT_COLORS: Record<MapPin['type'], string> = {
 
 const ALL_TYPES: SpotType[] = ['pico', 'escolinha', 'reparo', 'loja'];
 
+function toRadians(value: number): number {
+    return value * (Math.PI / 180);
+}
+
+function distanceInKm(from: [number, number], to: [number, number]): number {
+    const [fromLng, fromLat] = from;
+    const [toLng, toLat] = to;
+
+    const earthRadiusKm = 6371;
+    const dLat = toRadians(toLat - fromLat);
+    const dLng = toRadians(toLng - fromLng);
+
+    const lat1 = toRadians(fromLat);
+    const lat2 = toRadians(toLat);
+
+    const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+
+    return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
+}
+
+function findNearestBeachId(
+    coordinate: [number, number],
+    beaches: BeachDTO[]
+): number | null {
+    if (beaches.length === 0) return null;
+
+    let nearestBeachId: number | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    for (const beach of beaches) {
+        const beachCoordinate: [number, number] = [beach.longitude, beach.latitude];
+        const currentDistance = distanceInKm(coordinate, beachCoordinate);
+
+        if (currentDistance < nearestDistance) {
+            nearestDistance = currentDistance;
+            nearestBeachId = beach.id;
+        }
+    }
+
+    return nearestBeachId;
+}
+
 export default function MapScreen() {
     const [allPins, setAllPins] = useState<MapPin[]>([]);
+    const [beaches, setBeaches] = useState<BeachDTO[]>([]);
     const [activeFilters, setActiveFilters] = useState<SpotType[]>([...ALL_TYPES]);
+    const [searchText, setSearchText] = useState('');
     const [loading, setLoading] = useState(true);
 
     const [isLocationReady, setIsLocationReady] = useState(false);
@@ -72,19 +134,49 @@ export default function MapScreen() {
     const [pickingLocation, setPickingLocation] = useState(false);
     const [pendingCoord, setPendingCoord] = useState<[number, number] | null>(null);
     const [showPoiModal, setShowPoiModal] = useState(false);
+    const [poiName, setPoiName] = useState('');
+    const [poiDescription, setPoiDescription] = useState('');
+    const [poiPhone, setPoiPhone] = useState('');
+    const [poiType, setPoiType] = useState<SpotType>('escolinha');
+    const [selectedBeachId, setSelectedBeachId] = useState<number | null>(null);
+    const [creatingPoi, setCreatingPoi] = useState(false);
     const cameraRef = useRef<CameraRef>(null);
-    const mapRef = useRef<MapView>(null);
-    const GOOGLE_FORMS_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeV87FW1Ut1h5b91oGwOcvndbESRr-I4JTfFirj-MU03ivCRg/viewform';
-    const LAT_ENTRY = 'entry.1566997971';
-    const LNG_ENTRY = 'entry.1252285469';
+    const mapRef = useRef<any>(null);
+    const resetPoiForm = useCallback(() => {
+        setPoiName('');
+        setPoiDescription('');
+        setPoiPhone('');
+        setPoiType('escolinha');
+    }, []);
 
     useEffect(() => {
+        let mounted = true;
+
         (async () => {
             try {
-                const [beachesData, poisData] = await Promise.all([
+                const [beachesResult, poisResult] = await Promise.allSettled([
                     beachService.getAllBeaches(),
-                    poiService.getAllPois()
+                    poiService.getAllPois(),
                 ]);
+
+                if (!mounted) return;
+
+                const beachesData = beachesResult.status === 'fulfilled'
+                    ? beachesResult.value
+                    : [];
+                const poisData = poisResult.status === 'fulfilled'
+                    ? poisResult.value
+                    : [];
+
+                if (beachesResult.status === 'rejected') {
+                    console.error('Erro ao carregar praias do mapa:', beachesResult.reason);
+                }
+
+                if (poisResult.status === 'rejected') {
+                    console.error('Erro ao carregar POIs do mapa:', poisResult.reason);
+                }
+
+                setBeaches(beachesData);
 
                 const beachPins = beachesData.map(beachToPin);
                 const poiPins = poisData
@@ -95,9 +187,15 @@ export default function MapScreen() {
             } catch (err) {
                 console.error('Erro ao carregar pins do mapa:', err);
             } finally {
-                setLoading(false);
+                if (mounted) {
+                    setLoading(false);
+                }
             }
         })();
+
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -162,26 +260,67 @@ export default function MapScreen() {
         if (!pickingLocation) return;
         const coords: [number, number] = e.geometry.coordinates;
         setPendingCoord(coords);
+        setSelectedBeachId(findNearestBeachId(coords, beaches) ?? beaches[0]?.id ?? null);
+        resetPoiForm();
         setShowPoiModal(true);
-    }, [pickingLocation]);
+    }, [beaches, pickingLocation, resetPoiForm]);
 
-    const handleConfirmPoi = useCallback(() => {
+    const handleConfirmPoi = useCallback(async () => {
         if (!pendingCoord) return;
-        setShowPoiModal(false);
-        setPickingLocation(false);
+        if (!poiName.trim()) {
+            Alert.alert('Aviso', 'Informe o nome do ponto de interesse.');
+            return;
+        }
+        if (!selectedBeachId) {
+            Alert.alert('Aviso', 'Selecione uma praia para associar ao ponto de interesse.');
+            return;
+        }
+
+        const categoria = SPOT_TO_POI_CATEGORY[poiType];
+        if (!categoria) {
+            Alert.alert('Aviso', 'Selecione uma categoria valida.');
+            return;
+        }
+
         const [lng, lat] = pendingCoord;
-        const url = `${GOOGLE_FORMS_URL}?usp=pp_url&${LAT_ENTRY}=${lat.toFixed(6)}&${LNG_ENTRY}=${lng.toFixed(6)}`;
-        Linking.openURL(url).catch(() =>
-            Alert.alert('Erro', 'Não foi possível abrir o formulário.')
-        );
-        setPendingCoord(null);
-    }, [pendingCoord]);
+        setCreatingPoi(true);
+        try {
+            const createdPoi = await poiService.createPoi({
+                nome: poiName.trim(),
+                descricao: poiDescription.trim(),
+                categoria,
+                latitude: lat,
+                longitude: lng,
+                telefone: poiPhone.trim() || undefined,
+                beachId: selectedBeachId,
+            });
+
+            const newPin = poiToPin(createdPoi);
+            if (newPin) {
+                setAllPins((prev) => [newPin, ...prev]);
+            }
+
+            setShowPoiModal(false);
+            setPickingLocation(false);
+            setPendingCoord(null);
+            setSelectedBeachId(null);
+            resetPoiForm();
+            Alert.alert('Sucesso', 'Ponto de interesse criado com sucesso.');
+        } catch (error: any) {
+            console.error('Erro ao criar ponto de interesse:', error?.response?.data || error?.message);
+            Alert.alert('Erro', 'Nao foi possivel criar o ponto de interesse.');
+        } finally {
+            setCreatingPoi(false);
+        }
+    }, [pendingCoord, poiName, poiDescription, poiPhone, poiType, selectedBeachId, resetPoiForm]);
 
     const handleCancelPoi = useCallback(() => {
         setShowPoiModal(false);
         setPendingCoord(null);
         setPickingLocation(false);
-    }, []);
+        setSelectedBeachId(null);
+        resetPoiForm();
+    }, [resetPoiForm]);
 
     const handlePinPress = useCallback((pin: MapPin) => {
         setSelectedPinData(pin);
@@ -191,7 +330,25 @@ export default function MapScreen() {
         setSelectedPinData(null);
     }, []);
 
-    const visiblePins = allPins.filter((p) => activeFilters.includes(p.type));
+    const normalizedSearch = searchText.trim().toLowerCase();
+    const visiblePins = useMemo(() => {
+        return allPins.filter((pin) => {
+            if (!activeFilters.includes(pin.type)) return false;
+            if (!normalizedSearch) return true;
+
+            const searchable = [
+                pin.name,
+                pin.beachName,
+                pin.address,
+                pin.description,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+
+            return searchable.includes(normalizedSearch);
+        });
+    }, [allPins, activeFilters, normalizedSearch]);
 
     // INJETAMOS CORES E TAMANHOS DIRETAMENTE NO GEOJSON PARA LER NO CIRCLELAYER
     const pinsGeoJSON = useMemo(() => {
@@ -247,7 +404,6 @@ export default function MapScreen() {
                         id="pinsSource"
                         cluster={true}
                         clusterRadius={40}
-                        clusterMaxZoom={14}
                         shape={pinsGeoJSON as any}
                         onPress={async (e) => {
                             const feature = e.features[0];
@@ -330,6 +486,8 @@ export default function MapScreen() {
                             placeholder="Buscar picos, lojas, escolas..."
                             placeholderTextColor={Colors.light.text}
                             style={styles.searchInput}
+                            value={searchText}
+                            onChangeText={setSearchText}
                         />
                         <Search size={20} color={Colors.light.icon} />
                     </View>
@@ -399,14 +557,105 @@ export default function MapScreen() {
                             <MapPinIcon size={32} color={Colors.light.text} style={{ marginBottom: 12 }} />
                             <Text style={styles.modalTitle}>Novo ponto de interesse</Text>
                             <Text style={styles.modalBody}>
-                                Você quer adicionar um novo ponto de interesse nessa localização?
+                                Preencha os dados e associe uma praia.
                             </Text>
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="Nome do ponto"
+                                placeholderTextColor="#8B8B8B"
+                                value={poiName}
+                                onChangeText={setPoiName}
+                            />
+                            <TextInput
+                                style={[styles.modalInput, styles.modalInputMultiline]}
+                                placeholder="Descricao"
+                                placeholderTextColor="#8B8B8B"
+                                value={poiDescription}
+                                onChangeText={setPoiDescription}
+                                multiline
+                            />
+                            <TextInput
+                                style={styles.modalInput}
+                                placeholder="WhatsApp/Telefone (opcional)"
+                                placeholderTextColor="#8B8B8B"
+                                value={poiPhone}
+                                onChangeText={setPoiPhone}
+                                keyboardType="phone-pad"
+                            />
+
+                            <View style={styles.modalTypeRow}>
+                                {(
+                                    [
+                                        { label: 'Escolinha', type: 'escolinha' as SpotType },
+                                        { label: 'Reparo', type: 'reparo' as SpotType },
+                                        { label: 'Loja', type: 'loja' as SpotType },
+                                    ] as const
+                                ).map((item) => (
+                                    <TouchableOpacity
+                                        key={item.type}
+                                        style={[
+                                            styles.modalTypeButton,
+                                            poiType === item.type && styles.modalTypeButtonActive,
+                                        ]}
+                                        onPress={() => setPoiType(item.type)}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.modalTypeText,
+                                                poiType === item.type && styles.modalTypeTextActive,
+                                            ]}
+                                        >
+                                            {item.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <Text style={styles.modalSectionLabel}>Praia associada</Text>
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.modalBeachRow}
+                            >
+                                {beaches.length === 0 ? (
+                                    <Text style={styles.modalEmptyBeachText}>
+                                        Nenhuma praia disponivel para associar.
+                                    </Text>
+                                ) : (
+                                    beaches.map((beach) => (
+                                        <TouchableOpacity
+                                            key={beach.id}
+                                            style={[
+                                                styles.modalBeachButton,
+                                                selectedBeachId === beach.id && styles.modalBeachButtonActive,
+                                            ]}
+                                            onPress={() => setSelectedBeachId(beach.id)}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.modalBeachText,
+                                                    selectedBeachId === beach.id && styles.modalBeachTextActive,
+                                                ]}
+                                            >
+                                                {beach.nome}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))
+                                )}
+                            </ScrollView>
+
                             <View style={styles.modalActions}>
                                 <TouchableOpacity style={styles.modalBtnOutline} onPress={handleCancelPoi}>
-                                    <Text style={styles.modalBtnOutlineText}>Não</Text>
+                                    <Text style={styles.modalBtnOutlineText}>Cancelar</Text>
                                 </TouchableOpacity>
-                                <TouchableOpacity style={styles.modalBtnFill} onPress={handleConfirmPoi}>
-                                    <Text style={styles.modalBtnFillText}>Sim, abrir formulário</Text>
+                                <TouchableOpacity
+                                    style={[styles.modalBtnFill, creatingPoi && { opacity: 0.7 }]}
+                                    onPress={handleConfirmPoi}
+                                    disabled={creatingPoi}
+                                >
+                                    <Text style={styles.modalBtnFillText}>
+                                        {creatingPoi ? 'Salvando...' : 'Salvar POI'}
+                                    </Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -517,7 +766,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 24,
         width: '100%',
-        alignItems: 'center',
+        alignItems: 'stretch',
         elevation: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
@@ -534,14 +783,90 @@ const styles = StyleSheet.create({
     modalBody: {
         fontSize: 14,
         color: '#555',
-        textAlign: 'center',
+        textAlign: 'left',
         lineHeight: 21,
-        marginBottom: 24,
+        marginBottom: 12,
+    },
+    modalInput: {
+        width: '100%',
+        borderWidth: 1,
+        borderColor: '#E2DEC3',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        fontSize: 14,
+        color: '#2A4B7C',
+        marginBottom: 10,
+    },
+    modalInputMultiline: {
+        minHeight: 84,
+        textAlignVertical: 'top',
+    },
+    modalTypeRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 12,
+    },
+    modalTypeButton: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: '#D7D2B6',
+        borderRadius: 10,
+        paddingVertical: 8,
+        alignItems: 'center',
+        backgroundColor: '#F8F6EE',
+    },
+    modalTypeButtonActive: {
+        backgroundColor: Colors.light.text,
+        borderColor: Colors.light.text,
+    },
+    modalTypeText: {
+        fontSize: 13,
+        color: Colors.light.text,
+        fontWeight: '600',
+    },
+    modalTypeTextActive: {
+        color: '#fff',
+    },
+    modalSectionLabel: {
+        fontSize: 13,
+        color: '#6B7280',
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    modalBeachRow: {
+        gap: 8,
+        paddingBottom: 2,
+    },
+    modalBeachButton: {
+        borderWidth: 1,
+        borderColor: '#D7D2B6',
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        backgroundColor: '#F8F6EE',
+    },
+    modalBeachButtonActive: {
+        backgroundColor: '#DCEFF6',
+        borderColor: Colors.light.icon,
+    },
+    modalBeachText: {
+        fontSize: 13,
+        color: Colors.light.text,
+    },
+    modalBeachTextActive: {
+        fontWeight: '700',
+    },
+    modalEmptyBeachText: {
+        fontSize: 13,
+        color: '#6B7280',
+        paddingVertical: 6,
     },
     modalActions: {
         flexDirection: 'row',
         gap: 12,
         width: '100%',
+        marginTop: 14,
     },
     modalBtnOutline: {
         flex: 1,

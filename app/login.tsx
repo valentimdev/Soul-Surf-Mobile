@@ -36,7 +36,7 @@ export default function LoginScreen() {
       console.error('Detalhe do erro no login:', error.response?.data || error.message);
 
       if (error.message === 'Network Error') {
-        Alert.alert('Erro de Rede', 'O servidor não respondeu. Se estiver no Android/Expo Go, teste com HTTPS ou em um build nativo com cleartext HTTP habilitado.');
+        Alert.alert('Erro de Rede', 'O servidor não respondeu. Verifique EXPO_PUBLIC_API_URL e o protocolo (http/https) do backend. Se alterou o .env, reinicie o Expo com cache limpo.');
       } else if (error.response?.status === 401 || error.response?.status === 403) {
         Alert.alert('Erro', 'E-mail ou senha incorretos.');
       } else if (error.response?.status === 404) {
@@ -112,3 +112,4 @@ const styles = StyleSheet.create({
   linkText: { fontSize: 15, color: '#666666' },
   linkTextBold: { color: '#5C9DB8', fontWeight: 'bold' },
 });
+

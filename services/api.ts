@@ -1,8 +1,16 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
+const rawBaseURL = process.env.EXPO_PUBLIC_API_URL?.trim();
+const API_BASE_URL = (rawBaseURL && rawBaseURL.length > 0
+  ? rawBaseURL
+  : 'http://147.15.58.134:8080').replace(/\/+$/, '');
+const IS_DEV = typeof __DEV__ !== 'undefined'
+  ? __DEV__
+  : process.env.NODE_ENV !== 'production';
+
 const api = axios.create({
-  baseURL: 'http://147.15.58.134:8080',
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -17,7 +25,7 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    if (__DEV__) {
+    if (IS_DEV) {
       console.log(`[API] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     }
     return config;
@@ -28,7 +36,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (__DEV__) {
+    if (IS_DEV) {
       const method = error.config?.method?.toUpperCase();
       const url = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
       const status = error.response?.status;
