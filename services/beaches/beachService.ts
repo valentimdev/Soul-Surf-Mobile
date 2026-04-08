@@ -13,6 +13,14 @@ export interface BeachMessageDTO {
   praiaId: number;
 }
 
+function normalizeList<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object' && Array.isArray((raw as PageResponse<T>).content)) {
+    return (raw as PageResponse<T>).content;
+  }
+  return [];
+}
+
 export const beachService = {
   // Listar Todas as Praias
   getAllBeaches: async (): Promise<BeachDTO[]> => {
@@ -34,13 +42,13 @@ export const beachService = {
     const response = await api.get(`/api/beaches/${beachId}/posts`, {
       params: { page, size },
     });
-    return response.data;
+    return normalizeList<PostDTO>(response.data);
   },
 
   // Listar Mensagens do Mural da Praia
   getBeachMessages: async (beachId: number): Promise<BeachMessageDTO[]> => {
     const response = await api.get(`/api/beaches/${beachId}/mensagens`);
-    return response.data;
+    return normalizeList<BeachMessageDTO>(response.data);
   },
 
   // Postar Mensagem no Mural

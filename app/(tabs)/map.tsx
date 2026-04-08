@@ -15,10 +15,9 @@ import {
     SymbolLayer
 } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
-import { router } from 'expo-router';
 import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView, TouchableOpacity } from 'react-native-gesture-handler';
 
 const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {
@@ -79,6 +78,49 @@ const SPOT_COLORS: Record<MapPin['type'], string> = {
 
 const ALL_TYPES: SpotType[] = ['pico', 'escolinha', 'reparo', 'loja'];
 
+function toRadians(value: number): number {
+    return value * (Math.PI / 180);
+}
+
+function distanceInKm(from: [number, number], to: [number, number]): number {
+    const [fromLng, fromLat] = from;
+    const [toLng, toLat] = to;
+
+    const earthRadiusKm = 6371;
+    const dLat = toRadians(toLat - fromLat);
+    const dLng = toRadians(toLng - fromLng);
+
+    const lat1 = toRadians(fromLat);
+    const lat2 = toRadians(toLat);
+
+    const a = Math.sin(dLat / 2) ** 2
+        + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+
+    return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
+}
+
+function findNearestBeachId(
+    coordinate: [number, number],
+    beaches: BeachDTO[]
+): number | null {
+    if (beaches.length === 0) return null;
+
+    let nearestBeachId: number | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    for (const beach of beaches) {
+        const beachCoordinate: [number, number] = [beach.longitude, beach.latitude];
+        const currentDistance = distanceInKm(coordinate, beachCoordinate);
+
+        if (currentDistance < nearestDistance) {
+            nearestDistance = currentDistance;
+            nearestBeachId = beach.id;
+        }
+    }
+
+    return nearestBeachId;
+}
+
 export default function MapScreen() {
     const [allPins, setAllPins] = useState<MapPin[]>([]);
     const [beaches, setBeaches] = useState<BeachDTO[]>([]);
@@ -99,18 +141,42 @@ export default function MapScreen() {
     const [selectedBeachId, setSelectedBeachId] = useState<number | null>(null);
     const [creatingPoi, setCreatingPoi] = useState(false);
     const cameraRef = useRef<CameraRef>(null);
-    const mapRef = useRef<MapView>(null);
-    const GOOGLE_FORMS_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeV87FW1Ut1h5b91oGwOcvndbESRr-I4JTfFirj-MU03ivCRg/viewform';
-    const LAT_ENTRY = 'entry.1566997971';
-    const LNG_ENTRY = 'entry.1252285469';
+    const mapRef = useRef<any>(null);
+    const resetPoiForm = useCallback(() => {
+        setPoiName('');
+        setPoiDescription('');
+        setPoiPhone('');
+        setPoiType('escolinha');
+    }, []);
 
     useEffect(() => {
+        let mounted = true;
+
         (async () => {
             try {
-                const [beachesData, poisData] = await Promise.all([
+                const [beachesResult, poisResult] = await Promise.allSettled([
                     beachService.getAllBeaches(),
-                    poiService.getAllPois()
+                    poiService.getAllPois(),
                 ]);
+
+                if (!mounted) return;
+
+                const beachesData = beachesResult.status === 'fulfilled'
+                    ? beachesResult.value
+                    : [];
+                const poisData = poisResult.status === 'fulfilled'
+                    ? poisResult.value
+                    : [];
+
+                if (beachesResult.status === 'rejected') {
+                    console.error('Erro ao carregar praias do mapa:', beachesResult.reason);
+                }
+
+                if (poisResult.status === 'rejected') {
+                    console.error('Erro ao carregar POIs do mapa:', poisResult.reason);
+                }
+
+                setBeaches(beachesData);
 
                 const beachPins = beachesData.map(beachToPin);
                 const poiPins = poisData
@@ -121,9 +187,15 @@ export default function MapScreen() {
             } catch (err) {
                 console.error('Erro ao carregar pins do mapa:', err);
             } finally {
-                setLoading(false);
+                if (mounted) {
+                    setLoading(false);
+                }
             }
         })();
+
+        return () => {
+            mounted = false;
+        };
     }, []);
 
     useEffect(() => {
@@ -188,7 +260,7 @@ export default function MapScreen() {
         if (!pickingLocation) return;
         const coords: [number, number] = e.geometry.coordinates;
         setPendingCoord(coords);
-        setSelectedBeachId(findNearestBeachId(coords, beaches));
+        setSelectedBeachId(findNearestBeachId(coords, beaches) ?? beaches[0]?.id ?? null);
         resetPoiForm();
         setShowPoiModal(true);
     }, [beaches, pickingLocation, resetPoiForm]);
@@ -258,7 +330,25 @@ export default function MapScreen() {
         setSelectedPinData(null);
     }, []);
 
-    const visiblePins = allPins.filter((p) => activeFilters.includes(p.type));
+    const normalizedSearch = searchText.trim().toLowerCase();
+    const visiblePins = useMemo(() => {
+        return allPins.filter((pin) => {
+            if (!activeFilters.includes(pin.type)) return false;
+            if (!normalizedSearch) return true;
+
+            const searchable = [
+                pin.name,
+                pin.beachName,
+                pin.address,
+                pin.description,
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+
+            return searchable.includes(normalizedSearch);
+        });
+    }, [allPins, activeFilters, normalizedSearch]);
 
     // INJETAMOS CORES E TAMANHOS DIRETAMENTE NO GEOJSON PARA LER NO CIRCLELAYER
     const pinsGeoJSON = useMemo(() => {
@@ -314,7 +404,6 @@ export default function MapScreen() {
                         id="pinsSource"
                         cluster={true}
                         clusterRadius={40}
-                        clusterMaxZoom={14}
                         shape={pinsGeoJSON as any}
                         onPress={async (e) => {
                             const feature = e.features[0];
@@ -528,25 +617,31 @@ export default function MapScreen() {
                                 showsHorizontalScrollIndicator={false}
                                 contentContainerStyle={styles.modalBeachRow}
                             >
-                                {beaches.map((beach) => (
-                                    <TouchableOpacity
-                                        key={beach.id}
-                                        style={[
-                                            styles.modalBeachButton,
-                                            selectedBeachId === beach.id && styles.modalBeachButtonActive,
-                                        ]}
-                                        onPress={() => setSelectedBeachId(beach.id)}
-                                    >
-                                        <Text
+                                {beaches.length === 0 ? (
+                                    <Text style={styles.modalEmptyBeachText}>
+                                        Nenhuma praia disponivel para associar.
+                                    </Text>
+                                ) : (
+                                    beaches.map((beach) => (
+                                        <TouchableOpacity
+                                            key={beach.id}
                                             style={[
-                                                styles.modalBeachText,
-                                                selectedBeachId === beach.id && styles.modalBeachTextActive,
+                                                styles.modalBeachButton,
+                                                selectedBeachId === beach.id && styles.modalBeachButtonActive,
                                             ]}
+                                            onPress={() => setSelectedBeachId(beach.id)}
                                         >
-                                            {beach.nome}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
+                                            <Text
+                                                style={[
+                                                    styles.modalBeachText,
+                                                    selectedBeachId === beach.id && styles.modalBeachTextActive,
+                                                ]}
+                                            >
+                                                {beach.nome}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))
+                                )}
                             </ScrollView>
 
                             <View style={styles.modalActions}>
@@ -761,6 +856,11 @@ const styles = StyleSheet.create({
     },
     modalBeachTextActive: {
         fontWeight: '700',
+    },
+    modalEmptyBeachText: {
+        fontSize: 13,
+        color: '#6B7280',
+        paddingVertical: 6,
     },
     modalActions: {
         flexDirection: 'row',

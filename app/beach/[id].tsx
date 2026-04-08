@@ -39,6 +39,16 @@ function formatDateTime(value?: string) {
   });
 }
 
+function sortMessagesByDateDesc(messages: BeachMessageDTO[]): BeachMessageDTO[] {
+  return [...messages].sort((a, b) => {
+    const first = new Date(a.data).getTime();
+    const second = new Date(b.data).getTime();
+    const safeFirst = Number.isNaN(first) ? 0 : first;
+    const safeSecond = Number.isNaN(second) ? 0 : second;
+    return safeSecond - safeFirst;
+  });
+}
+
 function PostCard({ post }: { post: PostDTO }) {
   return (
     <View style={styles.postCard}>
@@ -106,7 +116,7 @@ export default function BeachDetailsScreen() {
 
       setBeach(beachData);
       setPosts(beachPosts || []);
-      setMessages(beachMessages || []);
+      setMessages(sortMessagesByDateDesc(beachMessages || []));
     } catch (e) {
       console.error('Erro ao carregar detalhes da praia:', e);
       setError('Nao foi possivel carregar os dados da praia.');
@@ -136,7 +146,7 @@ export default function BeachDetailsScreen() {
     setSendingMessage(true);
     try {
       const created = await beachService.postBeachMessage(beachId, newMessage.trim());
-      setMessages((prev) => [created, ...prev]);
+      setMessages((prev) => sortMessagesByDateDesc([created, ...prev]));
       setNewMessage('');
     } catch (e) {
       console.error('Erro ao enviar mensagem da praia:', e);
@@ -151,6 +161,7 @@ export default function BeachDetailsScreen() {
       <ScrollView
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadBeachDetails(true)} />}
       >
         {loading && !beach ? (
@@ -176,7 +187,7 @@ export default function BeachDetailsScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Mural da praia</Text>
+              <Text style={styles.sectionTitle}>Comentarios da praia</Text>
               <View style={styles.messageComposer}>
                 <TextInput
                   value={newMessage}
