@@ -1,36 +1,48 @@
-import MockAdapter from 'axios-mock-adapter';
 import api from '../api';
 import { beachService } from '../beaches/beachService';
+import { MockHttpServer, setupMockHttpServer } from './helpers/mockHttpServer';
 
-describe('beachService API integration (HTTP mocked)', () => {
-  let mock: MockAdapter;
+describe('beachService integration (mock data + real HTTP call)', () => {
+  let server: MockHttpServer;
+  const originalBaseUrl = api.defaults.baseURL;
 
-  beforeEach(() => {
-    mock = new MockAdapter(api);
+  beforeEach(async () => {
+    server = await setupMockHttpServer();
+    api.defaults.baseURL = server.baseUrl;
   });
 
-  afterEach(() => {
-    mock.restore();
+  afterEach(async () => {
+    api.defaults.baseURL = originalBaseUrl;
+    await server.stop();
     jest.clearAllMocks();
   });
 
   test('getAllBeaches deve aceitar resposta em array', async () => {
     const beaches = [{ id: 1, nome: 'Praia do Futuro' }];
-    mock.onGet('/api/beaches').reply(200, beaches);
+
+    server.setRoutes([
+      { method: 'GET', path: '/api/beaches', response: { status: 200, body: beaches } },
+    ]);
 
     await expect(beachService.getAllBeaches()).resolves.toEqual(beaches);
   });
 
   test('getAllBeaches deve aceitar resposta paginada', async () => {
     const beaches = [{ id: 2, nome: 'Iracema' }];
-    mock.onGet('/api/beaches').reply(200, { content: beaches });
+
+    server.setRoutes([
+      { method: 'GET', path: '/api/beaches', response: { status: 200, body: { content: beaches } } },
+    ]);
 
     await expect(beachService.getAllBeaches()).resolves.toEqual(beaches);
   });
 
   test('getBeachById deve consumir GET /api/beaches/{id}', async () => {
     const beach = { id: 7, nome: 'Cumbuco' };
-    mock.onGet('/api/beaches/7').reply(200, beach);
+
+    server.setRoutes([
+      { method: 'GET', path: '/api/beaches/7', response: { status: 200, body: beach } },
+    ]);
 
     await expect(beachService.getBeachById(7)).resolves.toEqual(beach);
   });
@@ -38,17 +50,30 @@ describe('beachService API integration (HTTP mocked)', () => {
   test('getBeachPosts deve enviar paginação e normalizar content', async () => {
     const posts = [{ id: 10, descricao: 'Session boa' }];
 
-    mock.onGet('/api/beaches/7/posts').reply((config) => {
-      expect(config.params).toEqual({ page: 1, size: 5 });
-      return [200, { content: posts }];
-    });
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/beaches/7/posts',
+        handler: (request) => {
+          expect(request.query).toEqual({ page: '1', size: '5' });
+          return { status: 200, body: { content: posts } };
+        },
+      },
+    ]);
 
     await expect(beachService.getBeachPosts(7, 1, 5)).resolves.toEqual(posts);
   });
 
   test('getBeachMessages deve normalizar resposta paginada', async () => {
     const messages = [{ id: 3, texto: 'Mar subindo' }];
-    mock.onGet('/api/beaches/7/mensagens').reply(200, { content: messages });
+
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/beaches/7/mensagens',
+        response: { status: 200, body: { content: messages } },
+      },
+    ]);
 
     await expect(beachService.getBeachMessages(7)).resolves.toEqual(messages);
   });
@@ -56,16 +81,28 @@ describe('beachService API integration (HTTP mocked)', () => {
   test('postBeachMessage deve consumir POST /api/beaches/{id}/mensagens com query texto', async () => {
     const created = { id: 11, texto: 'Crowd tranquilo' };
 
-    mock.onPost('/api/beaches/7/mensagens').reply((config) => {
-      expect(config.params).toEqual({ texto: 'Crowd tranquilo' });
-      return [201, created];
-    });
+    server.setRoutes([
+      {
+        method: 'POST',
+        path: '/api/beaches/7/mensagens',
+        handler: (request) => {
+          expect(request.query).toEqual({ texto: 'Crowd tranquilo' });
+          return { status: 201, body: created };
+        },
+      },
+    ]);
 
     await expect(beachService.postBeachMessage(7, 'Crowd tranquilo')).resolves.toEqual(created);
   });
 
-  test('getBeachById deve propagar erro HTTP', async () => {
-    mock.onGet('/api/beaches/999').reply(404, { message: 'Praia não encontrada' });
+  test('getBeachById deve propagar erro HTTP real', async () => {
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/beaches/999',
+        response: { status: 404, body: { message: 'Praia não encontrada' } },
+      },
+    ]);
 
     await expect(beachService.getBeachById(999)).rejects.toMatchObject({
       response: { status: 404 },

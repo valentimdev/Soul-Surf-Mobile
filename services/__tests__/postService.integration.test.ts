@@ -1,104 +1,157 @@
-import MockAdapter from 'axios-mock-adapter';
 import api from '../api';
 import { postService } from '../posts/postService';
+import { MockHttpServer, setupMockHttpServer } from './helpers/mockHttpServer';
 
-describe('postService API integration (HTTP mocked)', () => {
-  let mock: MockAdapter;
+describe('postService integration (mock data + real HTTP call)', () => {
+  let server: MockHttpServer;
+  const originalBaseUrl = api.defaults.baseURL;
 
-  beforeEach(() => {
-    mock = new MockAdapter(api);
+  beforeEach(async () => {
+    server = await setupMockHttpServer();
+    api.defaults.baseURL = server.baseUrl;
   });
 
-  afterEach(() => {
-    mock.restore();
+  afterEach(async () => {
+    api.defaults.baseURL = originalBaseUrl;
+    await server.stop();
     jest.clearAllMocks();
   });
 
   test('getPublicFeed deve enviar paginação', async () => {
     const payload = { content: [], totalElements: 0 };
-    mock.onGet('/api/posts/home').reply((config) => {
-      expect(config.params).toEqual({ page: 1, size: 20 });
-      return [200, payload];
-    });
+
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/posts/home',
+        handler: (request) => {
+          expect(request.query).toEqual({ page: '1', size: '20' });
+          return { status: 200, body: payload };
+        },
+      },
+    ]);
 
     await expect(postService.getPublicFeed(1, 20)).resolves.toEqual(payload);
   });
 
   test('getFollowingFeed deve enviar paginação', async () => {
     const payload = { content: [{ id: 1 }], totalElements: 1 };
-    mock.onGet('/api/posts/following').reply((config) => {
-      expect(config.params).toEqual({ page: 2, size: 5 });
-      return [200, payload];
-    });
+
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/posts/following',
+        handler: (request) => {
+          expect(request.query).toEqual({ page: '2', size: '5' });
+          return { status: 200, body: payload };
+        },
+      },
+    ]);
 
     await expect(postService.getFollowingFeed(2, 5)).resolves.toEqual(payload);
   });
 
   test('getPostById deve consumir GET /api/posts/{id}', async () => {
     const payload = { id: 123, descricao: 'Session' };
-    mock.onGet('/api/posts/123').reply(200, payload);
+
+    server.setRoutes([
+      { method: 'GET', path: '/api/posts/123', response: { status: 200, body: payload } },
+    ]);
 
     await expect(postService.getPostById(123)).resolves.toEqual(payload);
   });
 
   test('getPostsByUserEmail deve enviar query email/page/size', async () => {
     const payload = { content: [{ id: 2 }] };
-    mock.onGet('/api/posts/user').reply((config) => {
-      expect(config.params).toEqual({
-        email: 'teste@soulsurf.com',
-        page: 0,
-        size: 20,
-      });
-      return [200, payload];
-    });
+
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/posts/user',
+        handler: (request) => {
+          expect(request.query).toEqual({
+            email: 'teste@soulsurf.com',
+            page: '0',
+            size: '20',
+          });
+          return { status: 200, body: payload };
+        },
+      },
+    ]);
 
     await expect(postService.getPostsByUserEmail('teste@soulsurf.com')).resolves.toEqual(payload);
   });
 
   test('getMyPosts deve enviar paginação', async () => {
     const payload = { content: [{ id: 3 }] };
-    mock.onGet('/api/posts/me').reply((config) => {
-      expect(config.params).toEqual({ page: 1, size: 10 });
-      return [200, payload];
-    });
+
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/posts/me',
+        handler: (request) => {
+          expect(request.query).toEqual({ page: '1', size: '10' });
+          return { status: 200, body: payload };
+        },
+      },
+    ]);
 
     await expect(postService.getMyPosts(1, 10)).resolves.toEqual(payload);
   });
 
   test('toggleLike deve consumir POST /api/posts/{id}/likes', async () => {
     const payload = { liked: true };
-    mock.onPost('/api/posts/9/likes').reply(200, payload);
+
+    server.setRoutes([
+      { method: 'POST', path: '/api/posts/9/likes', response: { status: 200, body: payload } },
+    ]);
 
     await expect(postService.toggleLike(9)).resolves.toEqual(payload);
   });
 
   test('getLikeStatus deve consumir GET /api/posts/{id}/likes/status', async () => {
     const payload = { liked: false };
-    mock.onGet('/api/posts/9/likes/status').reply(200, payload);
+
+    server.setRoutes([
+      { method: 'GET', path: '/api/posts/9/likes/status', response: { status: 200, body: payload } },
+    ]);
 
     await expect(postService.getLikeStatus(9)).resolves.toEqual(payload);
   });
 
   test('getLikesCount deve consumir GET /api/posts/{id}/likes/count', async () => {
     const payload = { count: 14 };
-    mock.onGet('/api/posts/9/likes/count').reply(200, payload);
+
+    server.setRoutes([
+      { method: 'GET', path: '/api/posts/9/likes/count', response: { status: 200, body: payload } },
+    ]);
 
     await expect(postService.getLikesCount(9)).resolves.toEqual(payload);
   });
 
   test('updatePost deve enviar descricao via params', async () => {
     const payload = { message: 'Atualizado' };
-    mock.onPut('/api/posts/15').reply((config) => {
-      expect(config.params).toEqual({ descricao: 'Novo texto' });
-      return [200, payload];
-    });
+
+    server.setRoutes([
+      {
+        method: 'PUT',
+        path: '/api/posts/15',
+        handler: (request) => {
+          expect(request.query).toEqual({ descricao: 'Novo texto' });
+          return { status: 200, body: payload };
+        },
+      },
+    ]);
 
     await expect(postService.updatePost(15, 'Novo texto')).resolves.toEqual(payload);
   });
 
   test('deletePost deve consumir DELETE /api/posts/{id}', async () => {
     const payload = { message: 'Excluído' };
-    mock.onDelete('/api/posts/15').reply(200, payload);
+
+    server.setRoutes([
+      { method: 'DELETE', path: '/api/posts/15', response: { status: 200, body: payload } },
+    ]);
 
     await expect(postService.deletePost(15)).resolves.toEqual(payload);
   });
@@ -113,15 +166,20 @@ describe('postService API integration (HTTP mocked)', () => {
       }
     }
     (global as any).FormData = MockFormData as any;
+
     try {
       const payload = { id: 99, descricao: 'Novo post' };
 
-      mock.onPost('/api/posts').reply((config) => {
-        expect(String(config.headers?.['Content-Type'] || config.headers?.['content-type'])).toContain(
-          'multipart/form-data'
-        );
-        return [200, payload];
-      });
+      server.setRoutes([
+        {
+          method: 'POST',
+          path: '/api/posts',
+          handler: (request) => {
+            expect(String(request.headers['content-type'] || '')).toContain('multipart/form-data');
+            return { status: 200, body: payload };
+          },
+        },
+      ]);
 
       await expect(postService.createPost('Novo post', true, 1, 'file:///tmp/foto.jpg')).resolves.toEqual(payload);
     } finally {
@@ -129,11 +187,18 @@ describe('postService API integration (HTTP mocked)', () => {
     }
   });
 
-  test('getPublicFeed deve propagar erro HTTP', async () => {
-    mock.onGet('/api/posts/home').reply(500, { message: 'Falha interna' });
+  test('getPublicFeed deve propagar erro HTTP real', async () => {
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/posts/home',
+        response: { status: 500, body: { message: 'Falha interna' } },
+      },
+    ]);
 
     await expect(postService.getPublicFeed()).rejects.toMatchObject({
       response: { status: 500 },
     });
   });
 });
+

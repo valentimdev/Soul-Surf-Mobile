@@ -1,16 +1,19 @@
-import MockAdapter from 'axios-mock-adapter';
 import api from '../api';
 import { weatherService } from '../weather/weatherService';
+import { MockHttpServer, setupMockHttpServer } from './helpers/mockHttpServer';
 
-describe('weatherService API integration (HTTP mocked)', () => {
-  let mock: MockAdapter;
+describe('weatherService integration (mock data + real HTTP call)', () => {
+  let server: MockHttpServer;
+  const originalBaseUrl = api.defaults.baseURL;
 
-  beforeEach(() => {
-    mock = new MockAdapter(api);
+  beforeEach(async () => {
+    server = await setupMockHttpServer();
+    api.defaults.baseURL = server.baseUrl;
   });
 
-  afterEach(() => {
-    mock.restore();
+  afterEach(async () => {
+    api.defaults.baseURL = originalBaseUrl;
+    await server.stop();
     jest.clearAllMocks();
   });
 
@@ -22,16 +25,28 @@ describe('weatherService API integration (HTTP mocked)', () => {
       iconCode: '01d',
     };
 
-    mock.onGet('/api/weather/current').reply((config) => {
-      expect(config.params).toEqual({ city: 'Fortaleza,BR' });
-      return [200, payload];
-    });
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/weather/current',
+        handler: (request) => {
+          expect(request.query).toEqual({ city: 'Fortaleza,BR' });
+          return { status: 200, body: payload };
+        },
+      },
+    ]);
 
     await expect(weatherService.getCurrentWeather('Fortaleza,BR')).resolves.toEqual(payload);
   });
 
-  test('getCurrentWeather deve propagar erro HTTP', async () => {
-    mock.onGet('/api/weather/current').reply(503, { message: 'Serviço indisponível' });
+  test('getCurrentWeather deve propagar erro HTTP real', async () => {
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/weather/current',
+        response: { status: 503, body: { message: 'Serviço indisponível' } },
+      },
+    ]);
 
     await expect(weatherService.getCurrentWeather()).rejects.toMatchObject({
       response: { status: 503 },
