@@ -45,11 +45,22 @@ export const poiService = {
 
   // Buscar apenas os POIs exibidos no mapa (SURF_SCHOOL, SURF_SHOP, BOARD_REPAIR) — filtragem local
   getMapPois: async (): Promise<PointOfInterestDTO[]> => {
-    const response = await api.get('/api/pois');
-    const all: PointOfInterestDTO[] = response.data;
-    return all.filter((poi) =>
-      ['SURF_SCHOOL', 'SURF_SHOP', 'BOARD_REPAIR'].includes(poi.categoria)
-    );
+    try {
+      const response = await api.get('/api/pois');
+      const raw = response.data;
+      const all: PointOfInterestDTO[] = Array.isArray(raw)
+        ? raw
+        : Array.isArray(raw?.content)
+          ? raw.content
+          : [];
+
+      return all.filter((poi) =>
+        ['SURF_SCHOOL', 'SURF_SHOP', 'BOARD_REPAIR'].includes(poi.categoria)
+      );
+    } catch (error) {
+      console.error('Falha ao buscar POIs do mapa. Exibindo apenas picos:', error);
+      return [];
+    }
   },
 
   createPoi: async (payload: CreatePoiRequest): Promise<PointOfInterestDTO> => {

@@ -114,14 +114,26 @@ export default function MapScreen() {
     useEffect(() => {
         (async () => {
             try {
-                const [beaches, pois] = await Promise.all([
+                const [beachesResult, poisResult] = await Promise.allSettled([
                     beachService.getAllBeaches(),
                     poiService.getMapPois(),
                 ]);
 
-                setBeaches(beaches);
-                const beachPins = beaches.map(beachToPin);
-                const poiPins = pois
+                const loadedBeaches =
+                    beachesResult.status === 'fulfilled' ? beachesResult.value : [];
+                const loadedPois =
+                    poisResult.status === 'fulfilled' ? poisResult.value : [];
+
+                if (beachesResult.status === 'rejected') {
+                    console.error('Erro ao carregar praias no mapa:', beachesResult.reason);
+                }
+                if (poisResult.status === 'rejected') {
+                    console.error('Erro ao carregar POIs no mapa:', poisResult.reason);
+                }
+
+                setBeaches(loadedBeaches);
+                const beachPins = loadedBeaches.map(beachToPin);
+                const poiPins = loadedPois
                     .map(poiToPin)
                     .filter((pin): pin is MapPin => pin !== null);
 

@@ -17,7 +17,10 @@ export const beachService = {
   // Listar Todas as Praias
   getAllBeaches: async (): Promise<BeachDTO[]> => {
     const response = await api.get('/api/beaches');
-    return response.data;
+    const raw = response.data;
+    if (Array.isArray(raw)) return raw;
+    if (Array.isArray(raw?.content)) return raw.content;
+    return [];
   },
 
   // Detalhes de uma Praia Específica
