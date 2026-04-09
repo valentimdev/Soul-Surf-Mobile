@@ -1,5 +1,17 @@
 import api from '../api';
 
+interface PageResponse<T> {
+  content?: T[];
+}
+
+function normalizeList<T>(raw: unknown): T[] {
+  if (Array.isArray(raw)) return raw as T[];
+  if (raw && typeof raw === 'object' && Array.isArray((raw as PageResponse<T>).content)) {
+    return (raw as PageResponse<T>).content as T[];
+  }
+  return [];
+}
+
 export interface ChatMessageResponse {
   id: string;
   conversationId: string;
@@ -28,14 +40,27 @@ export const chatService = {
   // Inbox - Listar conversas ativas
   getMyConversations: async (): Promise<ConversationResponse[]> => {
     const response = await api.get('/api/chat/conversations');
-    return response.data;
+    return normalizeList<ConversationResponse>(response.data);
   },
 
   // Iniciar ou pegar DM existente com outro usuário
   createOrGetDM: async (otherUserId: string): Promise<string> => {
-    // Retorna o conversationId (string) que a API devolve
     const response = await api.post('/api/chat/dm', { otherUserId });
-    return response.data.conversationId || response.data;
+    const data = response.data as unknown;
+
+    if (typeof data === 'string') {
+      return data;
+    }
+
+    if (data && typeof data === 'object') {
+      const payload = data as { conversationId?: string | number; id?: string | number };
+      const idCandidate = payload.conversationId ?? payload.id;
+      if (idCandidate !== undefined && idCandidate !== null) {
+        return String(idCandidate);
+      }
+    }
+
+    throw new Error('Resposta inesperada ao criar conversa');
   },
 
   // Pegar mensagens de uma conversa
@@ -43,7 +68,7 @@ export const chatService = {
     const response = await api.get(`/api/chat/conversations/${conversationId}/messages`, {
       params: { page, size },
     });
-    return response.data;
+    return normalizeList<ChatMessageResponse>(response.data);
   },
 
   // Enviar Mensagem (via HTTP, antes do WebSockets)

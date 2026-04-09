@@ -15,6 +15,7 @@ import {
     SymbolLayer
 } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
+import { useRouter } from 'expo-router';
 import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -122,6 +123,7 @@ function findNearestBeachId(
 }
 
 export default function MapScreen() {
+    const router = useRouter();
     const [allPins, setAllPins] = useState<MapPin[]>([]);
     const [beaches, setBeaches] = useState<BeachDTO[]>([]);
     const [activeFilters, setActiveFilters] = useState<SpotType[]>([...ALL_TYPES]);
@@ -329,6 +331,16 @@ export default function MapScreen() {
     const handleCloseSheet = useCallback(() => {
         setSelectedPinData(null);
     }, []);
+
+    const handleOpenBeachDetails = useCallback((pin: MapPin) => {
+        if (!pin.beachId) return;
+
+        setSelectedPinData(null);
+        router.push({
+            pathname: '/beach/[id]',
+            params: { id: String(pin.beachId) },
+        });
+    }, [router]);
 
     const normalizedSearch = searchText.trim().toLowerCase();
     const visiblePins = useMemo(() => {
@@ -543,7 +555,12 @@ export default function MapScreen() {
                     visible={selectedPinData !== null}
                     onClose={handleCloseSheet}
                 >
-                    {selectedPinData && <PinSheet pin={selectedPinData} />}
+                    {selectedPinData && (
+                        <PinSheet
+                            pin={selectedPinData}
+                            onOpenBeachDetails={handleOpenBeachDetails}
+                        />
+                    )}
                 </BottomSheet>
 
                 <Modal
