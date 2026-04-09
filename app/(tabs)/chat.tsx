@@ -1,5 +1,5 @@
 import { chatService, ConversationResponse } from '@/services/chat/chatService';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -14,6 +14,7 @@ import {
 
 type ConversationItemView = {
   id: string;
+  otherUserId: string;
   name: string;
   avatar: string;
   lastMessage: string;
@@ -67,6 +68,7 @@ function toConversationView(item: ConversationResponse): ConversationItemView {
 
   return {
     id: item.id,
+    otherUserId: item.otherUserId,
     name: item.otherUserName || fallbackName,
     avatar: item.otherUserAvatarUrl || FALLBACK_AVATAR,
     lastMessage: item.lastMessage?.content || 'Sem mensagens ainda',
@@ -75,9 +77,9 @@ function toConversationView(item: ConversationResponse): ConversationItemView {
   };
 }
 
-function ConversationCard({ item }: { item: ConversationItemView }) {
+function ConversationCard({ item, onPress }: { item: ConversationItemView; onPress: () => void }) {
   return (
-    <TouchableOpacity style={styles.conversationCard} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.conversationCard} activeOpacity={0.7} onPress={onPress}>
       <Image source={{ uri: item.avatar }} style={styles.avatar} />
       <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
@@ -103,6 +105,7 @@ function ConversationCard({ item }: { item: ConversationItemView }) {
 }
 
 export default function ChatScreen() {
+  const router = useRouter();
   const [conversations, setConversations] = useState<ConversationItemView[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -134,6 +137,21 @@ export default function ChatScreen() {
   const showCenteredLoader = loading && conversations.length === 0;
   const showRetry = !loading && !!error && conversations.length === 0;
 
+  const handleOpenConversation = useCallback(
+    (item: ConversationItemView) => {
+      router.push({
+        pathname: '/chat/[id]',
+        params: {
+          id: item.id,
+          name: item.name,
+          avatar: item.avatar,
+          otherUserId: item.otherUserId,
+        },
+      });
+    },
+    [router]
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -155,7 +173,9 @@ export default function ChatScreen() {
           <FlatList
             data={conversations}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <ConversationCard item={item} />}
+            renderItem={({ item }) => (
+              <ConversationCard item={item} onPress={() => handleOpenConversation(item)} />
+            )}
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             refreshing={refreshing}

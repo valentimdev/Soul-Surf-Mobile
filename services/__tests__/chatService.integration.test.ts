@@ -26,6 +26,19 @@ describe('chatService integration (mock data + real HTTP call)', () => {
     await expect(chatService.getMyConversations()).resolves.toEqual(payload);
   });
 
+  test('getMyConversations deve aceitar resposta paginada', async () => {
+    const payload = [{ id: 'c2', group: false }];
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/chat/conversations',
+        response: { status: 200, body: { content: payload } },
+      },
+    ]);
+
+    await expect(chatService.getMyConversations()).resolves.toEqual(payload);
+  });
+
   test('createOrGetDM deve retornar conversationId quando API mandar objeto', async () => {
     server.setRoutes([
       {
@@ -63,6 +76,19 @@ describe('chatService integration (mock data + real HTTP call)', () => {
     ]);
 
     await expect(chatService.getMessages('conv-1', 2, 15)).resolves.toEqual(payload);
+  });
+
+  test('getMessages deve aceitar resposta paginada', async () => {
+    const payload = [{ id: 'm9', content: 'Linha perfeita hoje' }];
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/chat/conversations/conv-9/messages',
+        response: { status: 200, body: { content: payload } },
+      },
+    ]);
+
+    await expect(chatService.getMessages('conv-9')).resolves.toEqual(payload);
   });
 
   test('sendMessage deve consumir POST /api/chat/conversations/{id}/messages', async () => {
