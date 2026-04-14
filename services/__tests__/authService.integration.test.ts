@@ -71,6 +71,11 @@ describe('authService integration (mock data + real HTTP call)', () => {
     await expect(authService.forgotPassword('samuca@soulsurf.com')).resolves.toEqual({
       message: 'Email enviado',
     });
+
+    const request = server.getLastRequest('POST', '/api/auth/forgot-password');
+    expect(request?.jsonBody).toEqual({
+      email: 'samuca@soulsurf.com',
+    });
   });
 
   test('resetPassword deve consumir POST /api/auth/reset-password', async () => {
@@ -84,6 +89,12 @@ describe('authService integration (mock data + real HTTP call)', () => {
 
     await expect(authService.resetPassword('reset-token', 'nova-senha')).resolves.toEqual({
       message: 'Senha alterada',
+    });
+
+    const request = server.getLastRequest('POST', '/api/auth/reset-password');
+    expect(request?.jsonBody).toEqual({
+      token: 'reset-token',
+      newPassword: 'nova-senha',
     });
   });
 
@@ -100,5 +111,48 @@ describe('authService integration (mock data + real HTTP call)', () => {
       response: { status: 401 },
     });
   });
-});
 
+  test('signup deve propagar erro HTTP real', async () => {
+    server.setRoutes([
+      {
+        method: 'POST',
+        path: '/api/auth/signup',
+        response: { status: 400, body: { message: 'Usuário já existe' } },
+      },
+    ]);
+
+    await expect(
+      authService.signup('samuca@soulsurf.com', '123456', 'samuca')
+    ).rejects.toMatchObject({
+      response: { status: 400 },
+    });
+  });
+
+  test('forgotPassword deve propagar erro HTTP real', async () => {
+    server.setRoutes([
+      {
+        method: 'POST',
+        path: '/api/auth/forgot-password',
+        response: { status: 404, body: { message: 'Usuário não encontrado' } },
+      },
+    ]);
+
+    await expect(authService.forgotPassword('naoexiste@soulsurf.com')).rejects.toMatchObject({
+      response: { status: 404 },
+    });
+  });
+
+  test('resetPassword deve propagar erro HTTP real', async () => {
+    server.setRoutes([
+      {
+        method: 'POST',
+        path: '/api/auth/reset-password',
+        response: { status: 400, body: { message: 'Token inválido' } },
+      },
+    ]);
+
+    await expect(authService.resetPassword('token-invalido', '12345678')).rejects.toMatchObject({
+      response: { status: 400 },
+    });
+  });
+});
