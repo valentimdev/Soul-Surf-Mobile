@@ -1,4 +1,5 @@
 import { beachService, BeachMessageDTO } from '@/services/beaches/beachService';
+import { formatDate, formatDateTime } from '@/utils/formatters';
 import { BeachDTO, PostDTO } from '@/types/api';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -16,28 +17,7 @@ import {
   View,
 } from 'react-native';
 
-function formatDate(value?: string) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
 
-function formatDateTime(value?: string) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 function sortMessagesByDateDesc(messages: BeachMessageDTO[]): BeachMessageDTO[] {
   return [...messages].sort((a, b) => {
@@ -49,18 +29,18 @@ function sortMessagesByDateDesc(messages: BeachMessageDTO[]): BeachMessageDTO[] 
   });
 }
 
-function PostCard({ post }: { post: PostDTO }) {
+export function PostCard({ post }: { post: PostDTO }) {
   return (
     <View style={styles.postCard}>
       <View style={styles.postHeader}>
-        <Text style={styles.postAuthor}>{post.usuario?.username || 'Surfista'}</Text>
-        <Text style={styles.postDate}>{formatDate(post.data)}</Text>
+        <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>{post.usuario?.username || 'Surfista'}</Text>
+        <Text testID={`post-date-${post.id}`} style={styles.postDate}>{formatDate(post.data)}</Text>
       </View>
-      {post.caminhoFoto ? <Image source={{ uri: post.caminhoFoto }} style={styles.postImage} /> : null}
-      <Text style={styles.postDescription}>{post.descricao || 'Sem descricao.'}</Text>
+      {post.caminhoFoto ? <Image testID={`post-image-${post.id}`} source={{ uri: post.caminhoFoto }} style={styles.postImage} /> : null}
+      <Text testID={`post-description-${post.id}`} style={styles.postDescription}>{post.descricao || 'Sem descricao.'}</Text>
       <View style={styles.postStats}>
-        <Text style={styles.postStatsText}>{post.likesCount ?? 0} curtidas</Text>
-        <Text style={styles.postStatsText}>{post.commentsCount ?? 0} comentarios</Text>
+        <Text testID={`post-likes-${post.id}`} style={styles.postStatsText}>{post.likesCount ?? 0} curtidas</Text>
+        <Text testID={`post-comments-${post.id}`} style={styles.postStatsText}>{post.commentsCount ?? 0} comentarios</Text>
       </View>
     </View>
   );
@@ -70,10 +50,10 @@ function MessageCard({ message }: { message: BeachMessageDTO }) {
   return (
     <View style={styles.messageCard}>
       <View style={styles.messageHeader}>
-        <Text style={styles.messageAuthor}>{message.autor?.username || 'Surfista'}</Text>
-        <Text style={styles.messageDate}>{formatDateTime(message.data)}</Text>
+        <Text testID={`message-author-${message.id}`} style={styles.messageAuthor}>{message.autor?.username || 'Surfista'}</Text>
+        <Text testID={`message-date-${message.id}`} style={styles.messageDate}>{formatDateTime(message.data)}</Text>
       </View>
-      <Text style={styles.messageText}>{message.texto}</Text>
+      <Text testID={`message-text-${message.id}`} style={styles.messageText}>{message.texto}</Text>
     </View>
   );
 }
@@ -179,11 +159,11 @@ export default function BeachDetailsScreen() {
         ) : (
           <>
             <View style={styles.heroCard}>
-              {beach?.caminhoFoto ? <Image source={{ uri: beach.caminhoFoto }} style={styles.heroImage} /> : null}
-              <Text style={styles.beachName}>{beach?.nome}</Text>
-              {beach?.descricao ? <Text style={styles.beachDescription}>{beach.descricao}</Text> : null}
-              <Text style={styles.beachMeta}>Local: {beach?.localizacao || 'Nao informado'}</Text>
-              <Text style={styles.beachMeta}>Nivel: {beach?.nivelExperiencia || 'Nao informado'}</Text>
+              {beach?.caminhoFoto ? <Image testID="beach-image" source={{ uri: beach.caminhoFoto }} style={styles.heroImage} /> : null}
+              <Text testID="beach-name" style={styles.beachName}>{beach?.nome}</Text>
+              {beach?.descricao ? <Text testID="beach-description" style={styles.beachDescription}>{beach.descricao}</Text> : null}
+              <Text testID="beach-location" style={styles.beachMeta}>Local: {beach?.localizacao || 'Nao informado'}</Text>
+              <Text testID="beach-experience" style={styles.beachMeta}>Nivel: {beach?.nivelExperiencia || 'Nao informado'}</Text>
             </View>
 
             <View style={styles.section}>
