@@ -9,16 +9,13 @@ import {
     Camera,
     CameraRef,
     MapView,
-    MarkerView,
-    ShapeSource,
-    CircleLayer,
-    SymbolLayer
+    MarkerView
 } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { ActivityIndicator, Alert, Modal, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView, TouchableOpacity } from 'react-native-gesture-handler';
 
 const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {
@@ -29,10 +26,11 @@ const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {
     TOURIST_SPOT: null,
 };
 
-const SPOT_TO_POI_CATEGORY: Partial<Record<SpotType, PointOfInterestDTO['categoria']>> = {
-    escolinha: 'SURF_SCHOOL',
-    loja: 'SURF_SHOP',
-    reparo: 'BOARD_REPAIR',
+const PIN_ICONS: Record<MapPin['type'], React.ComponentType<any>> = {
+    pico: Waves,
+    escolinha: GraduationCap,
+    reparo: Wrench,
+    loja: Store,
 };
 
 function beachToPin(b: BeachDTO): MapPin {
@@ -69,63 +67,80 @@ function poiToPin(poi: PointOfInterestDTO): MapPin | null {
     };
 }
 
-// Cores temáticas para os pontos no mapa
-const SPOT_COLORS: Record<MapPin['type'], string> = {
-    pico: '#0ea5e9',      // Azul
-    escolinha: '#10b981', // Verde
-    reparo: '#f59e0b',    // Laranja
-    loja: '#8b5cf6',      // Roxo
-};
-
 const ALL_TYPES: SpotType[] = ['pico', 'escolinha', 'reparo', 'loja'];
 
-function toRadians(value: number): number {
-    return value * (Math.PI / 180);
-}
+type MapCanvasProps = {
+    cameraRef: React.RefObject<CameraRef | null>;
+    onMapPress: (e: any) => void;
+    onPinPress: (pin: MapPin) => void;
+    pendingCoord: [number, number] | null;
+    userLocation: [number, number] | null;
+    visiblePins: MapPin[];
+};
 
-function distanceInKm(from: [number, number], to: [number, number]): number {
-    const [fromLng, fromLat] = from;
-    const [toLng, toLat] = to;
+const MapCanvas = React.memo(function MapCanvas({
+    cameraRef,
+    onMapPress,
+    onPinPress,
+    pendingCoord,
+    userLocation,
+    visiblePins,
+}: MapCanvasProps) {
+    return (
+        <MapView
+            style={styles.map}
+            mapStyle="https://tiles.openfreemap.org/styles/positron"
+            onPress={onMapPress}
+        >
+            <Camera
+                ref={cameraRef}
+                defaultSettings={{
+                    centerCoordinate: userLocation ?? [-38.5016, -3.7172],
+                    zoomLevel: 12,
+                }}
+            />
 
-    const earthRadiusKm = 6371;
-    const dLat = toRadians(toLat - fromLat);
-    const dLng = toRadians(toLng - fromLng);
+            {visiblePins.map((pin) => {
+                const IconComponent = PIN_ICONS[pin.type];
 
-    const lat1 = toRadians(fromLat);
-    const lat2 = toRadians(toLat);
+                return (
+                    <MarkerView
+                        key={pin.id}
+                        coordinate={pin.coordinate}
+                        anchor={{ x: 0.5, y: 0.5 }}
+                    >
+                        <Pressable
+                            style={styles.pinContainer}
+                            onPress={() => onPinPress(pin)}
+                        >
+                            <View style={styles.pinBubble}>
+                                <IconComponent size={20} color={Colors.light.background} />
+                            </View>
+                        </Pressable>
+                    </MarkerView>
+                );
+            })}
 
-    const a = Math.sin(dLat / 2) ** 2
-        + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+            {userLocation && (
+                <MarkerView coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
+                    <View style={styles.userLocationOuter}>
+                        <View style={styles.userLocationDot} />
+                    </View>
+                </MarkerView>
+            )}
 
-    return 2 * earthRadiusKm * Math.asin(Math.sqrt(a));
-}
-
-function findNearestBeachId(
-    coordinate: [number, number],
-    beaches: BeachDTO[]
-): number | null {
-    if (beaches.length === 0) return null;
-
-    let nearestBeachId: number | null = null;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-
-    for (const beach of beaches) {
-        const beachCoordinate: [number, number] = [beach.longitude, beach.latitude];
-        const currentDistance = distanceInKm(coordinate, beachCoordinate);
-
-        if (currentDistance < nearestDistance) {
-            nearestDistance = currentDistance;
-            nearestBeachId = beach.id;
-        }
-    }
-
-    return nearestBeachId;
-}
+            {pendingCoord && (
+                <MarkerView coordinate={pendingCoord} anchor={{ x: 0.5, y: 1 }}>
+                    <View style={styles.pendingPin} />
+                </MarkerView>
+            )}
+        </MapView>
+    );
+});
 
 export default function MapScreen() {
     const router = useRouter();
     const [allPins, setAllPins] = useState<MapPin[]>([]);
-    const [beaches, setBeaches] = useState<BeachDTO[]>([]);
     const [activeFilters, setActiveFilters] = useState<SpotType[]>([...ALL_TYPES]);
     const [searchText, setSearchText] = useState('');
     const [loading, setLoading] = useState(true);
@@ -136,20 +151,12 @@ export default function MapScreen() {
     const [pickingLocation, setPickingLocation] = useState(false);
     const [pendingCoord, setPendingCoord] = useState<[number, number] | null>(null);
     const [showPoiModal, setShowPoiModal] = useState(false);
-    const [poiName, setPoiName] = useState('');
-    const [poiDescription, setPoiDescription] = useState('');
-    const [poiPhone, setPoiPhone] = useState('');
-    const [poiType, setPoiType] = useState<SpotType>('escolinha');
-    const [selectedBeachId, setSelectedBeachId] = useState<number | null>(null);
-    const [creatingPoi, setCreatingPoi] = useState(false);
     const cameraRef = useRef<CameraRef>(null);
-    const mapRef = useRef<any>(null);
-    const resetPoiForm = useCallback(() => {
-        setPoiName('');
-        setPoiDescription('');
-        setPoiPhone('');
-        setPoiType('escolinha');
-    }, []);
+    const initialCameraCenterRef = useRef<[number, number]>([-38.5016, -3.7172]);
+    const hasInitializedCameraRef = useRef(false);
+    const GOOGLE_FORMS_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeV87FW1Ut1h5b91oGwOcvndbESRr-I4JTfFirj-MU03ivCRg/viewform';
+    const LAT_ENTRY = 'entry.1566997971';
+    const LNG_ENTRY = 'entry.1252285469';
 
     useEffect(() => {
         let mounted = true;
@@ -177,8 +184,6 @@ export default function MapScreen() {
                 if (poisResult.status === 'rejected') {
                     console.error('Erro ao carregar POIs do mapa:', poisResult.reason);
                 }
-
-                setBeaches(beachesData);
 
                 const beachPins = beachesData.map(beachToPin);
                 const poiPins = poisData
@@ -214,7 +219,12 @@ export default function MapScreen() {
                 const location = await Location.getCurrentPositionAsync({
                     accuracy: Location.Accuracy.High,
                 });
-                setUserLocation([location.coords.longitude, location.coords.latitude]);
+                const currentUserLocation: [number, number] = [
+                    location.coords.longitude,
+                    location.coords.latitude,
+                ];
+                initialCameraCenterRef.current = currentUserLocation;
+                setUserLocation(currentUserLocation);
                 setIsLocationReady(true);
 
                 subscription = await Location.watchPositionAsync(
@@ -233,6 +243,17 @@ export default function MapScreen() {
             if (subscription) subscription.remove();
         };
     }, []);
+
+    useEffect(() => {
+        if (!isLocationReady || hasInitializedCameraRef.current || !cameraRef.current) return;
+
+        hasInitializedCameraRef.current = true;
+        cameraRef.current.setCamera({
+            centerCoordinate: initialCameraCenterRef.current,
+            zoomLevel: 12,
+            animationDuration: 0,
+        });
+    }, [isLocationReady]);
 
     const toggleFilter = useCallback((type: SpotType) => {
         setActiveFilters((prev) =>
@@ -262,67 +283,26 @@ export default function MapScreen() {
         if (!pickingLocation) return;
         const coords: [number, number] = e.geometry.coordinates;
         setPendingCoord(coords);
-        setSelectedBeachId(findNearestBeachId(coords, beaches) ?? beaches[0]?.id ?? null);
-        resetPoiForm();
         setShowPoiModal(true);
-    }, [beaches, pickingLocation, resetPoiForm]);
+    }, [pickingLocation]);
 
-    const handleConfirmPoi = useCallback(async () => {
+    const handleConfirmPoi = useCallback(() => {
         if (!pendingCoord) return;
-        if (!poiName.trim()) {
-            Alert.alert('Aviso', 'Informe o nome do ponto de interesse.');
-            return;
-        }
-        if (!selectedBeachId) {
-            Alert.alert('Aviso', 'Selecione uma praia para associar ao ponto de interesse.');
-            return;
-        }
-
-        const categoria = SPOT_TO_POI_CATEGORY[poiType];
-        if (!categoria) {
-            Alert.alert('Aviso', 'Selecione uma categoria valida.');
-            return;
-        }
-
+        setShowPoiModal(false);
+        setPickingLocation(false);
         const [lng, lat] = pendingCoord;
-        setCreatingPoi(true);
-        try {
-            const createdPoi = await poiService.createPoi({
-                nome: poiName.trim(),
-                descricao: poiDescription.trim(),
-                categoria,
-                latitude: lat,
-                longitude: lng,
-                telefone: poiPhone.trim() || undefined,
-                beachId: selectedBeachId,
-            });
-
-            const newPin = poiToPin(createdPoi);
-            if (newPin) {
-                setAllPins((prev) => [newPin, ...prev]);
-            }
-
-            setShowPoiModal(false);
-            setPickingLocation(false);
-            setPendingCoord(null);
-            setSelectedBeachId(null);
-            resetPoiForm();
-            Alert.alert('Sucesso', 'Ponto de interesse criado com sucesso.');
-        } catch (error: any) {
-            console.error('Erro ao criar ponto de interesse:', error?.response?.data || error?.message);
-            Alert.alert('Erro', 'Nao foi possivel criar o ponto de interesse.');
-        } finally {
-            setCreatingPoi(false);
-        }
-    }, [pendingCoord, poiName, poiDescription, poiPhone, poiType, selectedBeachId, resetPoiForm]);
+        const url = `${GOOGLE_FORMS_URL}?usp=pp_url&${LAT_ENTRY}=${lat.toFixed(6)}&${LNG_ENTRY}=${lng.toFixed(6)}`;
+        Linking.openURL(url).catch(() =>
+            Alert.alert('Erro', 'Não foi possível abrir o formulário.')
+        );
+        setPendingCoord(null);
+    }, [pendingCoord]);
 
     const handleCancelPoi = useCallback(() => {
         setShowPoiModal(false);
         setPendingCoord(null);
         setPickingLocation(false);
-        setSelectedBeachId(null);
-        resetPoiForm();
-    }, [resetPoiForm]);
+    }, []);
 
     const handlePinPress = useCallback((pin: MapPin) => {
         setSelectedPinData(pin);
@@ -362,26 +342,6 @@ export default function MapScreen() {
         });
     }, [allPins, activeFilters, normalizedSearch]);
 
-    // INJETAMOS CORES E TAMANHOS DIRETAMENTE NO GEOJSON PARA LER NO CIRCLELAYER
-    const pinsGeoJSON = useMemo(() => {
-        return {
-            type: 'FeatureCollection',
-            features: visiblePins.map((pin) => ({
-                type: 'Feature',
-                id: pin.id,
-                geometry: {
-                    type: 'Point',
-                    coordinates: pin.coordinate,
-                },
-                properties: {
-                    ...pin,
-                    color: SPOT_COLORS[pin.type],
-                    radius: selectedPinData?.id === pin.id ? 14 : 9,
-                },
-            })),
-        };
-    }, [visiblePins, selectedPinData]);
-
     if (!isLocationReady) {
         return (
             <View style={[styles.map, { alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.light.background }]}>
@@ -393,97 +353,17 @@ export default function MapScreen() {
         );
     }
 
-    const initialCameraCenter = userLocation ?? [-38.5016, -3.7172];
-
     return (
         <GestureHandlerRootView style={{ flex: 1 }}>
             <View style={{ flex: 1 }}>
-                <MapView
-                    ref={mapRef}
-                    style={styles.map}
-                    mapStyle="https://tiles.openfreemap.org/styles/positron"
-                    onPress={handleMapPress}
-                >
-                    <Camera
-                        ref={cameraRef}
-                        defaultSettings={{
-                            zoomLevel: 12,
-                            centerCoordinate: initialCameraCenter,
-                        }}
-                    />
-
-                    <ShapeSource
-                        id="pinsSource"
-                        cluster={true}
-                        clusterRadius={40}
-                        shape={pinsGeoJSON as any}
-                        onPress={async (e) => {
-                            const feature = e.features[0];
-                            if (feature.properties?.cluster) {
-                                const currentZoom = await mapRef.current?.getZoom() || 12;
-                                cameraRef.current?.setCamera({
-                                    centerCoordinate: (feature.geometry as any).coordinates,
-                                    zoomLevel: currentZoom + 2,
-                                    animationDuration: 400,
-                                });
-                            } else {
-                                handlePinPress(feature.properties as any);
-                            }
-                        }}
-                    >
-                        <CircleLayer
-                            id="clusteredPoints"
-                            filter={['has', 'point_count']}
-                            style={{
-                                circleColor: Colors.light.text,
-                                circleRadius: 18,
-                                circleStrokeWidth: 2,
-                                circleStrokeColor: '#ffffff',
-                            }}
-                        />
-
-                        {/* NÚMEROS DO AGRUPAMENTO - SE DER 404 NO CONSOLE, BASTA APAGAR ESTE SYMBOL LAYER */}
-                        <SymbolLayer
-                            id="clusterCount"
-                            filter={['has', 'point_count']}
-                            style={{
-                                textField: '{point_count}',
-                                textSize: 13,
-                                textColor: '#ffffff',
-                                textAllowOverlap: true,
-                                textFont: ['Noto Sans Regular'],
-                            }}
-                        />
-
-                        {/* PONTOS INDIVIDUAIS COM AS CORES (ZOOM IN) */}
-                        <CircleLayer
-                            id="unclusteredPoints"
-                            filter={['!', ['has', 'point_count']]}
-                            style={{
-                                circleColor: ['get', 'color'],
-                                circleRadius: ['get', 'radius'],
-                                circleStrokeWidth: 2,
-                                circleStrokeColor: '#ffffff',
-                            }}
-                        />
-                    </ShapeSource>
-
-                    {/* LOCALIZAÇÃO DO USUÁRIO */}
-                    {userLocation && (
-                        <MarkerView coordinate={userLocation} anchor={{ x: 0.5, y: 0.5 }}>
-                            <View style={styles.userLocationOuter}>
-                                <View style={styles.userLocationDot} />
-                            </View>
-                        </MarkerView>
-                    )}
-
-                    {/* PIN PENDENTE */}
-                    {pendingCoord && (
-                        <MarkerView coordinate={pendingCoord} anchor={{ x: 0.5, y: 1 }}>
-                            <View style={styles.pendingPin} />
-                        </MarkerView>
-                    )}
-                </MapView>
+                <MapCanvas
+                    cameraRef={cameraRef}
+                    onMapPress={handleMapPress}
+                    onPinPress={handlePinPress}
+                    pendingCoord={pendingCoord}
+                    userLocation={userLocation}
+                    visiblePins={visiblePins}
+                />
 
                 {pickingLocation && (
                     <View style={styles.pickingBanner}>
@@ -536,20 +416,31 @@ export default function MapScreen() {
                     )}
                 </View>
 
-                <TouchableOpacity
-                    style={styles.myLocationButton}
-                    onPress={handleGoToMyLocation}
-                    disabled={!userLocation}
-                >
-                    <Locate size={22} color={userLocation ? Colors.light.text : '#aaa'} />
-                </TouchableOpacity>
+                <View pointerEvents="box-none" style={styles.floatingControls}>
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.myLocationButton,
+                            pressed && styles.floatingButtonPressed,
+                        ]}
+                        onPress={handleGoToMyLocation}
+                        disabled={!userLocation}
+                        hitSlop={8}
+                    >
+                        <Locate size={22} color={userLocation ? Colors.light.text : '#aaa'} />
+                    </Pressable>
 
-                <TouchableOpacity
-                    style={[styles.markPoiButton, pickingLocation && styles.markPoiButtonActive]}
-                    onPress={handleTogglePickingMode}
-                >
-                    <MapPinIcon size={22} color={pickingLocation ? '#fff' : Colors.light.text} />
-                </TouchableOpacity>
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.markPoiButton,
+                            pickingLocation && styles.markPoiButtonActive,
+                            pressed && styles.floatingButtonPressed,
+                        ]}
+                        onPress={handleTogglePickingMode}
+                        hitSlop={8}
+                    >
+                        <MapPinIcon size={22} color={pickingLocation ? '#fff' : Colors.light.text} />
+                    </Pressable>
+                </View>
 
                 <BottomSheet
                     visible={selectedPinData !== null}
@@ -574,106 +465,15 @@ export default function MapScreen() {
                             <MapPinIcon size={32} color={Colors.light.text} style={{ marginBottom: 12 }} />
                             <Text style={styles.modalTitle}>Novo ponto de interesse</Text>
                             <Text style={styles.modalBody}>
-                                Preencha os dados e associe uma praia.
+                                Você quer adicionar um novo ponto de interesse nessa localização? Você sera redirecionado para um formulario.
                             </Text>
-                            <TextInput
-                                style={styles.modalInput}
-                                placeholder="Nome do ponto"
-                                placeholderTextColor="#8B8B8B"
-                                value={poiName}
-                                onChangeText={setPoiName}
-                            />
-                            <TextInput
-                                style={[styles.modalInput, styles.modalInputMultiline]}
-                                placeholder="Descricao"
-                                placeholderTextColor="#8B8B8B"
-                                value={poiDescription}
-                                onChangeText={setPoiDescription}
-                                multiline
-                            />
-                            <TextInput
-                                style={styles.modalInput}
-                                placeholder="WhatsApp/Telefone (opcional)"
-                                placeholderTextColor="#8B8B8B"
-                                value={poiPhone}
-                                onChangeText={setPoiPhone}
-                                keyboardType="phone-pad"
-                            />
-
-                            <View style={styles.modalTypeRow}>
-                                {(
-                                    [
-                                        { label: 'Escolinha', type: 'escolinha' as SpotType },
-                                        { label: 'Reparo', type: 'reparo' as SpotType },
-                                        { label: 'Loja', type: 'loja' as SpotType },
-                                    ] as const
-                                ).map((item) => (
-                                    <TouchableOpacity
-                                        key={item.type}
-                                        style={[
-                                            styles.modalTypeButton,
-                                            poiType === item.type && styles.modalTypeButtonActive,
-                                        ]}
-                                        onPress={() => setPoiType(item.type)}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.modalTypeText,
-                                                poiType === item.type && styles.modalTypeTextActive,
-                                            ]}
-                                        >
-                                            {item.label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            <Text style={styles.modalSectionLabel}>Praia associada</Text>
-                            <ScrollView
-                                horizontal
-                                showsHorizontalScrollIndicator={false}
-                                contentContainerStyle={styles.modalBeachRow}
-                            >
-                                {beaches.length === 0 ? (
-                                    <Text style={styles.modalEmptyBeachText}>
-                                        Nenhuma praia disponivel para associar.
-                                    </Text>
-                                ) : (
-                                    beaches.map((beach) => (
-                                        <TouchableOpacity
-                                            key={beach.id}
-                                            style={[
-                                                styles.modalBeachButton,
-                                                selectedBeachId === beach.id && styles.modalBeachButtonActive,
-                                            ]}
-                                            onPress={() => setSelectedBeachId(beach.id)}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.modalBeachText,
-                                                    selectedBeachId === beach.id && styles.modalBeachTextActive,
-                                                ]}
-                                            >
-                                                {beach.nome}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))
-                                )}
-                            </ScrollView>
-
                             <View style={styles.modalActions}>
-                                <TouchableOpacity style={styles.modalBtnOutline} onPress={handleCancelPoi}>
-                                    <Text style={styles.modalBtnOutlineText}>Cancelar</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[styles.modalBtnFill, creatingPoi && { opacity: 0.7 }]}
-                                    onPress={handleConfirmPoi}
-                                    disabled={creatingPoi}
-                                >
-                                    <Text style={styles.modalBtnFillText}>
-                                        {creatingPoi ? 'Salvando...' : 'Salvar POI'}
-                                    </Text>
-                                </TouchableOpacity>
+                                <Pressable style={styles.modalBtnOutline} onPress={handleCancelPoi}>
+                                    <Text style={styles.modalBtnOutlineText}>Não</Text>
+                                </Pressable>
+                                <Pressable style={styles.modalBtnFill} onPress={handleConfirmPoi}>
+                                    <Text style={styles.modalBtnFillText}>Sim, abrir formulário</Text>
+                                </Pressable>
                             </View>
                         </View>
                     </View>
@@ -705,6 +505,11 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: '#fff',
     },
+    floatingControls: {
+        ...StyleSheet.absoluteFillObject,
+        pointerEvents: 'box-none',
+        zIndex: 30,
+    },
     myLocationButton: {
         position: 'absolute',
         bottom: 90,
@@ -715,11 +520,11 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
-        elevation: 6,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
+        elevation: 8,
     },
     markPoiButton: {
         position: 'absolute',
@@ -731,14 +536,18 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
-        elevation: 6,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
+        elevation: 8,
     },
     markPoiButtonActive: {
         backgroundColor: Colors.light.text,
+    },
+    floatingButtonPressed: {
+        opacity: 0.85,
+        transform: [{ scale: 0.96 }],
     },
     pendingPin: {
         width: 16,
@@ -969,5 +778,20 @@ const styles = StyleSheet.create({
     },
     filterTextInactive: {
         color: Colors.light.text,
+    },
+    pinContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+    },
+    pinBubble: {
+        backgroundColor: Colors.light.text,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 });

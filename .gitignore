@@ -57,3 +57,5 @@ test_results.txt
 *.swp
 *.swo
 *~
+
+.codex
