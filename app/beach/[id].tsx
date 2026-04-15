@@ -42,7 +42,6 @@ function sortMessagesByDateDesc(messages: Array<BeachMessageDTO | null | undefin
 }
 
 export function PostCard({ post }: { post: PostDTO }) {
-function PostCard({ post }: { post: PostDTO }) {
   const likesCount = normalizeCounter(post.likesCount);
   const commentsCount = normalizeCounter(post.commentsCount);
 
@@ -55,10 +54,8 @@ function PostCard({ post }: { post: PostDTO }) {
       {post.caminhoFoto ? <Image testID={`post-image-${post.id}`} source={{ uri: post.caminhoFoto }} style={styles.postImage} /> : null}
       <Text testID={`post-description-${post.id}`} style={styles.postDescription}>{post.descricao || 'Sem descricao.'}</Text>
       <View style={styles.postStats}>
-        <Text testID={`post-likes-${post.id}`} style={styles.postStatsText}>{post.likesCount ?? 0} curtidas</Text>
-        <Text testID={`post-comments-${post.id}`} style={styles.postStatsText}>{post.commentsCount ?? 0} comentarios</Text>
-        <Text style={styles.postStatsText}>{likesCount} curtidas</Text>
-        <Text style={styles.postStatsText}>{commentsCount} comentarios</Text>
+        <Text testID={`post-likes-${post.id}`} style={styles.postStatsText}>{likesCount} curtidas</Text>
+        <Text testID={`post-comments-${post.id}`} style={styles.postStatsText}>{commentsCount} comentarios</Text>
       </View>
     </View>
   );
@@ -75,7 +72,6 @@ function MessageCard({ message }: { message: BeachMessageDTO }) {
     </View>
   );
 }
-
 export default function BeachDetailsScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const navigation = useNavigation();
