@@ -1,10 +1,41 @@
-import React from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { authService } from '../services/auth/authService';
 
 export default function RegisterScreen() {
-  const handleRegister = () => {
-    router.replace('/(tabs)');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!username || !email || !password) {
+      Alert.alert('Aviso', 'Por favor, preencha todos os campos.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await authService.signup(email, password, username);
+      Alert.alert('Sucesso', 'Conta criada com sucesso!', [
+        { text: 'Ir para o Login', onPress: () => router.replace('/') },
+      ]);
+    } catch (error: any) {
+      console.log('Erro no cadastro:', error.response?.data || error.message);
+
+      if (error.response?.status === 400) {
+        Alert.alert('Erro', 'O e-mail ou usuário já está em uso.');
+      } else if (error.response?.status === 404) {
+        Alert.alert('Erro', 'Rota de cadastro não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
+      } else {
+        Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -15,14 +46,40 @@ export default function RegisterScreen() {
           style={styles.logo}
         />
 
-        <TextInput style={styles.input} placeholder="Usuário" placeholderTextColor="#8C8A80" autoCapitalize="none" />
-        <TextInput style={styles.input} placeholder="E-mail" placeholderTextColor="#8C8A80" keyboardType="email-address" autoCapitalize="none" />
-        <TextInput style={styles.input} placeholder="Senha" placeholderTextColor="#8C8A80" secureTextEntry />
-        <TextInput style={styles.input} placeholder="Gênero" placeholderTextColor="#8C8A80" />
-        <TextInput style={styles.input} placeholder="Data de Nascimento (DD/MM/AAAA)" placeholderTextColor="#8C8A80" keyboardType="numeric" />
+        <TextInput
+          style={styles.input}
+          placeholder="Usuário"
+          placeholderTextColor="#8C8A80"
+          autoCapitalize="none"
+          value={username}
+          onChangeText={setUsername}
+        />
 
-        <TouchableOpacity style={styles.button} onPress={handleRegister}>
-          <Text style={styles.buttonText}>Cadastrar</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="E-mail"
+          placeholderTextColor="#8C8A80"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
+        />
+
+        <TextInput
+          style={styles.input}
+          placeholder="Senha"
+          placeholderTextColor="#8C8A80"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+
+        <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isLoading}>
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Cadastrar</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity onPress={() => router.back()} style={styles.loginLink}>
@@ -86,5 +143,5 @@ const styles = StyleSheet.create({
   linkTextBold: {
     color: '#5C9DB8',
     fontWeight: 'bold',
-  }
+  },
 });
