@@ -39,17 +39,32 @@ function formatDateTime(value?: string) {
   });
 }
 
-function sortMessagesByDateDesc(messages: BeachMessageDTO[]): BeachMessageDTO[] {
-  return [...messages].sort((a, b) => {
-    const first = new Date(a.data).getTime();
-    const second = new Date(b.data).getTime();
-    const safeFirst = Number.isNaN(first) ? 0 : first;
-    const safeSecond = Number.isNaN(second) ? 0 : second;
-    return safeSecond - safeFirst;
-  });
+function normalizeCounter(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  if (Array.isArray(value)) return value.length;
+  return 0;
+}
+
+function sortMessagesByDateDesc(messages: Array<BeachMessageDTO | null | undefined>): BeachMessageDTO[] {
+  return messages
+    .filter((message): message is BeachMessageDTO => Boolean(message))
+    .sort((a, b) => {
+      const first = new Date(a.data).getTime();
+      const second = new Date(b.data).getTime();
+      const safeFirst = Number.isNaN(first) ? 0 : first;
+      const safeSecond = Number.isNaN(second) ? 0 : second;
+      return safeSecond - safeFirst;
+    });
 }
 
 function PostCard({ post }: { post: PostDTO }) {
+  const likesCount = normalizeCounter(post.likesCount);
+  const commentsCount = normalizeCounter(post.commentsCount);
+
   return (
     <View style={styles.postCard}>
       <View style={styles.postHeader}>
@@ -59,8 +74,8 @@ function PostCard({ post }: { post: PostDTO }) {
       {post.caminhoFoto ? <Image source={{ uri: post.caminhoFoto }} style={styles.postImage} /> : null}
       <Text style={styles.postDescription}>{post.descricao || 'Sem descricao.'}</Text>
       <View style={styles.postStats}>
-        <Text style={styles.postStatsText}>{post.likesCount ?? 0} curtidas</Text>
-        <Text style={styles.postStatsText}>{post.commentsCount ?? 0} comentarios</Text>
+        <Text style={styles.postStatsText}>{likesCount} curtidas</Text>
+        <Text style={styles.postStatsText}>{commentsCount} comentarios</Text>
       </View>
     </View>
   );
@@ -108,14 +123,30 @@ export default function BeachDetailsScreen() {
 
     try {
       setError(null);
-      const [beachData, beachPosts, beachMessages] = await Promise.all([
+      const [beachResult, postsResult, messagesResult] = await Promise.allSettled([
         beachService.getBeachById(beachId),
         beachService.getBeachPosts(beachId),
         beachService.getBeachMessages(beachId),
       ]);
 
+      if (beachResult.status === 'rejected') {
+        throw beachResult.reason;
+      }
+
+      const beachData = beachResult.value;
+      const beachPosts = postsResult.status === 'fulfilled' ? postsResult.value : [];
+      const beachMessages = messagesResult.status === 'fulfilled' ? messagesResult.value : [];
+
+      if (postsResult.status === 'rejected') {
+        console.error('Erro ao carregar posts da praia:', postsResult.reason);
+      }
+
+      if (messagesResult.status === 'rejected') {
+        console.error('Erro ao carregar mensagens da praia:', messagesResult.reason);
+      }
+
       setBeach(beachData);
-      setPosts(beachPosts || []);
+      setPosts((beachPosts || []).filter(Boolean));
       setMessages(sortMessagesByDateDesc(beachMessages || []));
     } catch (e) {
       console.error('Erro ao carregar detalhes da praia:', e);
@@ -209,7 +240,9 @@ export default function BeachDetailsScreen() {
               {messages.length === 0 ? (
                 <Text style={styles.emptyStateText}>Ainda nao ha mensagens neste mural.</Text>
               ) : (
-                messages.map((message) => <MessageCard key={message.id} message={message} />)
+                messages.map((message, index) => (
+                  <MessageCard key={message.id ?? `message-${index}`} message={message} />
+                ))
               )}
             </View>
 
