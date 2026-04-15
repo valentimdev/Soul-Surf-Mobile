@@ -1,7 +1,7 @@
 import { render, waitFor } from '@testing-library/react-native';
 import * as Location from 'expo-location';
 import React from 'react';
-import MapScreen from './map';
+import MapScreen from '../app/(tabs)/map';
 
 // Mock do expo-location
 jest.mock('expo-location', () => ({
