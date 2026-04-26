@@ -11,7 +11,7 @@ describe('api configuration', () => {
     }
 
     if (originalNodeEnv === undefined) {
-      process.env.NODE_ENV = undefined as unknown as string;
+      Reflect.deleteProperty(process.env, 'NODE_ENV');
       return;
     }
 
