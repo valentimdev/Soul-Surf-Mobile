@@ -39,6 +39,28 @@ describe('weatherService integration (mock data + real HTTP call)', () => {
     await expect(weatherService.getCurrentWeather('Fortaleza,BR')).resolves.toEqual(payload);
   });
 
+  test('getCurrentWeather deve usar cidade padrao quando parametro nao for informado', async () => {
+    const payload = {
+      cityName: 'Fortaleza',
+      temp: 30,
+      description: 'sol forte',
+      iconCode: '01d',
+    };
+
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/weather/current',
+        handler: (request) => {
+          expect(request.query).toEqual({ city: 'Fortaleza,BR' });
+          return { status: 200, body: payload };
+        },
+      },
+    ]);
+
+    await expect(weatherService.getCurrentWeather()).resolves.toEqual(payload);
+  });
+
   test('getCurrentWeather deve propagar erro HTTP real', async () => {
     server.setRoutes([
       {

@@ -81,4 +81,18 @@ describe('authService unit', () => {
       authService.signup('samuca@soulsurf.com', '123456', 'samuca')
     ).rejects.toBe(error);
   });
+
+  test('propaga erros do forgotPassword sem mascarar a resposta da API', async () => {
+    const error = { response: { status: 404, data: { message: 'Email não encontrado' } } };
+    (api.post as jest.Mock).mockRejectedValue(error);
+
+    await expect(authService.forgotPassword('naoexiste@soulsurf.com')).rejects.toBe(error);
+  });
+
+  test('propaga erros do resetPassword sem mascarar a resposta da API', async () => {
+    const error = { response: { status: 400, data: { message: 'Token inválido' } } };
+    (api.post as jest.Mock).mockRejectedValue(error);
+
+    await expect(authService.resetPassword('token-errado', 'nova-senha')).rejects.toBe(error);
+  });
 });
