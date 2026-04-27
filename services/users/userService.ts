@@ -1,5 +1,15 @@
 import api from '../api';
+import * as SecureStore from 'expo-secure-store';
 import { UserDTO } from '../../types/api';
+
+const rawUploadTimeoutMs = process.env.EXPO_PUBLIC_UPLOAD_TIMEOUT_MS?.trim();
+const parsedUploadTimeoutMs = Number(rawUploadTimeoutMs);
+const PROFILE_UPLOAD_TIMEOUT_MS = Number.isFinite(parsedUploadTimeoutMs) && parsedUploadTimeoutMs > 0
+  ? parsedUploadTimeoutMs
+  : 120000;
+const IS_DEV = typeof __DEV__ !== 'undefined'
+  ? __DEV__
+  : process.env.NODE_ENV !== 'production';
 
 export const userService = {
   // Pegar Meu Perfil Atual
@@ -54,6 +64,7 @@ export const userService = {
   },
 
   // Atualizar Perfil: Bio e Fotos
+  // Usa fetch nativo em vez de Axios para evitar problemas de Content-Type com FormData no React Native.
   updateProfile: async (bio?: string, username?: string, fotoPerfilUri?: string, fotoCapaUri?: string): Promise<UserDTO> => {
     const formData = new FormData();
 
@@ -78,25 +89,80 @@ export const userService = {
     if (fotoPerfilUri) appendFile(fotoPerfilUri, 'fotoPerfil');
     if (fotoCapaUri) appendFile(fotoCapaUri, 'fotoCapa');
 
-    const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
+    const startedAt = Date.now();
 
-    const response = await api.put('/api/users/me/upload', formData, isReactNative
-      ? {
-          // No React Native, deixar o runtime definir o boundary automaticamente.
-          transformRequest: (data, headers) => {
-            if (headers) {
-              delete (headers as any)['Content-Type'];
-              delete (headers as any)['content-type'];
-            }
-            return data;
-          },
+    if (IS_DEV) {
+      console.log('[UPLOAD_PROFILE]', {
+        endpoint: '/api/users/me/upload',
+        timeoutMs: PROFILE_UPLOAD_TIMEOUT_MS,
+        hasBio: typeof bio === 'string' && bio.trim().length > 0,
+        hasUsername: typeof username === 'string' && username.trim().length > 0,
+        hasFotoPerfil: Boolean(fotoPerfilUri),
+        hasFotoCapa: Boolean(fotoCapaUri),
+      });
+    }
+
+    try {
+      // Usa fetch nativo para uploads multipart.
+      // O Axios v1.x não remove corretamente o header Content-Type no React Native,
+      // fazendo com que o FormData seja enviado como application/json e falhe instantaneamente.
+      const token = await SecureStore.getItemAsync('userToken');
+      const baseURL = api.defaults.baseURL ?? '';
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), PROFILE_UPLOAD_TIMEOUT_MS);
+
+      const response = await fetch(`${baseURL}/api/users/me/upload`, {
+        method: 'PUT',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          'Accept': 'application/json',
+          // NÃO definir Content-Type! O fetch define automaticamente com o boundary correto.
+        },
+        body: formData,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      const responseData = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        if (IS_DEV) {
+          console.error('[UPLOAD_PROFILE_ERROR]', {
+            endpoint: '/api/users/me/upload',
+            status: response.status,
+            data: responseData,
+            durationMs: Date.now() - startedAt,
+          });
         }
-      : {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
+        const error: any = new Error(responseData?.message || `Request failed with status ${response.status}`);
+        error.response = { status: response.status, data: responseData };
+        throw error;
+      }
+
+      if (IS_DEV) {
+        console.log('[UPLOAD_PROFILE_OK]', {
+          endpoint: '/api/users/me/upload',
+          status: response.status,
+          durationMs: Date.now() - startedAt,
         });
-    
-    return response.data;
+      }
+
+      return responseData as UserDTO;
+    } catch (error: any) {
+      if (IS_DEV && !error.response) {
+        console.error('[UPLOAD_PROFILE_ERROR]', {
+          endpoint: '/api/users/me/upload',
+          message: error?.message,
+          name: error?.name,
+          durationMs: Date.now() - startedAt,
+          timeoutMs: PROFILE_UPLOAD_TIMEOUT_MS,
+          isAborted: error?.name === 'AbortError',
+        });
+      }
+
+      throw error;
+    }
   },
 };
