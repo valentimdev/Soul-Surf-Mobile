@@ -62,6 +62,32 @@ describe('chatService integration (mock data + real HTTP call)', () => {
     await expect(chatService.createOrGetDM('88')).resolves.toBe('conv-raw');
   });
 
+  test('createOrGetDM deve usar campo id quando conversationId nao vier', async () => {
+    server.setRoutes([
+      {
+        method: 'POST',
+        path: '/api/chat/dm',
+        response: { status: 200, body: { id: 77 } },
+      },
+    ]);
+
+    await expect(chatService.createOrGetDM('77')).resolves.toBe('77');
+  });
+
+  test('createOrGetDM deve falhar com resposta inesperada', async () => {
+    server.setRoutes([
+      {
+        method: 'POST',
+        path: '/api/chat/dm',
+        response: { status: 200, body: { ok: true } },
+      },
+    ]);
+
+    await expect(chatService.createOrGetDM('11')).rejects.toThrow(
+      'Resposta inesperada ao criar conversa'
+    );
+  });
+
   test('getMessages deve enviar paginação', async () => {
     const payload = [{ id: 'm1', content: 'O mar ta bom' }];
     server.setRoutes([
@@ -89,6 +115,18 @@ describe('chatService integration (mock data + real HTTP call)', () => {
     ]);
 
     await expect(chatService.getMessages('conv-9')).resolves.toEqual(payload);
+  });
+
+  test('getMessages deve retornar vazio quando formato da resposta for invalido', async () => {
+    server.setRoutes([
+      {
+        method: 'GET',
+        path: '/api/chat/conversations/conv-x/messages',
+        response: { status: 200, body: { page: 0, total: 1 } },
+      },
+    ]);
+
+    await expect(chatService.getMessages('conv-x')).resolves.toEqual([]);
   });
 
   test('sendMessage deve consumir POST /api/chat/conversations/{id}/messages', async () => {

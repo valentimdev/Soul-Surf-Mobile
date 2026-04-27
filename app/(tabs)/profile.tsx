@@ -42,6 +42,12 @@ export default function ProfileScreen() {
   const [modalUsers, setModalUsers] = useState<UserDTO[]>([]);
   const [loadingModal, setLoadingModal] = useState(false);
 
+  // Estados do BottomSheet (Substituindo o Modal)
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [modalType, setModalType] = useState<'followers' | 'following' | null>(null);
+  const [modalUsers, setModalUsers] = useState<UserDTO[]>([]);
+  const [loadingModal, setLoadingModal] = useState(false);
+
   const fetchProfile = useCallback(async () => {
     setLoading(true);
     try {

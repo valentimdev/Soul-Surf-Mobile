@@ -7,10 +7,12 @@ Aplicativo mobile desenvolvido com Expo e React Native.
 Crie um arquivo `.env` baseado em `.env.example`:
 
 ```bash
-EXPO_PUBLIC_API_URL=http://147.15.58.134:8080
+EXPO_PUBLIC_API_URL=https://api.sua-url.com
 ```
 
-Se `EXPO_PUBLIC_API_URL` nao for definido, o app usa esse endpoint Oracle como fallback em `services/api.ts`.
+Em ambiente de desenvolvimento e testes, se `EXPO_PUBLIC_API_URL` nao for definido, o app usa fallback HTTP para facilitar setup local.
+
+Em producao, `EXPO_PUBLIC_API_URL` e obrigatorio e deve usar `https://`.
 
 ---
 

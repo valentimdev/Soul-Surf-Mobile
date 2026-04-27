@@ -12,6 +12,16 @@ const IS_DEV = typeof __DEV__ !== 'undefined'
   : process.env.NODE_ENV !== 'production';
 
 export const userService = {
+  // Lista todos os usuários paginados
+  getUsers: async (offset = 0, limit = 30): Promise<UserDTO[]> => {
+    const response = await api.get('/api/users', {
+      params: { offset, limit }
+    });
+    // Nota: Se a sua API retornar um objeto de página (ex: { content: [...], totalElements: 100 }),
+    // você precisará alterar para: return response.data.content;
+    return response.data;
+  },
+
   // Pegar Meu Perfil Atual
   getMyProfile: async (): Promise<UserDTO> => {
     const response = await api.get('/api/users/me');
