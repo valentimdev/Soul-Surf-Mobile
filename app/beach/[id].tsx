@@ -29,7 +29,7 @@ function normalizeCounter(value: unknown): number {
   return 0;
 }
 
-function sortMessagesByDateDesc(messages: Array<BeachMessageDTO | null | undefined>): BeachMessageDTO[] {
+function sortMessagesByDateDesc(messages: (BeachMessageDTO | null | undefined)[]): BeachMessageDTO[] {
   return messages
     .filter((message): message is BeachMessageDTO => Boolean(message))
     .sort((a, b) => {

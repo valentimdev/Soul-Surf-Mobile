@@ -34,6 +34,11 @@ describe('Marker Utils', () => {
       const filtered = filterMarkers(mockMarkers.slice(0, 2), ['loja']);
       expect(filtered.length).toBe(0);
     });
+
+    it('deve retornar todos os marcadores quando todos os tipos forem selecionados', () => {
+      const filtered = filterMarkers(mockMarkers, ['pico', 'loja', 'escolinha', 'reparo']);
+      expect(filtered).toEqual(mockMarkers);
+    });
   });
 
   describe('simulateClustering', () => {
@@ -49,11 +54,22 @@ describe('Marker Utils', () => {
       expect(result[0]).toHaveProperty('count', 6);
     });
 
+    it('deve agrupar marcadores no limite de zoom 15', () => {
+      const result = simulateClustering(mockMarkers, 15);
+      expect(result.length).toBe(1);
+      expect(result[0]).toHaveProperty('count', 6);
+    });
+
     it('nao deve agrupar se houver poucos marcadores', () => {
       const fewMarkers = mockMarkers.slice(0, 3);
       const result = simulateClustering(fewMarkers, 10);
       expect(result.length).toBe(3);
       expect(result[0]).toHaveProperty('name');
+    });
+
+    it('deve manter lista vazia quando nao houver marcadores', () => {
+      const result = simulateClustering([], 10);
+      expect(result).toEqual([]);
     });
   });
 });
