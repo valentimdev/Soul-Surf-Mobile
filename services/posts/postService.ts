@@ -83,7 +83,7 @@ export const postService = {
     if (fotoUri) {
       const filename = fotoUri.split('/').pop();
       const match = /\.(\w+)$/.exec(filename || '');
-      const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+      const type = match ? `image/${match[1].toLowerCase()}` : 'image';
       const safeFilename = filename && filename.length > 0 ? filename : 'post.jpg';
 
       formData.append('foto', {
