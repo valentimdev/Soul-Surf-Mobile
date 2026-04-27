@@ -1,8 +1,13 @@
 import { chatService, ConversationResponse } from '@/services/chat/chatService';
+import { userService } from '@/services/users/userService';
+import { UserDTO } from '@/types/api';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   SafeAreaView,
@@ -22,7 +27,7 @@ type ConversationItemView = {
   unread: boolean;
 };
 
-const FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300';
+const FALLBACK_AVATAR = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -63,8 +68,12 @@ function formatConversationTime(createdAt?: string) {
   });
 }
 
-function toConversationView(item: ConversationResponse): ConversationItemView {
+// NOVO: Recebe o currentUserId para verificar a autoria da última mensagem
+function toConversationView(item: ConversationResponse, currentUserId: string): ConversationItemView {
   const fallbackName = item.group ? 'Grupo' : 'Conversa';
+
+  // Verifica se fomos nós que mandamos a última mensagem
+  const isMyLastMessage = String(item.lastMessage?.senderId) === currentUserId;
 
   return {
     id: item.id,
@@ -73,7 +82,8 @@ function toConversationView(item: ConversationResponse): ConversationItemView {
     avatar: item.otherUserAvatarUrl || FALLBACK_AVATAR,
     lastMessage: item.lastMessage?.content || 'Sem mensagens ainda',
     time: formatConversationTime(item.lastMessage?.createdAt),
-    unread: (item.unreadCount ?? 0) > 0,
+    // SÓ mostra a bolinha azul se a última mensagem NÃO for nossa E o contador for maior que 0
+    unread: !isMyLastMessage && (item.unreadCount ?? 0) > 0,
   };
 }
 
@@ -106,32 +116,58 @@ function ConversationCard({ item, onPress }: { item: ConversationItemView; onPre
 
 export default function ChatScreen() {
   const router = useRouter();
+
   const [conversations, setConversations] = useState<ConversationItemView[]>([]);
+  const [following, setFollowing] = useState<UserDTO[]>([]);
+
   const [loading, setLoading] = useState(true);
+  const [loadingFollowing, setLoadingFollowing] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [startingChat, setStartingChat] = useState(false);
 
-  const loadConversations = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+  // NOVO: Uma única função que carrega tudo em paralelo de forma eficiente
+  const loadAllData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+      setLoadingFollowing(true);
+    }
 
     try {
       setError(null);
-      const response = await chatService.getMyConversations();
-      setConversations(response.map(toConversationView));
+
+      // 1. Descobrimos quem somos nós
+      const myProfile = await userService.getMyProfile();
+      const currentId = String(myProfile.id);
+
+      // 2. Buscamos Seguindo e Conversas ao MESMO TEMPO (mais rápido)
+      const [followingData, conversationsData] = await Promise.all([
+        userService.getFollowing(myProfile.id).catch(() => []), // Falha silenciosa pro topo
+        chatService.getMyConversations()
+      ]);
+    console.log("DADOS COMPLETOS DOS SEGUIDOS:", JSON.stringify(followingData, null, 2));
+
+      setFollowing(followingData);
+
+      // 3. Montamos a lista passando o nosso ID para evitar o bug do "Não Lido"
+      setConversations(conversationsData.map(c => toConversationView(c, currentId)));
+
     } catch (e) {
-      console.error('Erro ao carregar conversas:', e);
-      setError('Nao foi possivel carregar as conversas.');
+      console.error('Erro ao carregar dados da tela de chat:', e);
+      setError('Não foi possível carregar as conversas.');
     } finally {
       if (isRefresh) setRefreshing(false);
       else setLoading(false);
+      setLoadingFollowing(false);
     }
   }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadConversations();
-    }, [loadConversations])
+      loadAllData();
+    }, [loadAllData])
   );
 
   const showCenteredLoader = loading && conversations.length === 0;
@@ -152,10 +188,84 @@ export default function ChatScreen() {
     [router]
   );
 
+  const handleStartChatWithFollowed = async (user: UserDTO) => {
+    if (startingChat) return;
+    setStartingChat(true);
+    try {
+      const conversationId = await chatService.createOrGetDM(String(user.id));
+
+      router.push({
+        pathname: '/chat/[id]',
+        params: {
+          id: conversationId,
+          name: user.username,
+          avatar: user.fotoPerfil || FALLBACK_AVATAR,
+          otherUserId: String(user.id),
+        },
+      });
+    } catch (err) {
+      console.error('Erro ao iniciar chat', err);
+      Alert.alert('Erro', 'Não foi possível abrir a conversa no momento.');
+    } finally {
+      setStartingChat(false);
+    }
+  };
+
+  const renderListHeader = () => {
+    if (loadingFollowing) {
+      return (
+        <View style={styles.followingContainer}>
+          <ActivityIndicator size="small" color="#5C9DB8" />
+        </View>
+      );
+    }
+
+    if (following.length === 0) return null;
+
+    return (
+      <View style={styles.followingContainer}>
+        <Text style={styles.followingTitle}>Iniciar conversa</Text>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={following}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.followingItem, startingChat && { opacity: 0.5 }]}
+              activeOpacity={0.7}
+              onPress={() => handleStartChatWithFollowed(item)}
+              disabled={startingChat}
+            >
+              <Image
+                source={{ uri: item.fotoPerfil || FALLBACK_AVATAR }}
+                style={styles.followingAvatar}
+              />
+              <Text style={styles.followingName} numberOfLines={1}>
+                {item.username}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <Text style={styles.title}>Mensagens</Text>
+
+        <View style={styles.header}>
+          <Text style={styles.title}>Mensagens</Text>
+          <TouchableOpacity
+            style={styles.usersButton}
+            onPress={() => router.push('/users')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="people-outline" size={24} color="#1F4A63" />
+            <Text style={styles.usersButtonText}>Descobrir</Text>
+          </TouchableOpacity>
+        </View>
 
         {showCenteredLoader ? (
           <View style={styles.centerState}>
@@ -165,7 +275,7 @@ export default function ChatScreen() {
         ) : showRetry ? (
           <View style={styles.centerState}>
             <Text style={styles.centerStateText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => loadConversations()}>
+            <TouchableOpacity style={styles.retryButton} onPress={() => loadAllData()}>
               <Text style={styles.retryButtonText}>Tentar novamente</Text>
             </TouchableOpacity>
           </View>
@@ -173,13 +283,14 @@ export default function ChatScreen() {
           <FlatList
             data={conversations}
             keyExtractor={(item) => item.id}
+            ListHeaderComponent={renderListHeader}
             renderItem={({ item }) => (
               <ConversationCard item={item} onPress={() => handleOpenConversation(item)} />
             )}
             showsVerticalScrollIndicator={false}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             refreshing={refreshing}
-            onRefresh={() => loadConversations(true)}
+            onRefresh={() => loadAllData(true)}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>Nenhuma conversa encontrada.</Text>
@@ -202,11 +313,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#1F4A63',
-    marginBottom: 20,
+  },
+  usersButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E2DEC3',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 6,
+  },
+  usersButtonText: {
+    color: '#1F4A63',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  followingContainer: {
+    paddingVertical: 5,
+    marginBottom: 15,
+  },
+  followingTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1F4A63',
+    marginBottom: 12,
+  },
+  followingItem: {
+    alignItems: 'center',
+    width: 65,
+    marginRight: 12,
+  },
+  followingAvatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#E2DEC3',
+    marginBottom: 6,
+    borderWidth: 2,
+    borderColor: '#5C9DB8',
+  },
+  followingName: {
+    fontSize: 12,
+    color: '#1F4A63',
+    textAlign: 'center',
   },
   conversationCard: {
     flexDirection: 'row',

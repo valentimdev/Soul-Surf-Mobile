@@ -52,7 +52,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-            href: null,
           title: 'Chat',
           tabBarIcon: ({ color, size }) => (
             <MessageCircle size={size} color={Colors.light.icon} />
@@ -62,7 +61,6 @@ export default function TabLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
-            href: null,
           title: 'Notificações',
           tabBarIcon: ({ color, size }) => (
             <View>
