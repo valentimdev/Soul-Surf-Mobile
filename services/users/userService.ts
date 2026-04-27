@@ -63,11 +63,14 @@ export const userService = {
     const appendFile = (uri: string, fieldName: string) => {
         const filename = uri.split('/').pop();
         const match = /\.(\w+)$/.exec(filename || '');
-        const type = match ? `image/${match[1]}` : `image`;
+        const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+        const safeFilename = filename && filename.length > 0
+          ? filename
+          : `${fieldName}.jpg`;
         
         formData.append(fieldName, {
             uri,
-            name: filename,
+            name: safeFilename,
             type,
         } as any);
     };
@@ -75,11 +78,24 @@ export const userService = {
     if (fotoPerfilUri) appendFile(fotoPerfilUri, 'fotoPerfil');
     if (fotoCapaUri) appendFile(fotoCapaUri, 'fotoCapa');
 
-    const response = await api.put('/api/users/me/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
+
+    const response = await api.put('/api/users/me/upload', formData, isReactNative
+      ? {
+          // No React Native, deixar o runtime definir o boundary automaticamente.
+          transformRequest: (data, headers) => {
+            if (headers) {
+              delete (headers as any)['Content-Type'];
+              delete (headers as any)['content-type'];
+            }
+            return data;
+          },
+        }
+      : {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
     
     return response.data;
   },

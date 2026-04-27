@@ -1,6 +1,10 @@
 import { beachService, BeachMessageDTO } from '@/services/beaches/beachService';
 import { formatDate, formatDateTime } from '@/utils/formatters';
 import { BeachDTO, PostDTO } from '@/types/api';
+import { SurfConditionsCard } from '@/components/surf/SurfConditionsCard';
+import { surfConditionsService } from '@/services/weather/surfConditionsService';
+import { SurfConditionsResponse } from '@/types/surfConditions';
+import * as SecureStore from 'expo-secure-store';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -39,6 +43,23 @@ function sortMessagesByDateDesc(messages: Array<BeachMessageDTO | null | undefin
       const safeSecond = Number.isNaN(second) ? 0 : second;
       return safeSecond - safeFirst;
     });
+}
+
+function getBeachMessagesCacheKey(beachId: number): string {
+  return `beach_messages_${beachId}`;
+}
+
+function parseCachedMessages(raw: string | null): BeachMessageDTO[] {
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+
+    return sortMessagesByDateDesc(parsed as Array<BeachMessageDTO | null | undefined>);
+  } catch {
+    return [];
+  }
 }
 
 export function PostCard({ post }: { post: PostDTO }) {
@@ -83,11 +104,42 @@ export default function BeachDetailsScreen() {
   const [beach, setBeach] = useState<BeachDTO | null>(null);
   const [posts, setPosts] = useState<PostDTO[]>([]);
   const [messages, setMessages] = useState<BeachMessageDTO[]>([]);
+  const [surfConditions, setSurfConditions] = useState<SurfConditionsResponse | null>(null);
+  const [surfConditionsError, setSurfConditionsError] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const messagesCacheKey = useMemo(() => {
+    if (!Number.isFinite(beachId)) return null;
+    return getBeachMessagesCacheKey(beachId);
+  }, [beachId]);
+
+  const persistMessagesCache = useCallback(async (nextMessages: BeachMessageDTO[]) => {
+    if (!messagesCacheKey) return;
+
+    try {
+      const sorted = sortMessagesByDateDesc(nextMessages);
+      await SecureStore.setItemAsync(messagesCacheKey, JSON.stringify(sorted.slice(0, 80)));
+    } catch (cacheError) {
+      console.error('Erro ao salvar cache de mensagens da praia:', cacheError);
+    }
+  }, [messagesCacheKey]);
+
+  const loadMessagesCache = useCallback(async () => {
+    if (!messagesCacheKey) return;
+
+    try {
+      const raw = await SecureStore.getItemAsync(messagesCacheKey);
+      const cachedMessages = parseCachedMessages(raw);
+      if (cachedMessages.length > 0) {
+        setMessages(cachedMessages);
+      }
+    } catch (cacheError) {
+      console.error('Erro ao carregar cache de mensagens da praia:', cacheError);
+    }
+  }, [messagesCacheKey]);
 
   const loadBeachDetails = useCallback(async (isRefresh = false) => {
     if (!Number.isFinite(beachId)) {
@@ -102,19 +154,29 @@ export default function BeachDetailsScreen() {
 
     try {
       setError(null);
-      const [beachResult, postsResult, messagesResult] = await Promise.allSettled([
-        beachService.getBeachById(beachId),
-        beachService.getBeachPosts(beachId),
-        beachService.getBeachMessages(beachId),
+      const beachPromise = beachService.getBeachById(beachId);
+      const postsPromise = beachService.getBeachPosts(beachId);
+      const messagesPromise = beachService.getBeachMessages(beachId);
+      const beachData = await beachPromise;
+
+      const hasValidCoordinates =
+        Number.isFinite(beachData.latitude) && Number.isFinite(beachData.longitude);
+      const surfPromise = hasValidCoordinates
+        ? surfConditionsService.getSurfConditions({
+            lat: beachData.latitude,
+            lon: beachData.longitude,
+            beach: beachData.nome,
+          })
+        : Promise.resolve<SurfConditionsResponse | null>(null);
+
+      const [postsResult, messagesResult, surfResult] = await Promise.allSettled([
+        postsPromise,
+        messagesPromise,
+        surfPromise,
       ]);
 
-      if (beachResult.status === 'rejected') {
-        throw beachResult.reason;
-      }
-
-      const beachData = beachResult.value;
       const beachPosts = postsResult.status === 'fulfilled' ? postsResult.value : [];
-      const beachMessages = messagesResult.status === 'fulfilled' ? messagesResult.value : [];
+      const beachMessages = messagesResult.status === 'fulfilled' ? sortMessagesByDateDesc(messagesResult.value || []) : null;
 
       if (postsResult.status === 'rejected') {
         console.error('Erro ao carregar posts da praia:', postsResult.reason);
@@ -124,9 +186,29 @@ export default function BeachDetailsScreen() {
         console.error('Erro ao carregar mensagens da praia:', messagesResult.reason);
       }
 
+      if (surfResult.status === 'rejected') {
+        console.error('Erro ao carregar condicoes do mar:', surfResult.reason);
+        setSurfConditionsError('Nao foi possivel carregar onda, vento e balneabilidade agora.');
+      } else if (surfResult.value) {
+        setSurfConditions(surfResult.value);
+        setSurfConditionsError(null);
+      } else {
+        setSurfConditions(null);
+        setSurfConditionsError('Este pico ainda nao tem coordenadas para leitura automatica do mar.');
+      }
+
       setBeach(beachData);
       setPosts((beachPosts || []).filter(Boolean));
-      setMessages(sortMessagesByDateDesc(beachMessages || []));
+
+      if (beachMessages) {
+        if (beachMessages.length > 0) {
+          setMessages(beachMessages);
+          void persistMessagesCache(beachMessages);
+        } else {
+          // Se o backend voltar vazio, preserva o cache local para evitar "sumiço" ao voltar para a tela.
+          setMessages((prev) => (prev.length > 0 ? prev : []));
+        }
+      }
     } catch (e) {
       console.error('Erro ao carregar detalhes da praia:', e);
       setError('Nao foi possivel carregar os dados da praia.');
@@ -134,17 +216,34 @@ export default function BeachDetailsScreen() {
       if (isRefresh) setRefreshing(false);
       else setLoading(false);
     }
-  }, [beachId]);
+  }, [beachId, persistMessagesCache]);
+
+  useEffect(() => {
+    void loadMessagesCache();
+  }, [loadMessagesCache]);
 
   useEffect(() => {
     loadBeachDetails();
   }, [loadBeachDetails]);
 
   useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadBeachDetails(true);
+    });
+
+    return unsubscribe;
+  }, [navigation, loadBeachDetails]);
+
+  useEffect(() => {
     if (beach?.nome) {
       navigation.setOptions({ title: beach.nome });
     }
   }, [beach?.nome, navigation]);
+
+  useEffect(() => {
+    setSurfConditions(null);
+    setSurfConditionsError(null);
+  }, [beachId]);
 
   const handleSendMessage = useCallback(async () => {
     if (!Number.isFinite(beachId)) return;
@@ -156,15 +255,20 @@ export default function BeachDetailsScreen() {
     setSendingMessage(true);
     try {
       const created = await beachService.postBeachMessage(beachId, newMessage.trim());
-      setMessages((prev) => sortMessagesByDateDesc([created, ...prev]));
+      setMessages((prev) => {
+        const next = sortMessagesByDateDesc([created, ...prev]);
+        void persistMessagesCache(next);
+        return next;
+      });
       setNewMessage('');
+      void loadBeachDetails(true);
     } catch (e) {
       console.error('Erro ao enviar mensagem da praia:', e);
       Alert.alert('Erro', 'Nao foi possivel publicar sua mensagem.');
     } finally {
       setSendingMessage(false);
     }
-  }, [beachId, newMessage]);
+  }, [beachId, newMessage, loadBeachDetails, persistMessagesCache]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -194,6 +298,26 @@ export default function BeachDetailsScreen() {
               {beach?.descricao ? <Text testID="beach-description" style={styles.beachDescription}>{beach.descricao}</Text> : null}
               <Text testID="beach-location" style={styles.beachMeta}>Local: {beach?.localizacao || 'Nao informado'}</Text>
               <Text testID="beach-experience" style={styles.beachMeta}>Nivel: {beach?.nivelExperiencia || 'Nao informado'}</Text>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Condicoes do mar agora</Text>
+              <Text style={styles.sectionDescription}>
+                Leitura simples com onda, vento e balneabilidade para facilitar sua decisao no pico.
+              </Text>
+
+              {surfConditions ? (
+                <SurfConditionsCard beachName={beach?.nome} data={surfConditions} />
+              ) : loading ? (
+                <View style={styles.surfLoadingBox}>
+                  <ActivityIndicator size="small" color="#5C9DB8" />
+                  <Text style={styles.emptyStateText}>Carregando condicoes do mar...</Text>
+                </View>
+              ) : surfConditionsError ? (
+                <Text style={styles.warningText}>{surfConditionsError}</Text>
+              ) : (
+                <Text style={styles.emptyStateText}>Sem dados de condicoes para este pico agora.</Text>
+              )}
             </View>
 
             <View style={styles.section}>
@@ -295,6 +419,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#1F4A63',
+    marginBottom: 10,
+  },
+  sectionDescription: {
+    fontSize: 13,
+    color: '#4B647A',
+    lineHeight: 18,
     marginBottom: 10,
   },
   messageComposer: {
@@ -403,6 +533,16 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 13,
     color: '#6B7280',
+  },
+  warningText: {
+    fontSize: 13,
+    color: '#8D2E2E',
+    lineHeight: 18,
+  },
+  surfLoadingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   centerState: {
     flex: 1,

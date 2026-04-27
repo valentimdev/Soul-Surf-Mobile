@@ -44,8 +44,19 @@ export default function EditProfileScreen() {
 
       Alert.alert("Sucesso", "Perfil atualizado!");
       router.back();
-    } catch {
-      Alert.alert("Erro", "Não foi possível salvar.");
+    } catch (error: any) {
+      const apiMessage = error?.response?.data?.message;
+      const fallbackMessage = error?.message || 'Nao foi possivel salvar.';
+      const errorMessage = typeof apiMessage === 'string' && apiMessage.length > 0
+        ? apiMessage
+        : fallbackMessage;
+
+      console.error('[EDIT_PROFILE_ERROR]', {
+        status: error?.response?.status,
+        data: error?.response?.data,
+        message: error?.message,
+      });
+      Alert.alert('Erro', errorMessage);
     } finally {
       setLoading(false);
     }
