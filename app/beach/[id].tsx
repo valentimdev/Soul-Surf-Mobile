@@ -56,7 +56,7 @@ function parseCachedMessages(raw: string | null): BeachMessageDTO[] {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
 
-    return sortMessagesByDateDesc(parsed as Array<BeachMessageDTO | null | undefined>);
+    return sortMessagesByDateDesc(parsed as (BeachMessageDTO | null | undefined)[]);
   } catch {
     return [];
   }
