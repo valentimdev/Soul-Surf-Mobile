@@ -2,6 +2,16 @@ import api from '../api';
 import { UserDTO } from '../../types/api';
 
 export const userService = {
+  // Lista todos os usuários paginados
+  getUsers: async (offset = 0, limit = 30): Promise<UserDTO[]> => {
+    const response = await api.get('/api/users', {
+      params: { offset, limit }
+    });
+    // Nota: Se a sua API retornar um objeto de página (ex: { content: [...], totalElements: 100 }),
+    // você precisará alterar para: return response.data.content;
+    return response.data;
+  },
+
   // Pegar Meu Perfil Atual
   getMyProfile: async (): Promise<UserDTO> => {
     const response = await api.get('/api/users/me');
@@ -64,7 +74,7 @@ export const userService = {
         const filename = uri.split('/').pop();
         const match = /\.(\w+)$/.exec(filename || '');
         const type = match ? `image/${match[1]}` : `image`;
-        
+
         formData.append(fieldName, {
             uri,
             name: filename,
@@ -80,7 +90,7 @@ export const userService = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    
+
     return response.data;
   },
 };
