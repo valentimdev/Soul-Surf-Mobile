@@ -13,21 +13,17 @@ export interface BeachMessageDTO {
   praiaId: number;
 }
 
-function normalizeList<T>(raw: unknown): T[] {
-  if (Array.isArray(raw)) return raw as T[];
-  if (raw && typeof raw === 'object' && Array.isArray((raw as PageResponse<T>).content)) {
-    return (raw as PageResponse<T>).content;
-  }
+function normalizeList<T>(raw: any): T[] {
+  if (Array.isArray(raw)) return raw;
+  if (raw?.content && Array.isArray(raw.content)) return raw.content;
+  if (raw?.data && Array.isArray(raw.data)) return raw.data;
   return [];
 }
 
 export const beachService = {
   getAllBeaches: async (): Promise<BeachDTO[]> => {
     const response = await api.get('/api/beaches');
-    const raw = response.data;
-    if (Array.isArray(raw)) return raw;
-    if (Array.isArray(raw?.content)) return raw.content;
-    return [];
+    return normalizeList<BeachDTO>(response.data);
   },
 
   getBeachById: async (beachId: number): Promise<BeachDTO> => {
@@ -36,17 +32,14 @@ export const beachService = {
   },
 
   getBeachPostsPublic: async (beachId: number): Promise<PostDTO[]> => {
-    const bypassCache = new Date().getTime();
-
-    const response = await api.get(
-      `/api/beaches/${beachId}/posts?t=${bypassCache}`,
-      {
-        transformRequest: [(data, headers) => {
-          delete headers.Authorization;
-          return data;
-        }]
-      }
-    );
+    const response = await api.get(`/api/beaches/${beachId}/posts`, {
+      headers: {
+        Authorization: undefined,
+      },
+      params: {
+        t: Date.now(),
+      },
+    });
 
     return normalizeList<PostDTO>(response.data);
   },
@@ -57,9 +50,11 @@ export const beachService = {
   },
 
   getBeachPosts: async (beachId: number): Promise<PostDTO[]> => {
-    const bypassCache = new Date().getTime();
-
-    const response = await api.get(`/api/beaches/${beachId}/posts?t=${bypassCache}`);
+    const response = await api.get(`/api/beaches/${beachId}/posts`, {
+      params: {
+        t: Date.now(),
+      },
+    });
 
     return normalizeList<PostDTO>(response.data);
   },
@@ -71,7 +66,7 @@ export const beachService = {
 
   postBeachMessage: async (beachId: number, texto: string): Promise<BeachMessageDTO> => {
     const response = await api.post(`/api/beaches/${beachId}/mensagens`, null, {
-      params: { texto }
+      params: { texto },
     });
     return response.data;
   },
