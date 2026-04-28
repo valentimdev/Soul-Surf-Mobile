@@ -9,7 +9,8 @@ import {
     Camera,
     CameraRef,
     MapView,
-    MarkerView
+    MarkerView,
+    PointAnnotation,
 } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
@@ -73,6 +74,7 @@ type MapCanvasProps = {
     cameraRef: React.RefObject<CameraRef | null>;
     onMapPress: (e: any) => void;
     onPinPress: (pin: MapPin) => void;
+    selectedPinId: string | null;
     pendingCoord: [number, number] | null;
     userLocation: [number, number] | null;
     visiblePins: MapPin[];
@@ -82,6 +84,7 @@ const MapCanvas = React.memo(function MapCanvas({
     cameraRef,
     onMapPress,
     onPinPress,
+    selectedPinId,
     pendingCoord,
     userLocation,
     visiblePins,
@@ -104,20 +107,20 @@ const MapCanvas = React.memo(function MapCanvas({
                 const IconComponent = PIN_ICONS[pin.type];
 
                 return (
-                    <MarkerView
+                    <PointAnnotation
+                        id={pin.id}
                         key={pin.id}
                         coordinate={pin.coordinate}
                         anchor={{ x: 0.5, y: 0.5 }}
+                        selected={selectedPinId === pin.id}
+                        onSelected={() => onPinPress(pin)}
                     >
-                        <Pressable
-                            style={styles.pinContainer}
-                            onPress={() => onPinPress(pin)}
-                        >
-                            <View style={styles.pinBubble}>
+                        <View collapsable={false} style={styles.pinContainer}>
+                            <View collapsable={false} style={styles.pinBubble}>
                                 <IconComponent size={20} color={Colors.light.background} />
                             </View>
-                        </Pressable>
-                    </MarkerView>
+                        </View>
+                    </PointAnnotation>
                 );
             })}
 
@@ -317,7 +320,7 @@ export default function MapScreen() {
 
         setSelectedPinData(null);
         router.push({
-            pathname: '/beach/[id]',
+            pathname: '../beach/[id]',
             params: { id: String(pin.beachId) },
         });
     }, [router]);
@@ -360,6 +363,7 @@ export default function MapScreen() {
                     cameraRef={cameraRef}
                     onMapPress={handleMapPress}
                     onPinPress={handlePinPress}
+                    selectedPinId={selectedPinData?.id ?? null}
                     pendingCoord={pendingCoord}
                     userLocation={userLocation}
                     visiblePins={visiblePins}
@@ -791,7 +795,14 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
+        borderWidth: 2,
+        borderColor: Colors.light.icon,
         alignItems: 'center',
         justifyContent: 'center',
+        shadowColor: '#2A4B7C',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
     },
 });

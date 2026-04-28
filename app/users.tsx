@@ -40,7 +40,7 @@ const UserCardItem = memo(({
     try {
       // 2. Chama a função pai que faz o request
       await onToggleFollow(user.id, previousStatus);
-    } catch (error) {
+    } catch (_error) {
       // 3. Se der erro na API (ex: sem net), desfaz a animação do botão
       setIsFollowing(previousStatus);
       Alert.alert('Erro', 'Não foi possível atualizar o status.');
@@ -71,6 +71,7 @@ const UserCardItem = memo(({
     </View>
   );
 });
+UserCardItem.displayName = 'UserCardItem';
 
 // ==========================================
 // TELA PRINCIPAL

@@ -26,6 +26,15 @@ export default function ProfileScreen() {
   const [user, setUser] = useState<UserDTO | null>(null);
   const [posts, setPosts] = useState<PostDTO[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imgKey, setImgKey] = useState(Date.now());
+
+  // Adiciona um timestamp na URL da imagem para forçar o React Native
+  // a baixar a versão atualizada em vez de usar o cache.
+  const bustCache = (uri?: string) => {
+    if (!uri) return undefined;
+    const separator = uri.includes('?') ? '&' : '?';
+    return `${uri}${separator}t=${imgKey}`;
+  };
 
   // Estados do BottomSheet (Substituindo o Modal)
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -38,6 +47,7 @@ export default function ProfileScreen() {
     try {
       const profile = await userService.getMyProfile();
       setUser(profile);
+      setImgKey(Date.now()); // força reload das imagens
       const userPosts = await postService.getMyPosts(0, 20);
       setPosts(userPosts.content || []);
     } catch (error: any) {
@@ -113,7 +123,7 @@ export default function ProfileScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
           <Image
-            source={{ uri: user.fotoCapa || COVER_FALLBACK }}
+            source={{ uri: bustCache(user.fotoCapa) || COVER_FALLBACK }}
             style={styles.coverImage}
           />
 
@@ -125,7 +135,7 @@ export default function ProfileScreen() {
 
           <View style={styles.userInfoSection}>
             <Image
-              source={{ uri: user.fotoPerfil || AVATAR_FALLBACK }}
+              source={{ uri: bustCache(user.fotoPerfil) || AVATAR_FALLBACK }}
               style={styles.avatar}
             />
             <Text style={styles.userName}>{user.username || 'Surfista'}</Text>
@@ -273,7 +283,7 @@ const styles = StyleSheet.create({
   sheetContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
-    height: 450, // Define uma altura fixa ou use flex para o BottomSheet
+    height: 450,
   },
   sheetHeader: {
     flexDirection: 'row',
@@ -313,5 +323,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#999',
     marginTop: 30,
-  }
+  },
 });

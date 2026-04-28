@@ -176,7 +176,7 @@ export default function ChatScreen() {
   const handleOpenConversation = useCallback(
     (item: ConversationItemView) => {
       router.push({
-        pathname: '/chat/[id]',
+        pathname: '../chat/[id]',
         params: {
           id: item.id,
           name: item.name,
