@@ -46,7 +46,7 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
     setWeatherLoading(true);
 
     weatherService
-      .getCurrentWeather('Fortaleza,BR')
+      .getCurrentWeather(pin.coordinate[1], pin.coordinate[0])
       .then((data) => {
         if (active) setWeather(data);
       })
@@ -122,9 +122,9 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
               <View style={styles.conditionItem}>
                 <View style={styles.conditionIconRow}>
                   <Waves size={14} color={Colors.light.icon} />
-                  <Text style={styles.conditionLabel}>Condicao</Text>
+                  <Text style={styles.conditionLabel}>Vento</Text>
                 </View>
-                <Text style={styles.conditionValue}>{weather.description}</Text>
+                <Text style={styles.conditionValue}>{weather.windSpeed} km/h | {weather.windDirection}°</Text>
               </View>
             </View>
           ) : (
