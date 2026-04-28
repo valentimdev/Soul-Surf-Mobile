@@ -1,3 +1,13 @@
+// Utility to safely override NODE_ENV in tests.
+function setNodeEnv(value?: string) {
+  if (value === undefined) {
+    Reflect.deleteProperty(process.env, 'NODE_ENV');
+    return;
+  }
+
+  (process.env as Record<string, string | undefined>).NODE_ENV = value;
+}
+
 describe('api configuration', () => {
   const originalApiUrl = process.env.EXPO_PUBLIC_API_URL;
   const originalNodeEnv = process.env.NODE_ENV;
@@ -10,12 +20,7 @@ describe('api configuration', () => {
       process.env.EXPO_PUBLIC_API_URL = originalApiUrl;
     }
 
-    if (originalNodeEnv === undefined) {
-      Reflect.deleteProperty(process.env, 'NODE_ENV');
-      return;
-    }
-
-    process.env.NODE_ENV = originalNodeEnv;
+    setNodeEnv(originalNodeEnv);
   });
 
   test('usa EXPO_PUBLIC_API_URL removendo barras no final', () => {
@@ -30,7 +35,7 @@ describe('api configuration', () => {
 
   test('usa fallback quando EXPO_PUBLIC_API_URL nao for informado', () => {
     delete process.env.EXPO_PUBLIC_API_URL;
-    process.env.NODE_ENV = 'test';
+    setNodeEnv('test');
 
     jest.resetModules();
     jest.isolateModules(() => {
@@ -41,7 +46,7 @@ describe('api configuration', () => {
 
   test('usa fallback quando EXPO_PUBLIC_API_URL vier vazio', () => {
     process.env.EXPO_PUBLIC_API_URL = '   ';
-    process.env.NODE_ENV = 'test';
+    setNodeEnv('test');
 
     jest.resetModules();
     jest.isolateModules(() => {
@@ -52,7 +57,7 @@ describe('api configuration', () => {
 
   test('em production falha quando EXPO_PUBLIC_API_URL nao for definido', () => {
     delete process.env.EXPO_PUBLIC_API_URL;
-    process.env.NODE_ENV = 'production';
+    setNodeEnv('production');
 
     jest.resetModules();
     expect(() => {
@@ -64,7 +69,7 @@ describe('api configuration', () => {
 
   test('em production falha quando EXPO_PUBLIC_API_URL usar HTTP', () => {
     process.env.EXPO_PUBLIC_API_URL = 'http://api.insegura.com';
-    process.env.NODE_ENV = 'production';
+    setNodeEnv('production');
 
     jest.resetModules();
     expect(() => {
@@ -76,7 +81,7 @@ describe('api configuration', () => {
 
   test('em production aceita EXPO_PUBLIC_API_URL com HTTPS', () => {
     process.env.EXPO_PUBLIC_API_URL = 'https://api.soulsurf.com/';
-    process.env.NODE_ENV = 'production';
+    setNodeEnv('production');
 
     jest.resetModules();
     jest.isolateModules(() => {

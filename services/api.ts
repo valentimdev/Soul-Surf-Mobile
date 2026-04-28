@@ -1,10 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-const rawBaseURL = process.env.EXPO_PUBLIC_API_URL?.trim();
-const API_BASE_URL = (rawBaseURL && rawBaseURL.length > 0
-  ? rawBaseURL
-  : 'http://147.15.58.134:8080').replace(/\/+$/, '');
 const rawTimeoutMs = process.env.EXPO_PUBLIC_API_TIMEOUT_MS?.trim();
 const parsedTimeoutMs = Number(rawTimeoutMs);
 const API_TIMEOUT_MS = Number.isFinite(parsedTimeoutMs) && parsedTimeoutMs > 0
@@ -43,7 +39,13 @@ function resolveApiBaseUrl(): string {
     return normalized;
   }
 
-  if (IS_DEV || IS_TEST) {
+  const nodeEnv = process.env.NODE_ENV as string;
+  const isDev = typeof __DEV__ !== 'undefined'
+    ? __DEV__
+    : nodeEnv !== 'production';
+  const isTest = nodeEnv === 'test';
+
+  if (isDev || isTest) {
     return DEV_FALLBACK_API_URL;
   }
 

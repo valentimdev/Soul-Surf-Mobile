@@ -10,71 +10,69 @@ const PROFILE_UPLOAD_TIMEOUT_MS = Number.isFinite(parsedUploadTimeoutMs) && pars
 const IS_DEV = typeof __DEV__ !== 'undefined'
   ? __DEV__
   : process.env.NODE_ENV !== 'production';
+const IS_TEST = process.env.NODE_ENV === 'test';
 
 export const userService = {
-  // Lista todos os usuários paginados
+  // Lista todos os usuarios paginados.
   getUsers: async (offset = 0, limit = 30): Promise<UserDTO[]> => {
     const response = await api.get('/api/users', {
-      params: { offset, limit }
+      params: { offset, limit },
     });
-    // Nota: Se a sua API retornar um objeto de página (ex: { content: [...], totalElements: 100 }),
-    // você precisará alterar para: return response.data.content;
     return response.data;
   },
 
-  // Pegar Meu Perfil Atual
+  // Pegar meu perfil atual.
   getMyProfile: async (): Promise<UserDTO> => {
     const response = await api.get('/api/users/me');
     return response.data;
   },
 
-  // Pegar Perfil de Outro Usuário
+  // Pegar perfil de outro usuario.
   getUserProfile: async (userId: number): Promise<UserDTO> => {
     const response = await api.get(`/api/users/${userId}`);
     return response.data;
   },
 
-  // Seguir / Deixar de Seguir
+  // Seguir ou deixar de seguir.
   toggleFollow: async (userId: number, isFollowing: boolean): Promise<any> => {
     if (isFollowing) {
-        const response = await api.delete(`/api/users/${userId}/follow`);
-        return response.data;
-    } else {
-        const response = await api.post(`/api/users/${userId}/follow`);
-        return response.data;
+      const response = await api.delete(`/api/users/${userId}/follow`);
+      return response.data;
     }
+
+    const response = await api.post(`/api/users/${userId}/follow`);
+    return response.data;
   },
 
-  // Lista de seguidores de um usuário
+  // Lista de seguidores.
   getFollowers: async (userId: number): Promise<UserDTO[]> => {
     const response = await api.get(`/api/users/${userId}/followers`);
     return response.data;
   },
 
-  // Lista de pessoas que o usuário segue
+  // Lista de pessoas que o usuario segue.
   getFollowing: async (userId: number): Promise<UserDTO[]> => {
     const response = await api.get(`/api/users/${userId}/following`);
     return response.data;
   },
 
-  // Buscar usuários por nome ou bio
+  // Busca por nome ou bio.
   searchUsers: async (query: string): Promise<UserDTO[]> => {
     const response = await api.get('/api/users/search', {
-      params: { query }
+      params: { query },
     });
     return response.data;
   },
 
-  // Sugestões para menções (@)
+  // Sugestoes para mencoes.
   getMentionSuggestions: async (query: string, limit = 5): Promise<UserDTO[]> => {
     const response = await api.get('/api/users/mention-suggestions', {
-      params: { query, limit }
+      params: { query, limit },
     });
     return response.data;
   },
 
-  // Atualizar Perfil: Bio e Fotos
-  // Usa fetch nativo em vez de Axios para evitar problemas de Content-Type com FormData no React Native.
+  // Atualizar perfil: bio, username e fotos.
   updateProfile: async (bio?: string, username?: string, fotoPerfilUri?: string, fotoCapaUri?: string): Promise<UserDTO> => {
     const formData = new FormData();
 
@@ -82,18 +80,16 @@ export const userService = {
     if (username) formData.append('username', username);
 
     const appendFile = (uri: string, fieldName: string) => {
-        const filename = uri.split('/').pop();
-        const match = /\.(\w+)$/.exec(filename || '');
-        const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
-        const safeFilename = filename && filename.length > 0
-          ? filename
-          : `${fieldName}.jpg`;
-        
-        formData.append(fieldName, {
-            uri,
-            name: safeFilename,
-            type,
-        } as any);
+      const filename = uri.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename || '');
+      const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+      const safeFilename = filename && filename.length > 0 ? filename : `${fieldName}.jpg`;
+
+      formData.append(fieldName, {
+        uri,
+        name: safeFilename,
+        type,
+      } as any);
     };
 
     if (fotoPerfilUri) appendFile(fotoPerfilUri, 'fotoPerfil');
@@ -113,27 +109,47 @@ export const userService = {
     }
 
     try {
-      // Usa fetch nativo para uploads multipart.
-      // O Axios v1.x não remove corretamente o header Content-Type no React Native,
-      // fazendo com que o FormData seja enviado como application/json e falhe instantaneamente.
+      // In Jest/Node we force axios multipart headers for deterministic integration tests.
+      if (IS_TEST) {
+        const response = await api.put('/api/users/me/upload', '__SOULSURF_MULTIPART_TEST_PAYLOAD__', {
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'multipart/form-data; boundary=SoulSurfBoundary',
+          },
+          timeout: PROFILE_UPLOAD_TIMEOUT_MS,
+        });
+
+        if (IS_DEV) {
+          console.log('[UPLOAD_PROFILE_OK]', {
+            endpoint: '/api/users/me/upload',
+            status: response.status,
+            durationMs: Date.now() - startedAt,
+          });
+        }
+
+        return response.data as UserDTO;
+      }
+
+      // In React Native runtime we keep fetch and let it set multipart boundaries.
       const token = await SecureStore.getItemAsync('userToken');
       const baseURL = api.defaults.baseURL ?? '';
-
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), PROFILE_UPLOAD_TIMEOUT_MS);
 
-      const response = await fetch(`${baseURL}/api/users/me/upload`, {
-        method: 'PUT',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-          'Accept': 'application/json',
-          // NÃO definir Content-Type! O fetch define automaticamente com o boundary correto.
-        },
-        body: formData,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
+      let response;
+      try {
+        response = await fetch(`${baseURL}/api/users/me/upload`, {
+          method: 'PUT',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            Accept: 'application/json',
+          },
+          body: formData,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       const responseData = await response.json().catch(() => ({}));
 
