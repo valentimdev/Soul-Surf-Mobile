@@ -40,12 +40,14 @@ describeSmoke('API Smoke Test (Real Connection)', () => {
     }
   });
 
-  test('Deve conseguir carregar o Clima (GET /api/weather/current)', async () => {
+  test('Deve conseguir carregar o Clima (Open-Meteo)', async () => {
     try {
       const { weatherService } = await import('../weather/weatherService');
-      const weather = await weatherService.getCurrentWeather('Fortaleza,BR');
-      console.log(`Clima em ${weather.cityName}: ${weather.temp}C, ${weather.description}`);
+      const weather = await weatherService.getCurrentWeather(-3.7380, -38.4490);
+      console.log(`Clima na Praia do Futuro: ${weather.temp}C, Vento: ${weather.windSpeed}km/h | ${weather.windDirection}°`);
       expect(weather).toHaveProperty('temp');
+      expect(weather).toHaveProperty('windSpeed');
+      expect(weather).toHaveProperty('windDirection');
     } catch (error: any) {
       console.error('Erro ao conectar no /api/weather/current:', error.message);
       throw error;

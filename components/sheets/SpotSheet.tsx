@@ -25,7 +25,7 @@ export default function SpotSheet({ spot }: SpotSheetProps) {
     setLoading(true);
 
     weatherService
-      .getCurrentWeather('Fortaleza,BR')
+      .getCurrentWeather(spot.coordinate[1], spot.coordinate[0])
       .then((data) => {
         if (active) setWeather(data);
       })
@@ -69,7 +69,7 @@ export default function SpotSheet({ spot }: SpotSheetProps) {
               <Thermometer size={16} color={Colors.light.icon} />
               <Text style={styles.weatherText}>{Math.round(weather.temp)} C</Text>
             </View>
-            <Text style={styles.weatherText}>{weather.description}</Text>
+            <Text style={styles.weatherText}>{weather.windSpeed} km/h | Vento: {weather.windDirection}°</Text>
           </View>
         ) : (
           <Text style={styles.weatherText}>Sem dados de clima disponiveis.</Text>
