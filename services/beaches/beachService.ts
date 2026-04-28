@@ -31,13 +31,19 @@ export const beachService = {
     return response.data;
   },
 
-  getBeachPostsPublic: async (beachId: number): Promise<PostDTO[]> => {
+  getBeachPostsPublic: async (
+    beachId: number,
+    page?: number,
+    size?: number
+  ): Promise<PostDTO[]> => {
     const response = await api.get(`/api/beaches/${beachId}/posts`, {
       headers: {
         Authorization: undefined,
       },
       params: {
         t: Date.now(),
+        page,
+        size,
       },
     });
 
@@ -49,10 +55,16 @@ export const beachService = {
     return normalizeList<PostDTO>(response.data);
   },
 
-  getBeachPosts: async (beachId: number): Promise<PostDTO[]> => {
+  getBeachPosts: async (
+    beachId: number,
+    page?: number,
+    size?: number
+  ): Promise<PostDTO[]> => {
     const response = await api.get(`/api/beaches/${beachId}/posts`, {
       params: {
         t: Date.now(),
+        page,
+        size,
       },
     });
 
