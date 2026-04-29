@@ -16,7 +16,7 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView, TouchableOpacity } from 'react-native-gesture-handler';
 
 const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {
@@ -208,17 +208,12 @@ export default function MapScreen() {
         };
     }, []);
 
-    // FIX: Adicionada verificação de 'mounted' para evitar state updates após unmount
     useEffect(() => {
         let subscription: Location.LocationSubscription | null = null;
-        let mounted = true;
 
         (async () => {
             try {
                 const { status } = await Location.requestForegroundPermissionsAsync();
-
-                if (!mounted) return;
-
                 if (status !== 'granted') {
                     setIsLocationReady(true);
                     return;
@@ -227,9 +222,6 @@ export default function MapScreen() {
                 const location = await Location.getCurrentPositionAsync({
                     accuracy: Location.Accuracy.High,
                 });
-
-                if (!mounted) return;
-
                 const currentUserLocation: [number, number] = [
                     location.coords.longitude,
                     location.coords.latitude,
@@ -241,21 +233,16 @@ export default function MapScreen() {
                 subscription = await Location.watchPositionAsync(
                     { accuracy: Location.Accuracy.High, distanceInterval: 5 },
                     (loc: Location.LocationObject) => {
-                        if (mounted) {
-                            setUserLocation([loc.coords.longitude, loc.coords.latitude]);
-                        }
+                        setUserLocation([loc.coords.longitude, loc.coords.latitude]);
                     }
                 );
             } catch (error) {
                 console.error('Erro ao buscar localização inicial:', error);
-                if (mounted) {
-                    setIsLocationReady(true);
-                }
+                setIsLocationReady(true);
             }
         })();
 
         return () => {
-            mounted = false;
             if (subscription) subscription.remove();
         };
     }, []);
@@ -499,3 +486,323 @@ export default function MapScreen() {
         </GestureHandlerRootView>
     );
 }
+
+const styles = StyleSheet.create({
+    map: {
+        flex: 1,
+    },
+    userLocationOuter: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        backgroundColor: 'rgba(37, 99, 235, 0.25)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1.5,
+        borderColor: 'rgba(37, 99, 235, 0.4)',
+    },
+    userLocationDot: {
+        width: 12,
+        height: 12,
+        borderRadius: 6,
+        backgroundColor: '#2563EB',
+        borderWidth: 2,
+        borderColor: '#fff',
+    },
+    floatingControls: {
+        ...StyleSheet.absoluteFillObject,
+        pointerEvents: 'box-none',
+        zIndex: 30,
+    },
+    myLocationButton: {
+        position: 'absolute',
+        bottom: 90,
+        right: 16,
+        backgroundColor: Colors.light.background,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 8,
+    },
+    markPoiButton: {
+        position: 'absolute',
+        bottom: 32,
+        right: 16,
+        backgroundColor: Colors.light.background,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 8,
+    },
+    markPoiButtonActive: {
+        backgroundColor: Colors.light.text,
+    },
+    floatingButtonPressed: {
+        opacity: 0.85,
+        transform: [{ scale: 0.96 }],
+    },
+    pendingPin: {
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        backgroundColor: '#E11D48',
+        borderWidth: 2.5,
+        borderColor: '#fff',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 4,
+    },
+    pickingBanner: {
+        position: 'absolute',
+        bottom: 96,
+        alignSelf: 'center',
+        backgroundColor: Colors.light.text,
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        elevation: 6,
+    },
+    pickingBannerText: {
+        color: '#fff',
+        fontSize: 13,
+        fontWeight: '500',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 24,
+    },
+    modalCard: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        padding: 24,
+        width: '100%',
+        alignItems: 'stretch',
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    modalTitle: {
+        fontSize: 17,
+        fontWeight: '700',
+        color: Colors.light.text,
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    modalBody: {
+        fontSize: 14,
+        color: '#555',
+        textAlign: 'left',
+        lineHeight: 21,
+        marginBottom: 12,
+    },
+    modalInput: {
+        width: '100%',
+        borderWidth: 1,
+        borderColor: '#E2DEC3',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        fontSize: 14,
+        color: '#2A4B7C',
+        marginBottom: 10,
+    },
+    modalInputMultiline: {
+        minHeight: 84,
+        textAlignVertical: 'top',
+    },
+    modalTypeRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 12,
+    },
+    modalTypeButton: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: '#D7D2B6',
+        borderRadius: 10,
+        paddingVertical: 8,
+        alignItems: 'center',
+        backgroundColor: '#F8F6EE',
+    },
+    modalTypeButtonActive: {
+        backgroundColor: Colors.light.text,
+        borderColor: Colors.light.text,
+    },
+    modalTypeText: {
+        fontSize: 13,
+        color: Colors.light.text,
+        fontWeight: '600',
+    },
+    modalTypeTextActive: {
+        color: '#fff',
+    },
+    modalSectionLabel: {
+        fontSize: 13,
+        color: '#6B7280',
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    modalBeachRow: {
+        gap: 8,
+        paddingBottom: 2,
+    },
+    modalBeachButton: {
+        borderWidth: 1,
+        borderColor: '#D7D2B6',
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        backgroundColor: '#F8F6EE',
+    },
+    modalBeachButtonActive: {
+        backgroundColor: '#DCEFF6',
+        borderColor: Colors.light.icon,
+    },
+    modalBeachText: {
+        fontSize: 13,
+        color: Colors.light.text,
+    },
+    modalBeachTextActive: {
+        fontWeight: '700',
+    },
+    modalEmptyBeachText: {
+        fontSize: 13,
+        color: '#6B7280',
+        paddingVertical: 6,
+    },
+    modalActions: {
+        flexDirection: 'row',
+        gap: 12,
+        width: '100%',
+        marginTop: 14,
+    },
+    modalBtnOutline: {
+        flex: 1,
+        borderWidth: 1.5,
+        borderColor: Colors.light.text,
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    modalBtnOutlineText: {
+        color: Colors.light.text,
+        fontWeight: '600',
+    },
+    modalBtnFill: {
+        flex: 2,
+        backgroundColor: Colors.light.text,
+        borderRadius: 12,
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    modalBtnFillText: {
+        color: '#fff',
+        fontWeight: '600',
+    },
+    overlayContainer: {
+        position: 'absolute',
+        top: 56,
+        left: 16,
+        right: 16,
+        zIndex: 10,
+        gap: 12,
+    },
+    topOverlay: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingRight: 12,
+        paddingLeft: 8,
+        backgroundColor: Colors.light.background,
+        borderRadius: 28,
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+    },
+    searchInput: {
+        flex: 1,
+        marginLeft: 12,
+        fontSize: 15,
+        color: '#2A4B7C',
+    },
+    filterRow: {
+        flexDirection: 'row',
+        gap: 5,
+        justifyContent: 'center',
+    },
+    filterButton: {
+        backgroundColor: Colors.light.text,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        elevation: 4,
+        shadowColor: '#2A4B7C',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
+    filterButtonInactive: {
+        backgroundColor: Colors.light.background,
+        borderWidth: 1.5,
+        borderColor: Colors.light.text,
+        opacity: 0.8,
+    },
+    filterText: {
+        fontSize: 12,
+        color: Colors.light.background,
+        fontWeight: '600',
+    },
+    filterTextInactive: {
+        color: Colors.light.text,
+    },
+    pinContainer: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+    },
+    pinBubble: {
+        backgroundColor: Colors.light.text,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        borderWidth: 2,
+        borderColor: Colors.light.icon,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#2A4B7C',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+});

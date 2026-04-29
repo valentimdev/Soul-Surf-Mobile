@@ -1,114 +1,85 @@
 import api from '../api';
-import { beachService } from '../beaches/beachService';
-import { MockHttpServer, setupMockHttpServer } from './helpers/mockHttpServer';
+import { BeachDTO, PostDTO, PageResponse } from '../../types/api';
 
-describe('beachService integration (mock data + real HTTP call)', () => {
-  let server: MockHttpServer;
-  const originalBaseUrl = api.defaults.baseURL;
+export interface BeachMessageDTO {
+  id: number;
+  texto: string;
+  data: string;
+  autor: {
+    id: number;
+    username: string;
+    fotoPerfil: string;
+  };
+  praiaId: number;
+}
 
-  beforeEach(async () => {
-    server = await setupMockHttpServer();
-    api.defaults.baseURL = server.baseUrl;
-  });
+function normalizeList<T>(raw: any): T[] {
+  if (Array.isArray(raw)) return raw;
+  if (raw?.content && Array.isArray(raw.content)) return raw.content;
+  if (raw?.data && Array.isArray(raw.data)) return raw.data;
+  return [];
+}
 
-  afterEach(async () => {
-    api.defaults.baseURL = originalBaseUrl;
-    await server.stop();
-    jest.clearAllMocks();
-  });
+export const beachService = {
+  getAllBeaches: async (): Promise<BeachDTO[]> => {
+    const response = await api.get('/api/beaches');
+    return normalizeList<BeachDTO>(response.data);
+  },
 
-  test('getAllBeaches deve aceitar resposta em array', async () => {
-    const beaches = [{ id: 1, nome: 'Praia do Futuro' }];
+  getBeachById: async (beachId: number): Promise<BeachDTO> => {
+    const response = await api.get(`/api/beaches/${beachId}`);
+    return response.data;
+  },
 
-    server.setRoutes([
-      { method: 'GET', path: '/api/beaches', response: { status: 200, body: beaches } },
-    ]);
-
-    await expect(beachService.getAllBeaches()).resolves.toEqual(beaches);
-  });
-
-  test('getAllBeaches deve aceitar resposta paginada', async () => {
-    const beaches = [{ id: 2, nome: 'Iracema' }];
-
-    server.setRoutes([
-      { method: 'GET', path: '/api/beaches', response: { status: 200, body: { content: beaches } } },
-    ]);
-
-    await expect(beachService.getAllBeaches()).resolves.toEqual(beaches);
-  });
-
-  test('getBeachById deve consumir GET /api/beaches/{id}', async () => {
-    const beach = { id: 7, nome: 'Cumbuco' };
-
-    server.setRoutes([
-      { method: 'GET', path: '/api/beaches/7', response: { status: 200, body: beach } },
-    ]);
-
-    await expect(beachService.getBeachById(7)).resolves.toEqual(beach);
-  });
-
-  test('getBeachPosts deve enviar paginação e normalizar content', async () => {
-    const posts = [{ id: 10, descricao: 'Session boa' }];
-
-    server.setRoutes([
-      {
-        method: 'GET',
-        path: '/api/beaches/7/posts',
-        handler: (request) => {
-          // CORREÇÃO: Usando objectContaining para ignorar o parâmetro 't' (timestamp) gerado pelo serviço
-          expect(request.query).toEqual(
-            expect.objectContaining({ page: '1', size: '5' })
-          );
-          return { status: 200, body: { content: posts } };
-        },
+  getBeachPostsPublic: async (
+    beachId: number,
+    page?: number,
+    size?: number
+  ): Promise<PostDTO[]> => {
+    const response = await api.get(`/api/beaches/${beachId}/posts`, {
+      headers: {
+        Authorization: undefined,
       },
-    ]);
-
-    await expect(beachService.getBeachPosts(7, 1, 5)).resolves.toEqual(posts);
-  });
-
-  test('getBeachMessages deve normalizar resposta paginada', async () => {
-    const messages = [{ id: 3, texto: 'Mar subindo' }];
-
-    server.setRoutes([
-      {
-        method: 'GET',
-        path: '/api/beaches/7/mensagens',
-        response: { status: 200, body: { content: messages } },
+      params: {
+        t: Date.now(),
+        page,
+        size,
       },
-    ]);
-
-    await expect(beachService.getBeachMessages(7)).resolves.toEqual(messages);
-  });
-
-  test('postBeachMessage deve consumir POST /api/beaches/{id}/mensagens com query texto', async () => {
-    const created = { id: 11, texto: 'Crowd tranquilo' };
-
-    server.setRoutes([
-      {
-        method: 'POST',
-        path: '/api/beaches/7/mensagens',
-        handler: (request) => {
-          expect(request.query).toEqual({ texto: 'Crowd tranquilo' });
-          return { status: 201, body: created };
-        },
-      },
-    ]);
-
-    await expect(beachService.postBeachMessage(7, 'Crowd tranquilo')).resolves.toEqual(created);
-  });
-
-  test('getBeachById deve propagar erro HTTP real', async () => {
-    server.setRoutes([
-      {
-        method: 'GET',
-        path: '/api/beaches/999',
-        response: { status: 404, body: { message: 'Praia não encontrada' } },
-      },
-    ]);
-
-    await expect(beachService.getBeachById(999)).rejects.toMatchObject({
-      response: { status: 404 },
     });
-  });
-});
+
+    return normalizeList<PostDTO>(response.data);
+  },
+
+  getMyPosts: async (): Promise<PostDTO[]> => {
+    const response = await api.get('/api/posts/me');
+    return normalizeList<PostDTO>(response.data);
+  },
+
+  getBeachPosts: async (
+    beachId: number,
+    page?: number,
+    size?: number
+  ): Promise<PostDTO[]> => {
+    const response = await api.get(`/api/beaches/${beachId}/posts`, {
+      params: {
+        t: Date.now(),
+        page,
+        size,
+      },
+    });
+
+    return normalizeList<PostDTO>(response.data);
+  },
+
+  getBeachMessages: async (beachId: number): Promise<BeachMessageDTO[]> => {
+    const response = await api.get(`/api/beaches/${beachId}/mensagens`);
+    return normalizeList<BeachMessageDTO>(response.data);
+  },
+
+  postBeachMessage: async (beachId: number, texto: string): Promise<BeachMessageDTO> => {
+    const response = await api.post(`/api/beaches/${beachId}/mensagens`, null, {
+      params: { texto },
+    });
+    return response.data;
+  },
+};

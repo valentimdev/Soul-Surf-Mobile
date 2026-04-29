@@ -286,6 +286,7 @@ const loadBeachDetails = useCallback(async (isRefresh = false) => {
       setNewMessage('');
       void loadBeachDetails(true);
     } catch (e) {
+        console.error(e);
       Alert.alert('Erro', 'Nao foi possivel publicar sua mensagem.');
     } finally {
       setSendingMessage(false);
