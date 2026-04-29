@@ -47,6 +47,21 @@ function sortMessagesByDateDesc(messages: (BeachMessageDTO | null | undefined)[]
     });
 }
 
+function isMessageFromToday(value?: string): boolean {
+  if (!value) return false;
+
+  const messageDate = new Date(value);
+  if (Number.isNaN(messageDate.getTime())) return false;
+
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setHours(23, 59, 59, 999);
+
+  return messageDate >= startOfToday && messageDate <= endOfToday;
+}
+
 function getBeachMessagesCacheKey(beachId: number): string {
   return `beach_messages_${beachId}`;
 }
@@ -124,6 +139,10 @@ export default function BeachDetailsScreen() {
     if (!Number.isFinite(beachId)) return null;
     return getBeachMessagesCacheKey(beachId);
   }, [beachId]);
+  const todayMessages = useMemo(
+    () => messages.filter((message) => isMessageFromToday(message.data)),
+    [messages]
+  );
 
   const persistMessagesCache = useCallback(async (nextMessages: BeachMessageDTO[]) => {
     if (!messagesCacheKey) return;
@@ -430,12 +449,19 @@ const handleCreatePost = async () => {
                 </TouchableOpacity>
               </View>
 
-              {messages.length === 0 ? (
-                <Text style={styles.emptyStateText}>Ainda nao ha mensagens neste mural.</Text>
+              {todayMessages.length === 0 ? (
+                <Text style={styles.emptyStateText}>Ainda nao ha comentarios de hoje neste mural.</Text>
               ) : (
-                messages.map((message, index) => (
-                  <MessageCard key={message.id ?? `message-${index}`} message={message} />
-                ))
+                <ScrollView
+                  style={styles.messagesList}
+                  contentContainerStyle={styles.messagesListContent}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                >
+                  {todayMessages.map((message, index) => (
+                    <MessageCard key={message.id ?? `message-${index}`} message={message} />
+                  ))}
+                </ScrollView>
               )}
             </View>
 
@@ -450,7 +476,14 @@ const handleCreatePost = async () => {
               {posts.length === 0 ? (
                 <Text style={styles.emptyStateText}>Ainda nao ha posts publicos para esta praia.</Text>
               ) : (
-                posts.map((post) => <PostCard key={post.id} post={post} />)
+                <ScrollView
+                  style={styles.postsList}
+                  contentContainerStyle={styles.postsListContent}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                >
+                  {posts.map((post) => <PostCard key={post.id} post={post} />)}
+                </ScrollView>
               )}
             </View>
           </>
@@ -607,6 +640,18 @@ const styles = StyleSheet.create({
   },
   messageComposer: {
     marginBottom: 12,
+  },
+  messagesList: {
+    maxHeight: 320,
+  },
+  messagesListContent: {
+    paddingBottom: 4,
+  },
+  postsList: {
+    maxHeight: 420,
+  },
+  postsListContent: {
+    paddingBottom: 4,
   },
   messageInput: {
     borderWidth: 1,

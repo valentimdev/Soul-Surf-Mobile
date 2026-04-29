@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
@@ -65,48 +65,56 @@ export default function EditProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ title: 'Editar Perfil', headerShown: true }} />
-      <ScrollView contentContainerStyle={{ padding: 20 }}>
-
-        {/* Preview da Capa */}
-        <TouchableOpacity onPress={() => pickImage('cover')}>
-           <Image
-            source={{ uri: coverImg?.uri || (params.currentCover as string) || COVER_FALLBACK }}
-            style={styles.coverPreview}
-          />
-          <View style={styles.overlay}><Text style={styles.overlayText}>Trocar Capa</Text></View>
-        </TouchableOpacity>
-
-        <View style={styles.avatarContainer}>
-          <TouchableOpacity onPress={() => pickImage('profile')}>
-            <Image
-              source={{ uri: profileImg?.uri || (params.currentAvatar as string) || AVATAR_FALLBACK }}
-              style={styles.avatarPreview}
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TouchableOpacity onPress={() => pickImage('cover')}>
+             <Image
+              source={{ uri: coverImg?.uri || (params.currentCover as string) || COVER_FALLBACK }}
+              style={styles.coverPreview}
             />
-            <View style={styles.avatarOverlay}><Ionicons name="camera" size={20} color="#FFF" /></View>
+            <View style={styles.overlay}><Text style={styles.overlayText}>Trocar Capa</Text></View>
           </TouchableOpacity>
-        </View>
 
-        <Text style={styles.label}>Username</Text>
-        <TextInput style={styles.input} value={username} onChangeText={setUsername} />
+          <View style={styles.avatarContainer}>
+            <TouchableOpacity onPress={() => pickImage('profile')}>
+              <Image
+                source={{ uri: profileImg?.uri || (params.currentAvatar as string) || AVATAR_FALLBACK }}
+                style={styles.avatarPreview}
+              />
+              <View style={styles.avatarOverlay}><Ionicons name="camera" size={20} color="#FFF" /></View>
+            </TouchableOpacity>
+          </View>
 
-        <Text style={styles.label}>Bio</Text>
-        <TextInput
-          style={[styles.input, { height: 80 }]}
-          value={bio}
-          onChangeText={setBio}
-          multiline
-        />
+          <Text style={styles.label}>Username</Text>
+          <TextInput style={styles.input} value={username} onChangeText={setUsername} />
 
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
-          {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>Salvar Alterações</Text>}
-        </TouchableOpacity>
-      </ScrollView>
+          <Text style={styles.label}>Bio</Text>
+          <TextInput
+            style={[styles.input, { height: 80 }]}
+            value={bio}
+            onChangeText={setBio}
+            multiline
+          />
+
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={loading}>
+            {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveBtnText}>Salvar Alterações</Text>}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F6F4EB' },
+  flex: { flex: 1 },
+  scrollContent: { padding: 20, paddingBottom: 32 },
   coverPreview: { width: '100%', height: 150, borderRadius: 12 },
   overlay: { position: 'absolute', bottom: 10, right: 10, backgroundColor: 'rgba(0,0,0,0.5)', padding: 5, borderRadius: 5 },
   overlayText: { color: '#FFF', fontSize: 12 },

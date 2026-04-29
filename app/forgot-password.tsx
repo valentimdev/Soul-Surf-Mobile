@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { authService } from '../services/auth/authService';
@@ -41,40 +53,50 @@ export default function ForgotPasswordScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <Image
+              source={require('../assets/images/soulsurf.jpg')}
+              style={styles.logo}
+            />
 
-      <View style={styles.content}>
-        <Image
-          source={require('../assets/images/soulsurf.jpg')}
-          style={styles.logo}
-        />
+            <Text style={styles.title}>Recuperar Senha</Text>
+            <Text style={styles.subtitle}>
+              Digite seu e-mail abaixo e enviaremos as instruções para redefinir sua senha.
+            </Text>
 
-        <Text style={styles.title}>Recuperar Senha</Text>
-        <Text style={styles.subtitle}>
-          Digite seu e-mail abaixo e enviaremos as instruções para redefinir sua senha.
-        </Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Seu e-mail cadastrado"
+              placeholderTextColor="#8C8A80"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+            />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Seu e-mail cadastrado"
-          placeholderTextColor="#8C8A80"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-        />
+            <TouchableOpacity style={styles.button} onPress={handleRecover} disabled={isLoading}>
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.buttonText}>Enviar Link</Text>
+              )}
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={handleRecover} disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>Enviar Link</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.replace('/login')} style={styles.backLink}>
-          <Text style={styles.linkText}>Lembrou a senha? <Text style={styles.linkTextBold}>Voltar ao Login</Text></Text>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity onPress={() => router.replace('/login')} style={styles.backLink}>
+              <Text style={styles.linkText}>Lembrou a senha? <Text style={styles.linkTextBold}>Voltar ao Login</Text></Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -83,6 +105,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F6F4EB',
+  },
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   content: {
     flex: 1,

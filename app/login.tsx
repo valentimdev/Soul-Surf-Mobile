@@ -1,5 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ActivityIndicator, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
@@ -54,53 +66,66 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.content}>
-        <Image
-          source={require('../assets/images/soulsurf.jpg')}
-          style={styles.logo}
-        />
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+            <Image
+              source={require('../assets/images/soulsurf.jpg')}
+              style={styles.logo}
+            />
 
-        <TextInput
-          style={styles.input}
-          placeholder="E-mail"
-          placeholderTextColor="#8C8A80"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          value={email}
-          onChangeText={setEmail}
-        />
+            <TextInput
+              style={styles.input}
+              placeholder="E-mail"
+              placeholderTextColor="#8C8A80"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+            />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Senha"
-          placeholderTextColor="#8C8A80"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+            <TextInput
+              style={styles.input}
+              placeholder="Senha"
+              placeholderTextColor="#8C8A80"
+              secureTextEntry
+              value={password}
+              onChangeText={setPassword}
+            />
 
-        <TouchableOpacity style={styles.forgotPasswordContainer} onPress={() => router.push('/forgot-password')}>
-          <Text style={styles.forgotPasswordText}>Esqueci minha senha</Text>
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.forgotPasswordContainer} onPress={() => router.push('/forgot-password')}>
+              <Text style={styles.forgotPasswordText}>Esqueci minha senha</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
-          {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.buttonText}>Entrar</Text>
-          )}
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.buttonText}>Entrar</Text>
+              )}
+            </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/register')} style={styles.registerLink}>
-          <Text style={styles.linkText}>Não tem uma conta? <Text style={styles.linkTextBold}>Cadastre-se</Text></Text>
-        </TouchableOpacity>
-      </View>
+            <TouchableOpacity onPress={() => router.push('/register')} style={styles.registerLink}>
+              <Text style={styles.linkText}>Não tem uma conta? <Text style={styles.linkTextBold}>Cadastre-se</Text></Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F6F4EB' },
+  flex: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
   logo: { width: 320, height: 160, resizeMode: 'contain', marginBottom: 50 },
   input: { width: '100%', height: 60, backgroundColor: '#E8E5D4', borderRadius: 16, paddingHorizontal: 20, marginBottom: 16, fontSize: 16, color: '#333333' },
@@ -112,4 +137,3 @@ const styles = StyleSheet.create({
   linkText: { fontSize: 15, color: '#666666' },
   linkTextBold: { color: '#5C9DB8', fontWeight: 'bold' },
 });
-

@@ -7,13 +7,13 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function parseStringParam(value?: string | string[]): string {
   if (!value) return '';
@@ -79,6 +79,7 @@ export default function ChatConversationScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const listRef = useRef<FlatList<ChatMessageResponse>>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!navigation || !(navigation as any).setOptions) return;
@@ -164,7 +165,7 @@ export default function ChatConversationScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <View style={styles.contentContainer}>
@@ -204,7 +205,12 @@ export default function ChatConversationScreen() {
             />
           )}
 
-          <View style={styles.composerContainer}>
+          <View
+            style={[
+              styles.composerContainer,
+              { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 12) : Math.max(insets.bottom, 8) },
+            ]}
+          >
             <TextInput
               value={draft}
               onChangeText={setDraft}
@@ -329,7 +335,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F6F4EB',
     paddingHorizontal: 14,
     paddingTop: 10,
-    paddingBottom: Platform.OS === 'android' ? 24 : 12,
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 10,
