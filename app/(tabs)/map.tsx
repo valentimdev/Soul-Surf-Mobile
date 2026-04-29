@@ -5,6 +5,7 @@ import { beachService } from '@/services/beaches/beachService';
 import { PointOfInterestDTO, poiService } from '@/services/beaches/poiService';
 import { MapPin, SpotType } from '@/types';
 import { BeachDTO } from '@/types/api';
+import { StyleSheet } from 'react-native';
 import {
     Camera,
     CameraRef,
@@ -16,7 +17,7 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { ActivityIndicator, Alert, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView, TouchableOpacity } from 'react-native-gesture-handler';
 
 const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {

@@ -7,6 +7,9 @@ import { SurfConditionsResponse } from '@/types/surfConditions';
 import * as SecureStore from 'expo-secure-store';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import api from '@/services/api';
+import * as ImagePicker from 'expo-image-picker';
 import {
   ActivityIndicator,
   Alert,
@@ -19,9 +22,8 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Modal,
 } from 'react-native';
-
-
 
 function normalizeCounter(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -51,11 +53,9 @@ function getBeachMessagesCacheKey(beachId: number): string {
 
 function parseCachedMessages(raw: string | null): BeachMessageDTO[] {
   if (!raw) return [];
-
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-
     return sortMessagesByDateDesc(parsed as (BeachMessageDTO | null | undefined)[]);
   } catch {
     return [];
@@ -73,7 +73,7 @@ export function PostCard({ post }: { post: PostDTO }) {
         <Text testID={`post-date-${post.id}`} style={styles.postDate}>{formatDate(post.data)}</Text>
       </View>
       {post.caminhoFoto ? <Image testID={`post-image-${post.id}`} source={{ uri: post.caminhoFoto }} style={styles.postImage} /> : null}
-      <Text testID={`post-description-${post.id}`} style={styles.postDescription}>{post.descricao || 'Sem descricao.'}</Text>
+      {post.descricao ? <Text testID={`post-description-${post.id}`} style={styles.postDescription}>{post.descricao}</Text> : null}
       <View style={styles.postStats}>
         <Text testID={`post-likes-${post.id}`} style={styles.postStatsText}>{likesCount} curtidas</Text>
         <Text testID={`post-comments-${post.id}`} style={styles.postStatsText}>{commentsCount} comentarios</Text>
@@ -93,6 +93,7 @@ function MessageCard({ message }: { message: BeachMessageDTO }) {
     </View>
   );
 }
+
 export default function BeachDetailsScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const navigation = useNavigation();
@@ -106,11 +107,19 @@ export default function BeachDetailsScreen() {
   const [messages, setMessages] = useState<BeachMessageDTO[]>([]);
   const [surfConditions, setSurfConditions] = useState<SurfConditionsResponse | null>(null);
   const [surfConditionsError, setSurfConditionsError] = useState<string | null>(null);
+
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [isPostModalVisible, setIsPostModalVisible] = useState(false);
+  const [newPostDesc, setNewPostDesc] = useState('');
+  const [newPostPhotoUri, setNewPostPhotoUri] = useState<string | null>(null);
+  const [newPostBase64, setNewPostBase64] = useState<string | null>(null);
+  const [creatingPost, setCreatingPost] = useState(false);
+
   const messagesCacheKey = useMemo(() => {
     if (!Number.isFinite(beachId)) return null;
     return getBeachMessagesCacheKey(beachId);
@@ -118,18 +127,16 @@ export default function BeachDetailsScreen() {
 
   const persistMessagesCache = useCallback(async (nextMessages: BeachMessageDTO[]) => {
     if (!messagesCacheKey) return;
-
     try {
       const sorted = sortMessagesByDateDesc(nextMessages);
       await SecureStore.setItemAsync(messagesCacheKey, JSON.stringify(sorted.slice(0, 80)));
     } catch (cacheError) {
-      console.error('Erro ao salvar cache de mensagens da praia:', cacheError);
+      console.error(cacheError);
     }
   }, [messagesCacheKey]);
 
   const loadMessagesCache = useCallback(async () => {
     if (!messagesCacheKey) return;
-
     try {
       const raw = await SecureStore.getItemAsync(messagesCacheKey);
       const cachedMessages = parseCachedMessages(raw);
@@ -137,86 +144,110 @@ export default function BeachDetailsScreen() {
         setMessages(cachedMessages);
       }
     } catch (cacheError) {
-      console.error('Erro ao carregar cache de mensagens da praia:', cacheError);
+      console.error(cacheError);
     }
   }, [messagesCacheKey]);
 
-  const loadBeachDetails = useCallback(async (isRefresh = false) => {
-    if (!Number.isFinite(beachId)) {
-      setError('Praia invalida.');
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
+const loadBeachDetails = useCallback(async (isRefresh = false) => {
+  if (!Number.isFinite(beachId)) {
+    setError('Praia invalida.');
+    setLoading(false);
+    setRefreshing(false);
+    return;
+  }
 
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+  if (isRefresh) setRefreshing(true);
+  else setLoading(true);
 
-    try {
-      setError(null);
-      const beachPromise = beachService.getBeachById(beachId);
-      const postsPromise = beachService.getBeachPosts(beachId);
-      const messagesPromise = beachService.getBeachMessages(beachId);
-      const beachData = await beachPromise;
+  try {
+    setError(null);
 
-      const hasValidCoordinates =
-        Number.isFinite(beachData.latitude) && Number.isFinite(beachData.longitude);
-      const surfPromise = hasValidCoordinates
-        ? surfConditionsService.getSurfConditions({
-            lat: beachData.latitude,
-            lon: beachData.longitude,
-            beach: beachData.nome,
-          })
-        : Promise.resolve<SurfConditionsResponse | null>(null);
+    const beachPromise = beachService.getBeachById(beachId);
+    const publicPostsPromise = beachService.getBeachPostsPublic(beachId);
+    const myPostsPromise = beachService.getMyPosts();
+    const messagesPromise = beachService.getBeachMessages(beachId);
 
-      const [postsResult, messagesResult, surfResult] = await Promise.allSettled([
-        postsPromise,
+    const beachData = await beachPromise;
+
+    const hasValidCoordinates =
+      Number.isFinite(beachData.latitude) &&
+      Number.isFinite(beachData.longitude);
+
+    const surfPromise = hasValidCoordinates
+      ? surfConditionsService.getSurfConditions({
+          lat: beachData.latitude,
+          lon: beachData.longitude,
+          beach: beachData.nome,
+        })
+      : Promise.resolve(null);
+
+    const [publicPostsResult, myPostsResult, messagesResult, surfResult] =
+      await Promise.allSettled([
+        publicPostsPromise,
+        myPostsPromise,
         messagesPromise,
         surfPromise,
       ]);
 
-      const beachPosts = postsResult.status === 'fulfilled' ? postsResult.value : [];
-      const beachMessages = messagesResult.status === 'fulfilled' ? sortMessagesByDateDesc(messagesResult.value || []) : null;
+    const publicPosts =
+      publicPostsResult.status === 'fulfilled'
+        ? publicPostsResult.value
+        : [];
 
-      if (postsResult.status === 'rejected') {
-        console.error('Erro ao carregar posts da praia:', postsResult.reason);
-      }
+    const myPosts =
+      myPostsResult.status === 'fulfilled'
+        ? myPostsResult.value
+        : [];
 
-      if (messagesResult.status === 'rejected') {
-        console.error('Erro ao carregar mensagens da praia:', messagesResult.reason);
-      }
+    const myBeachPosts = myPosts.filter(
+      (post) => post.beach?.id === beachId
+    );
 
-      if (surfResult.status === 'rejected') {
-        console.error('Erro ao carregar condicoes do mar:', surfResult.reason);
-        setSurfConditionsError('Nao foi possivel carregar onda, vento e balneabilidade agora.');
-      } else if (surfResult.value) {
-        setSurfConditions(surfResult.value);
-        setSurfConditionsError(null);
-      } else {
-        setSurfConditions(null);
-        setSurfConditionsError('Este pico ainda nao tem coordenadas para leitura automatica do mar.');
-      }
+    const merged = [...publicPosts, ...myBeachPosts];
 
-      setBeach(beachData);
-      setPosts((beachPosts || []).filter(Boolean));
+    const uniquePosts = merged.filter(
+      (post, index, self) =>
+        index === self.findIndex((p) => p.id === post.id)
+    );
 
-      if (beachMessages) {
-        if (beachMessages.length > 0) {
-          setMessages(beachMessages);
-          void persistMessagesCache(beachMessages);
-        } else {
-          // Se o backend voltar vazio, preserva o cache local para evitar "sumiço" ao voltar para a tela.
-          setMessages((prev) => (prev.length > 0 ? prev : []));
-        }
-      }
-    } catch (e) {
-      console.error('Erro ao carregar detalhes da praia:', e);
-      setError('Nao foi possivel carregar os dados da praia.');
-    } finally {
-      if (isRefresh) setRefreshing(false);
-      else setLoading(false);
+    const beachMessages =
+      messagesResult.status === 'fulfilled'
+        ? sortMessagesByDateDesc(messagesResult.value || [])
+        : null;
+
+    if (surfResult.status === 'rejected') {
+      setSurfConditionsError(
+        'Nao foi possivel carregar onda, vento e balneabilidade agora.'
+      );
+    } else if (surfResult.value) {
+      setSurfConditions(surfResult.value);
+      setSurfConditionsError(null);
+    } else {
+      setSurfConditions(null);
+      setSurfConditionsError(
+        'Este pico ainda nao tem coordenadas para leitura automatica do mar.'
+      );
     }
-  }, [beachId, persistMessagesCache]);
+
+    setBeach(beachData);
+    setPosts(uniquePosts.filter(Boolean));
+
+    if (beachMessages) {
+      if (beachMessages.length > 0) {
+        setMessages(beachMessages);
+        void persistMessagesCache(beachMessages);
+      } else {
+        setMessages((prev) => (prev.length > 0 ? prev : []));
+      }
+    }
+  } catch (e) {
+    console.error(e);
+    setError('Nao foi possivel carregar os dados da praia.');
+  } finally {
+    if (isRefresh) setRefreshing(false);
+    else setLoading(false);
+  }
+}, [beachId, persistMessagesCache]);
 
   useEffect(() => {
     void loadMessagesCache();
@@ -225,14 +256,6 @@ export default function BeachDetailsScreen() {
   useEffect(() => {
     loadBeachDetails();
   }, [loadBeachDetails]);
-
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      loadBeachDetails(true);
-    });
-
-    return unsubscribe;
-  }, [navigation, loadBeachDetails]);
 
   useEffect(() => {
     if (beach?.nome) {
@@ -263,12 +286,79 @@ export default function BeachDetailsScreen() {
       setNewMessage('');
       void loadBeachDetails(true);
     } catch (e) {
-      console.error('Erro ao enviar mensagem da praia:', e);
+        console.error(e);
       Alert.alert('Erro', 'Nao foi possivel publicar sua mensagem.');
     } finally {
       setSendingMessage(false);
     }
   }, [beachId, newMessage, loadBeachDetails, persistMessagesCache]);
+
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.2,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setNewPostPhotoUri(result.assets[0].uri);
+      setNewPostBase64(result.assets[0].base64 || null);
+    }
+  };
+
+  const closePostModal = () => {
+    setIsPostModalVisible(false);
+    setNewPostDesc('');
+    setNewPostPhotoUri(null);
+    setNewPostBase64(null);
+  };
+
+const handleCreatePost = async () => {
+  if (!newPostDesc.trim() && !newPostPhotoUri) {
+    Alert.alert('Aviso', 'Seu post precisa ter ao menos uma foto ou uma descrição.');
+    return;
+  }
+
+  setCreatingPost(true);
+
+  try {
+    const formData = new FormData();
+
+    formData.append('publico', 'true');
+    formData.append('descricao', newPostDesc.trim() || '');
+    formData.append('beachId', String(beachId));
+
+    if (newPostPhotoUri) {
+      formData.append('foto', {
+        uri: newPostPhotoUri,
+        name: 'photo.jpg',
+        type: 'image/jpeg',
+      } as any);
+    }
+
+    const response = await api.post('/api/posts', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    console.log('POST CRIADO:', response.data);
+
+    // 👇 Atualiza imediatamente
+    setPosts(prev => [response.data, ...prev]);
+
+    closePostModal();
+    Alert.alert('Sucesso', 'Post publicado com sucesso!');
+
+  } catch (error: any) {
+    console.error(error?.response?.data || error.message);
+    Alert.alert('Erro', 'Não foi possível criar o post.');
+  } finally {
+    setCreatingPost(false);
+  }
+
+};
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -350,7 +440,13 @@ export default function BeachDetailsScreen() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Posts da praia</Text>
+              <View style={styles.sectionHeaderWithButton}>
+                <Text style={styles.sectionTitleWithoutMargin}>Posts da praia</Text>
+                <TouchableOpacity onPress={() => setIsPostModalVisible(true)} style={styles.addPostBtn}>
+                  <Text style={styles.addPostBtnText}>Adicionar post</Text>
+                </TouchableOpacity>
+              </View>
+
               {posts.length === 0 ? (
                 <Text style={styles.emptyStateText}>Ainda nao ha posts publicos para esta praia.</Text>
               ) : (
@@ -360,6 +456,66 @@ export default function BeachDetailsScreen() {
           </>
         )}
       </ScrollView>
+
+      <Modal
+        visible={isPostModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closePostModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Novo Post</Text>
+              <TouchableOpacity onPress={closePostModal}>
+                <Ionicons name="close" size={26} color="#1F4A63" />
+              </TouchableOpacity>
+            </View>
+
+            {newPostPhotoUri ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: newPostPhotoUri }} style={styles.imagePreview} />
+                <TouchableOpacity
+                  style={styles.removeImageBtn}
+                  onPress={() => {
+                    setNewPostPhotoUri(null);
+                    setNewPostBase64(null);
+                  }}
+                >
+                  <Ionicons name="trash" size={20} color="#FFF" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.addPhotoBtn} onPress={handlePickImage}>
+                <Ionicons name="image-outline" size={24} color="#5C9DB8" />
+                <Text style={styles.addPhotoText}>Adicionar Foto (Opcional)</Text>
+              </TouchableOpacity>
+            )}
+
+            <TextInput
+              style={styles.modalTextInput}
+              placeholder="O que rolou no mar hoje? (Opcional)"
+              placeholderTextColor="#8B8B8B"
+              value={newPostDesc}
+              onChangeText={setNewPostDesc}
+              multiline
+            />
+
+            <TouchableOpacity
+              style={[styles.modalButton, (creatingPost || (!newPostDesc.trim() && !newPostBase64)) && { opacity: 0.6 }]}
+              onPress={handleCreatePost}
+              disabled={creatingPost || (!newPostDesc.trim() && !newPostBase64)}
+            >
+              {creatingPost ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={styles.modalButtonText}>Publicar Post</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -420,6 +576,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1F4A63',
     marginBottom: 10,
+  },
+  sectionHeaderWithButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  sectionTitleWithoutMargin: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F4A63',
+  },
+  addPostBtn: {
+    backgroundColor: '#E2DEC3',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  addPostBtnText: {
+    color: '#1F4A63',
+    fontSize: 13,
+    fontWeight: '600',
   },
   sectionDescription: {
     fontSize: 13,
@@ -565,5 +743,92 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#F6F4EB',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F4A63',
+  },
+  addPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E5F0F5',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#5C9DB8',
+    borderRadius: 12,
+    paddingVertical: 20,
+    marginBottom: 16,
+    gap: 10,
+  },
+  addPhotoText: {
+    color: '#5C9DB8',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  imagePreviewContainer: {
+    width: '100%',
+    height: 150,
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#000',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 6,
+    borderRadius: 20,
+  },
+  modalTextInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2DEC3',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 15,
+    color: '#1F4A63',
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 24,
+  },
+  modalButton: {
+    backgroundColor: '#5C9DB8',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

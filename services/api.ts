@@ -83,9 +83,11 @@ api.interceptors.request.use(
     };
 
     const token = await SecureStore.getItemAsync('userToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    if (config.headers.Authorization === '') {
+          delete config.headers.Authorization;
+        } else if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
 
     if (IS_DEV) {
       console.log('[API]', {

@@ -134,7 +134,9 @@ export default function ChatConversationScreen() {
 
   useEffect(() => {
     if (messages.length === 0) return;
-    listRef.current?.scrollToEnd({ animated: true });
+    setTimeout(() => {
+        listRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   }, [messages.length]);
 
   const handleSend = useCallback(async () => {
@@ -163,59 +165,63 @@ export default function ChatConversationScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {loading && messages.length === 0 ? (
-          <View style={styles.centerState}>
-            <ActivityIndicator size="large" color="#5C9DB8" />
-            <Text style={styles.centerStateText}>Carregando mensagens...</Text>
-          </View>
-        ) : isInitialError ? (
-          <View style={styles.centerState}>
-            <Text style={styles.centerStateText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={() => loadMessages()}>
-              <Text style={styles.retryButtonText}>Tentar novamente</Text>
+        <View style={styles.contentContainer}>
+          {loading && messages.length === 0 ? (
+            <View style={styles.centerState}>
+              <ActivityIndicator size="large" color="#5C9DB8" />
+              <Text style={styles.centerStateText}>Carregando mensagens...</Text>
+            </View>
+          ) : isInitialError ? (
+            <View style={styles.centerState}>
+              <Text style={styles.centerStateText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={() => loadMessages()}>
+                <Text style={styles.retryButtonText}>Tentar novamente</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              ref={listRef}
+              data={messages}
+              keyExtractor={(item, index) => item.id || `${item.createdAt}-${index}`}
+              renderItem={({ item }) => (
+                <MessageBubble message={item} isMine={!!currentUserId && String(item.senderId) === currentUserId} />
+              )}
+              contentContainerStyle={[
+                styles.listContent,
+                messages.length === 0 && styles.listContentEmpty,
+              ]}
+              showsVerticalScrollIndicator={false}
+              refreshing={refreshing}
+              onRefresh={() => loadMessages(true)}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <View style={styles.emptyStateContainer}>
+                  <Text style={styles.emptyStateText}>Nenhuma mensagem ainda. Comece a conversa.</Text>
+                </View>
+              }
+            />
+          )}
+
+          <View style={styles.composerContainer}>
+            <TextInput
+              value={draft}
+              onChangeText={setDraft}
+              style={styles.input}
+              placeholder="Digite uma mensagem..."
+              placeholderTextColor="#8B8B8B"
+              multiline
+              maxLength={1000}
+            />
+            <TouchableOpacity
+              style={[styles.sendButton, (sending || !draft.trim()) && styles.sendButtonDisabled]}
+              onPress={handleSend}
+              disabled={sending || !draft.trim()}
+            >
+              <Text style={styles.sendButtonText}>{sending ? 'Enviando...' : 'Enviar'}</Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          <FlatList
-            ref={listRef}
-            data={messages}
-            keyExtractor={(item, index) => item.id || `${item.createdAt}-${index}`}
-            renderItem={({ item }) => (
-              <MessageBubble message={item} isMine={!!currentUserId && String(item.senderId) === currentUserId} />
-            )}
-            contentContainerStyle={[
-              styles.listContent,
-              messages.length === 0 && styles.listContentEmpty,
-            ]}
-            showsVerticalScrollIndicator={false}
-            refreshing={refreshing}
-            onRefresh={() => loadMessages(true)}
-            ListEmptyComponent={
-              <View style={styles.emptyStateContainer}>
-                <Text style={styles.emptyStateText}>Nenhuma mensagem ainda. Comece a conversa.</Text>
-              </View>
-            }
-          />
-        )}
-
-        <View style={styles.composerContainer}>
-          <TextInput
-            value={draft}
-            onChangeText={setDraft}
-            style={styles.input}
-            placeholder="Digite uma mensagem..."
-            placeholderTextColor="#8B8B8B"
-            multiline
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, (sending || !draft.trim()) && styles.sendButtonDisabled]}
-            onPress={handleSend}
-            disabled={sending || !draft.trim()}
-          >
-            <Text style={styles.sendButtonText}>{sending ? 'Enviando...' : 'Enviar'}</Text>
-          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -229,6 +235,10 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
   },
   centerState: {
     flex: 1,
@@ -255,7 +265,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 16,
     paddingTop: 14,
-    paddingBottom: 16,
+    paddingBottom: 20,
     gap: 8,
   },
   listContentEmpty: {
@@ -319,7 +329,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F6F4EB',
     paddingHorizontal: 14,
     paddingTop: 10,
-    paddingBottom: 12,
+    paddingBottom: Platform.OS === 'android' ? 24 : 12,
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 10,
