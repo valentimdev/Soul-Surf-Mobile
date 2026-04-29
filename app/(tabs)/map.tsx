@@ -5,6 +5,7 @@ import { beachService } from '@/services/beaches/beachService';
 import { PointOfInterestDTO, poiService } from '@/services/beaches/poiService';
 import { MapPin, SpotType } from '@/types';
 import { BeachDTO } from '@/types/api';
+import { StyleSheet } from 'react-native';
 import {
     Camera,
     CameraRef,

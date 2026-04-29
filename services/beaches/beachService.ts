@@ -41,7 +41,6 @@ export const beachService = {
         Authorization: undefined,
       },
       params: {
-        t: Date.now(),
         page,
         size,
       },
