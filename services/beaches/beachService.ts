@@ -61,7 +61,6 @@ export const beachService = {
   ): Promise<PostDTO[]> => {
     const response = await api.get(`/api/beaches/${beachId}/posts`, {
       params: {
-        t: Date.now(),
         page,
         size,
       },
