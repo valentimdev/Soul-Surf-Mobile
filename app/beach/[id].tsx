@@ -476,7 +476,14 @@ const handleCreatePost = async () => {
               {posts.length === 0 ? (
                 <Text style={styles.emptyStateText}>Ainda nao ha posts publicos para esta praia.</Text>
               ) : (
-                posts.map((post) => <PostCard key={post.id} post={post} />)
+                <ScrollView
+                  style={styles.postsList}
+                  contentContainerStyle={styles.postsListContent}
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                >
+                  {posts.map((post) => <PostCard key={post.id} post={post} />)}
+                </ScrollView>
               )}
             </View>
           </>
@@ -638,6 +645,12 @@ const styles = StyleSheet.create({
     maxHeight: 320,
   },
   messagesListContent: {
+    paddingBottom: 4,
+  },
+  postsList: {
+    maxHeight: 420,
+  },
+  postsListContent: {
     paddingBottom: 4,
   },
   messageInput: {
