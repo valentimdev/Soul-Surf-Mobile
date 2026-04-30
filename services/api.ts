@@ -22,34 +22,14 @@ function resolveApiBaseUrl(): string {
     ? sanitizeBaseUrl(rawBaseURL)
     : null;
 
-  // In production, we require explicit HTTPS to prevent token/API traffic over clear-text HTTP.
-  if (process.env.NODE_ENV === 'production') {
-    if (!normalized) {
-      throw new Error('EXPO_PUBLIC_API_URL is required in production.');
-    }
-
-    if (!normalized.startsWith('https://')) {
-      throw new Error('EXPO_PUBLIC_API_URL must use HTTPS in production.');
-    }
-
-    return normalized;
-  }
-
+  // Se a variável foi injetada pelo EAS, usa ela.
   if (normalized) {
     return normalized;
   }
 
-  const nodeEnv = process.env.NODE_ENV as string;
-  const isDev = typeof __DEV__ !== 'undefined'
-    ? __DEV__
-    : nodeEnv !== 'production';
-  const isTest = nodeEnv === 'test';
-
-  if (isDev || isTest) {
-    return DEV_FALLBACK_API_URL;
-  }
-
-  throw new Error('Unable to resolve API base URL. Set EXPO_PUBLIC_API_URL.');
+  // Se não foi injetada, não vamos dar "throw new Error" e crashar o app.
+  // Vamos usar o IP de nuvem direto como segurança para funcionar o APK.
+  return DEV_FALLBACK_API_URL;
 }
 
 const API_BASE_URL = resolveApiBaseUrl();

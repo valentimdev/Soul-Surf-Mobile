@@ -185,18 +185,32 @@ export default function ProfileScreen() {
           <View style={styles.postsSection}>
             <Text style={styles.sectionTitle}>Minhas Contribuicoes</Text>
             {posts.length > 0 ? (
-              posts.map((post) => (
-                <View key={post.id} style={styles.postCard}>
-                  <Image source={{ uri: post.caminhoFoto }} style={styles.postImage} />
-                  <View style={styles.postInfo}>
-                    <Text style={styles.postDesc} numberOfLines={1}>
-                      {post.descricao}
-                    </Text>
-                    <Text style={styles.postBeach}>{post.beach?.nome || 'Local desconhecido'}</Text>
-                  </View>
-                </View>
-              ))
-            ) : (
+                          posts.map((post) => (
+                            <TouchableOpacity
+                              key={post.id}
+                              style={styles.postCard}
+                              onPress={() => {
+                                if (post.beach?.id) {
+                                  router.push({
+                                    pathname: '/beach/[id]',
+                                    params: {
+                                      id: post.beach.id,
+                                      targetPostId: post.id
+                                    }
+                                  });
+                                }
+                              }}
+                            >
+                              <Image source={{ uri: post.caminhoFoto }} style={styles.postImage} />
+                              <View style={styles.postInfo}>
+                                <Text style={styles.postDesc} numberOfLines={1}>
+                                  {post.descricao}
+                                </Text>
+                                <Text style={styles.postBeach}>{post.beach?.nome || 'Local desconhecido'}</Text>
+                              </View>
+                            </TouchableOpacity>
+                          ))
+                        ) : (
               <Text style={styles.emptyPostsText}>Voce ainda nao fez nenhum post.</Text>
             )}
           </View>
