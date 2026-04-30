@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import api from '@/services/api';
 import * as ImagePicker from 'expo-image-picker';
+import { postService } from '@/services/posts/postService';
 import {
   ActivityIndicator,
   Alert,
@@ -78,20 +79,101 @@ function parseCachedMessages(raw: string | null): BeachMessageDTO[] {
 }
 
 export function PostCard({ post }: { post: PostDTO }) {
-  const likesCount = normalizeCounter(post.likesCount);
+  const initialLikes = normalizeCounter(post.likesCount);
   const commentsCount = normalizeCounter(post.commentsCount);
+
+  // Estados locais do componente para controle do like
+  const [liked, setLiked] = useState<boolean>(false);
+  const [likesCount, setLikesCount] = useState<number>(initialLikes);
+  const [isLiking, setIsLiking] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    // Fazemos as duas requisições em paralelo para ser mais rápido
+    Promise.all([
+      postService.getLikeStatus(post.id),
+      postService.getLikesCount(post.id)
+    ])
+      .then(([statusRes, countRes]) => {
+        if (mounted) {
+          setLiked(statusRes.liked);
+          setLikesCount(countRes.count);
+        }
+      })
+      .catch(error => {
+        console.error('Erro ao buscar dados do like:', error);
+      });
+
+    return () => { mounted = false; };
+  }, [post.id]);
+
+  const handleToggleLike = async () => {
+    if (isLiking) return; // Evita duplo clique rápido
+
+    const previousLiked = liked;
+    const previousCount = likesCount;
+
+    setLiked(!previousLiked);
+    setLikesCount(prev => prev + (!previousLiked ? 1 : -1));
+    setIsLiking(true);
+
+    try {
+      const res = await postService.toggleLike(post.id);
+      setLiked(res.liked);
+    } catch (error) {
+      console.error('Erro ao curtir:', error);
+      setLiked(previousLiked);
+      setLikesCount(previousCount);
+      Alert.alert('Erro', 'Não foi possível curtir o post.');
+    } finally {
+      setIsLiking(false);
+    }
+  };
 
   return (
     <View style={styles.postCard}>
       <View style={styles.postHeader}>
-        <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>{post.usuario?.username || 'Surfista'}</Text>
-        <Text testID={`post-date-${post.id}`} style={styles.postDate}>{formatDate(post.data)}</Text>
+        <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>
+          {post.usuario?.username || 'Surfista'}
+        </Text>
+        <Text testID={`post-date-${post.id}`} style={styles.postDate}>
+          {formatDate(post.data)}
+        </Text>
       </View>
-      {post.caminhoFoto ? <Image testID={`post-image-${post.id}`} source={{ uri: post.caminhoFoto }} style={styles.postImage} /> : null}
-      {post.descricao ? <Text testID={`post-description-${post.id}`} style={styles.postDescription}>{post.descricao}</Text> : null}
-      <View style={styles.postStats}>
-        <Text testID={`post-likes-${post.id}`} style={styles.postStatsText}>{likesCount} curtidas</Text>
-        <Text testID={`post-comments-${post.id}`} style={styles.postStatsText}>{commentsCount} comentarios</Text>
+
+      {post.caminhoFoto ? (
+        <Image testID={`post-image-${post.id}`} source={{ uri: post.caminhoFoto }} style={styles.postImage} />
+      ) : null}
+
+      {post.descricao ? (
+        <Text testID={`post-description-${post.id}`} style={styles.postDescription}>
+          {post.descricao}
+        </Text>
+      ) : null}
+
+      <View style={styles.postFooter}>
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={handleToggleLike}
+          disabled={isLiking}
+        >
+          <Ionicons
+            name={liked ? "heart" : "heart-outline"}
+            size={24}
+            color={liked ? "#E1306C" : "#6B7280"}
+          />
+          <Text style={[styles.actionText, liked && styles.actionTextLiked]}>
+            {likesCount} {likesCount === 1 ? 'curtida' : 'curtidas'}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.actionButton}>
+          <Ionicons name="chatbubble-outline" size={22} color="#6B7280" />
+          <Text style={styles.actionText}>
+            {commentsCount} {commentsCount === 1 ? 'comentário' : 'comentários'}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -110,7 +192,14 @@ function MessageCard({ message }: { message: BeachMessageDTO }) {
 }
 
 export default function BeachDetailsScreen() {
-  const params = useLocalSearchParams<{ id?: string | string[] }>();
+  const params = useLocalSearchParams<{ id?: string | string[], targetPostId?: string }>();
+  const targetPostId = useMemo(() => params.targetPostId ? Number(params.targetPostId) : null, [params.targetPostId]);
+
+  const mainScrollRef = React.useRef<ScrollView>(null);
+  const postsScrollRef = React.useRef<ScrollView>(null);
+  const postLayoutPositions = React.useRef<{ [key: number]: number }>({});
+  const postsSectionY = React.useRef<number>(0);
+
   const navigation = useNavigation();
   const beachId = useMemo(() => {
     const raw = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -139,6 +228,7 @@ export default function BeachDetailsScreen() {
     if (!Number.isFinite(beachId)) return null;
     return getBeachMessagesCacheKey(beachId);
   }, [beachId]);
+
   const todayMessages = useMemo(
     () => messages.filter((message) => isMessageFromToday(message.data)),
     [messages]
@@ -287,6 +377,23 @@ const loadBeachDetails = useCallback(async (isRefresh = false) => {
     setSurfConditionsError(null);
   }, [beachId]);
 
+  // NOVO: Efeito que faz a tela rolar sozinha para o post desejado
+  useEffect(() => {
+    if (!loading && posts.length > 0 && targetPostId) {
+      // Pequeno timeout para dar tempo da tela renderizar
+      setTimeout(() => {
+        if (mainScrollRef.current && postsSectionY.current > 0) {
+          mainScrollRef.current.scrollTo({ y: postsSectionY.current - 20, animated: true });
+        }
+
+        const targetY = postLayoutPositions.current[targetPostId];
+        if (postsScrollRef.current && targetY !== undefined) {
+          postsScrollRef.current.scrollTo({ y: targetY, animated: true });
+        }
+      }, 500);
+    }
+  }, [loading, posts, targetPostId]);
+
   const handleSendMessage = useCallback(async () => {
     if (!Number.isFinite(beachId)) return;
     if (!newMessage.trim()) {
@@ -362,9 +469,6 @@ const handleCreatePost = async () => {
       },
     });
 
-    console.log('POST CRIADO:', response.data);
-
-    // 👇 Atualiza imediatamente
     setPosts(prev => [response.data, ...prev]);
 
     closePostModal();
@@ -382,6 +486,7 @@ const handleCreatePost = async () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
+        ref={mainScrollRef}
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -465,7 +570,11 @@ const handleCreatePost = async () => {
               )}
             </View>
 
-            <View style={styles.section}>
+            {/* AQUI ESTÁ O onLayout PARA DESCOBRIR A ALTURA DA SESSÃO */}
+            <View
+              style={styles.section}
+              onLayout={(e) => { postsSectionY.current = e.nativeEvent.layout.y; }}
+            >
               <View style={styles.sectionHeaderWithButton}>
                 <Text style={styles.sectionTitleWithoutMargin}>Posts da praia</Text>
                 <TouchableOpacity onPress={() => setIsPostModalVisible(true)} style={styles.addPostBtn}>
@@ -477,12 +586,23 @@ const handleCreatePost = async () => {
                 <Text style={styles.emptyStateText}>Ainda nao ha posts publicos para esta praia.</Text>
               ) : (
                 <ScrollView
+                  ref={postsScrollRef}
                   style={styles.postsList}
                   contentContainerStyle={styles.postsListContent}
                   nestedScrollEnabled
                   showsVerticalScrollIndicator={false}
                 >
-                  {posts.map((post) => <PostCard key={post.id} post={post} />)}
+                  {posts.map((post) => (
+                    // AQUI ESTÁ O onLayout PARA DESCOBRIR A ALTURA DO POST ESPECÍFICO
+                    <View
+                      key={post.id}
+                      onLayout={(e) => {
+                        postLayoutPositions.current[post.id] = e.nativeEvent.layout.y;
+                      }}
+                    >
+                      <PostCard post={post} />
+                    </View>
+                  ))}
                 </ScrollView>
               )}
             </View>
@@ -745,13 +865,28 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 8,
   },
-  postStats: {
+  postFooter: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#EAE7DA',
+    paddingTop: 12,
   },
-  postStatsText: {
-    fontSize: 12,
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  actionText: {
+    fontSize: 13,
     color: '#6B7280',
+    fontWeight: '500',
+  },
+  actionTextLiked: {
+    color: '#E1306C',
+    fontWeight: '700',
   },
   emptyStateText: {
     fontSize: 13,

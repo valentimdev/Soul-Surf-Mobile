@@ -13,7 +13,9 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+// NOVO: Importamos o useHeaderHeight para calcular a distância do teclado perfeitamente
+import { useHeaderHeight } from '@react-navigation/elements';
 
 function parseStringParam(value?: string | string[]): string {
   if (!value) return '';
@@ -80,6 +82,9 @@ export default function ChatConversationScreen() {
 
   const listRef = useRef<FlatList<ChatMessageResponse>>(null);
   const insets = useSafeAreaInsets();
+
+  // Pegamos a altura exata do Header (Cabeçalho do Expo Router)
+  const headerHeight = useHeaderHeight();
 
   useEffect(() => {
     if (!navigation || !(navigation as any).setOptions) return;
@@ -162,75 +167,75 @@ export default function ChatConversationScreen() {
   const isInitialError = !!error && !loading && messages.length === 0;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
-        <View style={styles.contentContainer}>
-          {loading && messages.length === 0 ? (
-            <View style={styles.centerState}>
-              <ActivityIndicator size="large" color="#5C9DB8" />
-              <Text style={styles.centerStateText}>Carregando mensagens...</Text>
-            </View>
-          ) : isInitialError ? (
-            <View style={styles.centerState}>
-              <Text style={styles.centerStateText}>{error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={() => loadMessages()}>
-                <Text style={styles.retryButtonText}>Tentar novamente</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <FlatList
-              ref={listRef}
-              data={messages}
-              keyExtractor={(item, index) => item.id || `${item.createdAt}-${index}`}
-              renderItem={({ item }) => (
-                <MessageBubble message={item} isMine={!!currentUserId && String(item.senderId) === currentUserId} />
-              )}
-              contentContainerStyle={[
-                styles.listContent,
-                messages.length === 0 && styles.listContentEmpty,
-              ]}
-              showsVerticalScrollIndicator={false}
-              refreshing={refreshing}
-              onRefresh={() => loadMessages(true)}
-              keyboardShouldPersistTaps="handled"
-              ListEmptyComponent={
-                <View style={styles.emptyStateContainer}>
-                  <Text style={styles.emptyStateText}>Nenhuma mensagem ainda. Comece a conversa.</Text>
-                </View>
-              }
-            />
-          )}
-
-          <View
-            style={[
-              styles.composerContainer,
-              { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 12) : Math.max(insets.bottom, 8) },
-            ]}
-          >
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              style={styles.input}
-              placeholder="Digite uma mensagem..."
-              placeholderTextColor="#8B8B8B"
-              multiline
-              maxLength={1000}
-            />
-            <TouchableOpacity
-              style={[styles.sendButton, (sending || !draft.trim()) && styles.sendButtonDisabled]}
-              onPress={handleSend}
-              disabled={sending || !draft.trim()}
-            >
-              <Text style={styles.sendButtonText}>{sending ? 'Enviando...' : 'Enviar'}</Text>
+    // Removemos o SafeAreaView da raiz e tornamos o KeyboardAvoidingView o principal
+    <KeyboardAvoidingView
+      style={styles.safeArea}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={headerHeight} // Usando o cálculo exato dinâmico
+    >
+      <View style={styles.contentContainer}>
+        {loading && messages.length === 0 ? (
+          <View style={styles.centerState}>
+            <ActivityIndicator size="large" color="#5C9DB8" />
+            <Text style={styles.centerStateText}>Carregando mensagens...</Text>
+          </View>
+        ) : isInitialError ? (
+          <View style={styles.centerState}>
+            <Text style={styles.centerStateText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => loadMessages()}>
+              <Text style={styles.retryButtonText}>Tentar novamente</Text>
             </TouchableOpacity>
           </View>
+        ) : (
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={(item, index) => item.id || `${item.createdAt}-${index}`}
+            renderItem={({ item }) => (
+              <MessageBubble message={item} isMine={!!currentUserId && String(item.senderId) === currentUserId} />
+            )}
+            contentContainerStyle={[
+              styles.listContent,
+              messages.length === 0 && styles.listContentEmpty,
+            ]}
+            showsVerticalScrollIndicator={false}
+            refreshing={refreshing}
+            onRefresh={() => loadMessages(true)}
+            keyboardShouldPersistTaps="handled"
+            ListEmptyComponent={
+              <View style={styles.emptyStateContainer}>
+                <Text style={styles.emptyStateText}>Nenhuma mensagem ainda. Comece a conversa.</Text>
+              </View>
+            }
+          />
+        )}
+
+        <View
+          style={[
+            styles.composerContainer,
+            // A matemática de insets.bottom já garante que fica bom no iPhone com entalhe e no Android
+            { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 12) : Math.max(insets.bottom, 8) },
+          ]}
+        >
+          <TextInput
+            value={draft}
+            onChangeText={setDraft}
+            style={styles.input}
+            placeholder="Digite uma mensagem..."
+            placeholderTextColor="#8B8B8B"
+            multiline
+            maxLength={1000}
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, (sending || !draft.trim()) && styles.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={sending || !draft.trim()}
+          >
+            <Text style={styles.sendButtonText}>{sending ? 'Enviando...' : 'Enviar'}</Text>
+          </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -238,9 +243,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F6F4EB',
-  },
-  flex: {
-    flex: 1,
   },
   contentContainer: {
     flex: 1,
