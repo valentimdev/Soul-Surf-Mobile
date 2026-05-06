@@ -123,7 +123,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F6F4EB' },
+  container: { flex: 1, backgroundColor: '#FBF5E9' },
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
