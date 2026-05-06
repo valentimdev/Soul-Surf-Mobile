@@ -1,10 +1,10 @@
 import BottomSheet from '@/components/BottomSheet';
 import { chatService } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
-import { UserDTO } from '@/types/api';
+import { UserDTO, PostDTO } from '@/types/api';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, Stack, useFocusEffect} from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -57,7 +57,7 @@ const fetchProfileData = useCallback(async () => {
         const myFollowing = await userService.getFollowing(myProfile.id).catch(() => []);
         const isCurrentlyFollowing = myFollowing.some(u => u.id === userId);
 
-        setIsFollowing(isCurrentlyFollowing || profile.isFollowing || (profile as any).following || false);
+        setIsFollowing(isCurrentlyFollowing || (profile as any).isFollowing || (profile as any).following || false);
       }
     } catch (error: any) {
       console.error('Erro ao buscar perfil:', error.message);
@@ -177,8 +177,8 @@ const fetchProfileData = useCallback(async () => {
     );
   }
 
-  // Pegamos os posts direto do DTO retornado pela API
-  const userPosts = user.posts || [];
+  // Pegamos os posts direto do DTO retornado pela API e tipamos explicitamente
+  const userPosts: PostDTO[] = (user as any).posts || [];
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -257,7 +257,7 @@ const fetchProfileData = useCallback(async () => {
           <View style={styles.postsSection}>
             <Text style={styles.sectionTitle}>Contribuições</Text>
             {userPosts.length > 0 ? (
-              userPosts.map((post) => (
+              userPosts.map((post: PostDTO) => (
                 <TouchableOpacity
                   key={post.id}
                   style={styles.postCard}
@@ -364,8 +364,7 @@ const styles = StyleSheet.create({
   avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: '#F6F4EB' },
   userName: { fontSize: 22, fontWeight: 'bold', color: '#1F4A63', marginTop: 10 },
   bioText: { fontSize: 14, color: '#666', textAlign: 'center', marginVertical: 10, paddingHorizontal: 40 },
-  
-  // ESTILOS NOVOS DOS BOTÕES DE AÇÃO
+
   actionButtonsContainer: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 5 },
   actionButtonMain: { paddingHorizontal: 30, paddingVertical: 10, backgroundColor: '#1F4A63', borderRadius: 20 },
   actionButtonTextMain: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },

@@ -3,7 +3,6 @@ import { userService } from '@/services/users/userService';
 import { UserDTO } from '@/types/api';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
 
 import {
   ActivityIndicator,

@@ -12,7 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useFocusEffect } from 'expo-router'; // <-- Adicionado useFocusEffect
+import { useRouter, useFocusEffect } from 'expo-router';
 
 import { postService } from '@/services/posts/postService';
 import { userService } from '@/services/users/userService';
@@ -23,14 +23,11 @@ type TabType = 'posts' | 'pessoas' | 'praias';
 
 const FALLBACK_AVATAR = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
-// =====================================================================
-// COMPONENTE DO POST
-// =====================================================================
 const DiscoverPostCard = ({
   post,
-  isFollowing, // <-- Agora recebe o estado atualizado direto do pai
+  isFollowing,
   isMe,
-  onUpdateFollow // <-- Callback para atualizar a tela toda
+  onUpdateFollow
 }: {
   post: PostDTO;
   isFollowing: boolean;
@@ -152,7 +149,7 @@ export default function DiscoverScreen() {
         userService.getUsers(0, 30).catch(() => []),
         beachService.getAllBeaches().catch(() => []),
       ]);
-      const postsArray = Array.isArray(feedData) ? feedData : (feedData.content || feedData.data || []);
+      const postsArray = Array.isArray(feedData) ? feedData : (feedData.content || (feedData as any).data || []);
       setPosts(postsArray);
       setUsers(usersData);
       setBeaches(beachesData);
