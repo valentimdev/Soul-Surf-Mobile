@@ -2,7 +2,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { notificationService } from '@/services/notifications/notificationService';
 import { Tabs, useFocusEffect } from 'expo-router';
-import { Map, MessageCircle, Bell, User } from 'lucide-react-native';
+import { Map, MessageCircle, Bell, User, Compass } from 'lucide-react-native';
 import React, { useCallback, useState } from 'react';
 import { View } from 'react-native';
 
@@ -49,6 +49,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <Map size={size} color={Colors.light.icon} />,
         }}
       />
+      <Tabs.Screen
+                    name="discover"
+                    options={{
+                        title: 'Descobrir',
+                        tabBarIcon: ({ color, size }) => <Compass size={size} color={Colors.light.icon} />,
+                    }}
+                  />
       <Tabs.Screen
         name="chat"
         options={{

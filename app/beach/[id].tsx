@@ -5,7 +5,7 @@ import { SurfConditionsCard } from '@/components/surf/SurfConditionsCard';
 import { surfConditionsService } from '@/services/weather/surfConditionsService';
 import { SurfConditionsResponse } from '@/types/surfConditions';
 import * as SecureStore from 'expo-secure-store';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import api from '@/services/api';
@@ -79,6 +79,7 @@ function parseCachedMessages(raw: string | null): BeachMessageDTO[] {
 }
 
 export function PostCard({ post }: { post: PostDTO }) {
+  const router = useRouter();
   const initialLikes = normalizeCounter(post.likesCount);
   const commentsCount = normalizeCounter(post.commentsCount);
 
@@ -90,7 +91,6 @@ export function PostCard({ post }: { post: PostDTO }) {
   useEffect(() => {
     let mounted = true;
 
-    // Fazemos as duas requisições em paralelo para ser mais rápido
     Promise.all([
       postService.getLikeStatus(post.id),
       postService.getLikesCount(post.id)
@@ -109,7 +109,7 @@ export function PostCard({ post }: { post: PostDTO }) {
   }, [post.id]);
 
   const handleToggleLike = async () => {
-    if (isLiking) return; // Evita duplo clique rápido
+    if (isLiking) return;
 
     const previousLiked = liked;
     const previousCount = likesCount;
@@ -134,9 +134,14 @@ export function PostCard({ post }: { post: PostDTO }) {
   return (
     <View style={styles.postCard}>
       <View style={styles.postHeader}>
-        <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>
-          {post.usuario?.username || 'Surfista'}
-        </Text>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => post.usuario?.id && router.push(`/user/${post.usuario.id}`)}
+        >
+          <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>
+            {post.usuario?.username || 'Surfista'}
+          </Text>
+        </TouchableOpacity>
         <Text testID={`post-date-${post.id}`} style={styles.postDate}>
           {formatDate(post.data)}
         </Text>
@@ -180,10 +185,20 @@ export function PostCard({ post }: { post: PostDTO }) {
 }
 
 function MessageCard({ message }: { message: BeachMessageDTO }) {
+  const router = useRouter();
+
   return (
     <View style={styles.messageCard}>
       <View style={styles.messageHeader}>
-        <Text testID={`message-author-${message.id}`} style={styles.messageAuthor}>{message.autor?.username || 'Surfista'}</Text>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => message.autor?.id && router.push(`/user/${message.autor.id}`)}
+          style={{ flex: 1 }}
+        >
+          <Text testID={`message-author-${message.id}`} style={styles.messageAuthor}>
+            {message.autor?.username || 'Surfista'}
+          </Text>
+        </TouchableOpacity>
         <Text testID={`message-date-${message.id}`} style={styles.messageDate}>{formatDateTime(message.data)}</Text>
       </View>
       <Text testID={`message-text-${message.id}`} style={styles.messageText}>{message.texto}</Text>
@@ -192,8 +207,12 @@ function MessageCard({ message }: { message: BeachMessageDTO }) {
 }
 
 export default function BeachDetailsScreen() {
-  const params = useLocalSearchParams<{ id?: string | string[], targetPostId?: string }>();
-  const targetPostId = useMemo(() => params.targetPostId ? Number(params.targetPostId) : null, [params.targetPostId]);
+  const params = useLocalSearchParams<{ id?: string | string[], targetPostId?: string, scrollToPost?: string }>();
+  // Alterado para aceitar tanto targetPostId quanto scrollToPost (usado na tela de Discover)
+  const targetPostId = useMemo(() => {
+    const target = params.targetPostId || params.scrollToPost;
+    return target ? Number(target) : null;
+  }, [params.targetPostId, params.scrollToPost]);
 
   const mainScrollRef = React.useRef<ScrollView>(null);
   const postsScrollRef = React.useRef<ScrollView>(null);
@@ -257,106 +276,106 @@ export default function BeachDetailsScreen() {
     }
   }, [messagesCacheKey]);
 
-const loadBeachDetails = useCallback(async (isRefresh = false) => {
-  if (!Number.isFinite(beachId)) {
-    setError('Praia invalida.');
-    setLoading(false);
-    setRefreshing(false);
-    return;
-  }
-
-  if (isRefresh) setRefreshing(true);
-  else setLoading(true);
-
-  try {
-    setError(null);
-
-    const beachPromise = beachService.getBeachById(beachId);
-    const publicPostsPromise = beachService.getBeachPostsPublic(beachId);
-    const myPostsPromise = beachService.getMyPosts();
-    const messagesPromise = beachService.getBeachMessages(beachId);
-
-    const beachData = await beachPromise;
-
-    const hasValidCoordinates =
-      Number.isFinite(beachData.latitude) &&
-      Number.isFinite(beachData.longitude);
-
-    const surfPromise = hasValidCoordinates
-      ? surfConditionsService.getSurfConditions({
-          lat: beachData.latitude,
-          lon: beachData.longitude,
-          beach: beachData.nome,
-        })
-      : Promise.resolve(null);
-
-    const [publicPostsResult, myPostsResult, messagesResult, surfResult] =
-      await Promise.allSettled([
-        publicPostsPromise,
-        myPostsPromise,
-        messagesPromise,
-        surfPromise,
-      ]);
-
-    const publicPosts =
-      publicPostsResult.status === 'fulfilled'
-        ? publicPostsResult.value
-        : [];
-
-    const myPosts =
-      myPostsResult.status === 'fulfilled'
-        ? myPostsResult.value
-        : [];
-
-    const myBeachPosts = myPosts.filter(
-      (post) => post.beach?.id === beachId
-    );
-
-    const merged = [...publicPosts, ...myBeachPosts];
-
-    const uniquePosts = merged.filter(
-      (post, index, self) =>
-        index === self.findIndex((p) => p.id === post.id)
-    );
-
-    const beachMessages =
-      messagesResult.status === 'fulfilled'
-        ? sortMessagesByDateDesc(messagesResult.value || [])
-        : null;
-
-    if (surfResult.status === 'rejected') {
-      setSurfConditionsError(
-        'Nao foi possivel carregar onda, vento e balneabilidade agora.'
-      );
-    } else if (surfResult.value) {
-      setSurfConditions(surfResult.value);
-      setSurfConditionsError(null);
-    } else {
-      setSurfConditions(null);
-      setSurfConditionsError(
-        'Este pico ainda nao tem coordenadas para leitura automatica do mar.'
-      );
+  const loadBeachDetails = useCallback(async (isRefresh = false) => {
+    if (!Number.isFinite(beachId)) {
+      setError('Praia invalida.');
+      setLoading(false);
+      setRefreshing(false);
+      return;
     }
 
-    setBeach(beachData);
-    setPosts(uniquePosts.filter(Boolean));
+    if (isRefresh) setRefreshing(true);
+    else setLoading(true);
 
-    if (beachMessages) {
-      if (beachMessages.length > 0) {
-        setMessages(beachMessages);
-        void persistMessagesCache(beachMessages);
+    try {
+      setError(null);
+
+      const beachPromise = beachService.getBeachById(beachId);
+      const publicPostsPromise = beachService.getBeachPostsPublic(beachId);
+      const myPostsPromise = beachService.getMyPosts();
+      const messagesPromise = beachService.getBeachMessages(beachId);
+
+      const beachData = await beachPromise;
+
+      const hasValidCoordinates =
+        Number.isFinite(beachData.latitude) &&
+        Number.isFinite(beachData.longitude);
+
+      const surfPromise = hasValidCoordinates
+        ? surfConditionsService.getSurfConditions({
+            lat: beachData.latitude,
+            lon: beachData.longitude,
+            beach: beachData.nome,
+          })
+        : Promise.resolve(null);
+
+      const [publicPostsResult, myPostsResult, messagesResult, surfResult] =
+        await Promise.allSettled([
+          publicPostsPromise,
+          myPostsPromise,
+          messagesPromise,
+          surfPromise,
+        ]);
+
+      const publicPosts =
+        publicPostsResult.status === 'fulfilled'
+          ? publicPostsResult.value
+          : [];
+
+      const myPosts =
+        myPostsResult.status === 'fulfilled'
+          ? myPostsResult.value
+          : [];
+
+      const myBeachPosts = myPosts.filter(
+        (post) => post.beach?.id === beachId
+      );
+
+      const merged = [...publicPosts, ...myBeachPosts];
+
+      const uniquePosts = merged.filter(
+        (post, index, self) =>
+          index === self.findIndex((p) => p.id === post.id)
+      );
+
+      const beachMessages =
+        messagesResult.status === 'fulfilled'
+          ? sortMessagesByDateDesc(messagesResult.value || [])
+          : null;
+
+      if (surfResult.status === 'rejected') {
+        setSurfConditionsError(
+          'Nao foi possivel carregar onda, vento e balneabilidade agora.'
+        );
+      } else if (surfResult.value) {
+        setSurfConditions(surfResult.value);
+        setSurfConditionsError(null);
       } else {
-        setMessages((prev) => (prev.length > 0 ? prev : []));
+        setSurfConditions(null);
+        setSurfConditionsError(
+          'Este pico ainda nao tem coordenadas para leitura automatica do mar.'
+        );
       }
+
+      setBeach(beachData);
+      setPosts(uniquePosts.filter(Boolean));
+
+      if (beachMessages) {
+        if (beachMessages.length > 0) {
+          setMessages(beachMessages);
+          void persistMessagesCache(beachMessages);
+        } else {
+          setMessages((prev) => (prev.length > 0 ? prev : []));
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      setError('Nao foi possivel carregar os dados da praia.');
+    } finally {
+      if (isRefresh) setRefreshing(false);
+      else setLoading(false);
     }
-  } catch (e) {
-    console.error(e);
-    setError('Nao foi possivel carregar os dados da praia.');
-  } finally {
-    if (isRefresh) setRefreshing(false);
-    else setLoading(false);
-  }
-}, [beachId, persistMessagesCache]);
+  }, [beachId, persistMessagesCache]);
 
   useEffect(() => {
     void loadMessagesCache();
@@ -377,10 +396,8 @@ const loadBeachDetails = useCallback(async (isRefresh = false) => {
     setSurfConditionsError(null);
   }, [beachId]);
 
-  // NOVO: Efeito que faz a tela rolar sozinha para o post desejado
   useEffect(() => {
     if (!loading && posts.length > 0 && targetPostId) {
-      // Pequeno timeout para dar tempo da tela renderizar
       setTimeout(() => {
         if (mainScrollRef.current && postsSectionY.current > 0) {
           mainScrollRef.current.scrollTo({ y: postsSectionY.current - 20, animated: true });
@@ -440,48 +457,48 @@ const loadBeachDetails = useCallback(async (isRefresh = false) => {
     setNewPostBase64(null);
   };
 
-const handleCreatePost = async () => {
-  if (!newPostDesc.trim() && !newPostPhotoUri) {
-    Alert.alert('Aviso', 'Seu post precisa ter ao menos uma foto ou uma descrição.');
-    return;
-  }
-
-  setCreatingPost(true);
-
-  try {
-    const formData = new FormData();
-
-    formData.append('publico', 'true');
-    formData.append('descricao', newPostDesc.trim() || '');
-    formData.append('beachId', String(beachId));
-
-    if (newPostPhotoUri) {
-      formData.append('foto', {
-        uri: newPostPhotoUri,
-        name: 'photo.jpg',
-        type: 'image/jpeg',
-      } as any);
+  const handleCreatePost = async () => {
+    if (!newPostDesc.trim() && !newPostPhotoUri) {
+      Alert.alert('Aviso', 'Seu post precisa ter ao menos uma foto ou uma descrição.');
+      return;
     }
 
-    const response = await api.post('/api/posts', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    setCreatingPost(true);
 
-    setPosts(prev => [response.data, ...prev]);
+    try {
+      const formData = new FormData();
 
-    closePostModal();
-    Alert.alert('Sucesso', 'Post publicado com sucesso!');
+      formData.append('publico', 'true');
+      formData.append('descricao', newPostDesc.trim() || '');
+      formData.append('beachId', String(beachId));
 
-  } catch (error: any) {
-    console.error(error?.response?.data || error.message);
-    Alert.alert('Erro', 'Não foi possível criar o post.');
-  } finally {
-    setCreatingPost(false);
-  }
+      if (newPostPhotoUri) {
+        formData.append('foto', {
+          uri: newPostPhotoUri,
+          name: 'photo.jpg',
+          type: 'image/jpeg',
+        } as any);
+      }
 
-};
+      const response = await api.post('/api/posts', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setPosts(prev => [response.data, ...prev]);
+
+      closePostModal();
+      Alert.alert('Sucesso', 'Post publicado com sucesso!');
+
+    } catch (error: any) {
+      console.error(error?.response?.data || error.message);
+      Alert.alert('Erro', 'Não foi possível criar o post.');
+    } finally {
+      setCreatingPost(false);
+    }
+
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -570,7 +587,6 @@ const handleCreatePost = async () => {
               )}
             </View>
 
-            {/* AQUI ESTÁ O onLayout PARA DESCOBRIR A ALTURA DA SESSÃO */}
             <View
               style={styles.section}
               onLayout={(e) => { postsSectionY.current = e.nativeEvent.layout.y; }}
@@ -593,7 +609,6 @@ const handleCreatePost = async () => {
                   showsVerticalScrollIndicator={false}
                 >
                   {posts.map((post) => (
-                    // AQUI ESTÁ O onLayout PARA DESCOBRIR A ALTURA DO POST ESPECÍFICO
                     <View
                       key={post.id}
                       onLayout={(e) => {
@@ -817,7 +832,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: '#1F4A63',
-    flex: 1,
+    flex: 1, // Impede que o texto "empurre" a data se for muito grande
   },
   messageDate: {
     fontSize: 12,
@@ -847,7 +862,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1F4A63',
     fontWeight: '700',
-    flex: 1,
   },
   postDate: {
     fontSize: 12,

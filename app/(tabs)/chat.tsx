@@ -3,7 +3,6 @@ import { userService } from '@/services/users/userService';
 import { UserDTO } from '@/types/api';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Ionicons } from '@expo/vector-icons';
 
 import {
   ActivityIndicator,
@@ -257,14 +256,6 @@ export default function ChatScreen() {
 
         <View style={styles.header}>
           <Text style={styles.title}>Mensagens</Text>
-          <TouchableOpacity
-            style={styles.usersButton}
-            onPress={() => router.push('/users')}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="people-outline" size={24} color="#1F4A63" />
-            <Text style={styles.usersButtonText}>Descobrir</Text>
-          </TouchableOpacity>
         </View>
 
         {showCenteredLoader ? (
@@ -323,20 +314,6 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     color: '#1F4A63',
-  },
-  usersButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E2DEC3',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    gap: 6,
-  },
-  usersButtonText: {
-    color: '#1F4A63',
-    fontWeight: '600',
-    fontSize: 14,
   },
   followingContainer: {
     paddingVertical: 5,
