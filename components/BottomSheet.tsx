@@ -74,14 +74,14 @@ export default function BottomSheet({ visible, onClose, children }: BottomSheetP
 
     return (
         <>
-            <Pressable style={styles.backdrop} onPress={onClose} />
-            <Animated.View style={[styles.container, animatedStyle]}>
+            <Pressable testID="bottom-sheet-backdrop" style={styles.backdrop} onPress={onClose} />
+            <Animated.View testID="bottom-sheet-container" style={[styles.container, animatedStyle]}>
                 <GestureDetector gesture={gesture}>
                     <View style={styles.handleArea}>
                         <View style={styles.handle} />
                     </View>
                 </GestureDetector>
-                <View style={styles.content}>
+                <View testID="bottom-sheet-content" style={styles.content}>
                     {children}
                 </View>
             </Animated.View>
