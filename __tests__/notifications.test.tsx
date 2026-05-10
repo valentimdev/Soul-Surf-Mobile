@@ -3,26 +3,6 @@ import { render, waitFor } from '@testing-library/react-native';
 import NotificationsScreen from '../app/(tabs)/notifications';
 import { notificationService } from '../services/notifications/notificationService';
 
-// Mock do react-native para evitar erros de transformação
-jest.mock('react-native', () => {
-  const React = require('react');
-  const make = (type: string) => ({ children, ...props }: any) =>
-    React.createElement(type, props, children);
-
-  return {
-    ActivityIndicator: make('ActivityIndicator'),
-    RefreshControl: make('RefreshControl'),
-    SafeAreaView: make('SafeAreaView'),
-    ScrollView: make('ScrollView'),
-    StyleSheet: {
-      create: (s: any) => s,
-    },
-    Text: make('Text'),
-    TouchableOpacity: make('TouchableOpacity'),
-    View: make('View'),
-  };
-});
-
 // Mock do notificationService
 jest.mock('../services/notifications/notificationService', () => ({
   notificationService: {
