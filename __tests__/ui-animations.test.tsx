@@ -3,6 +3,30 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import BottomSheet from '../components/BottomSheet';
 import { View, Text, TouchableOpacity } from 'react-native';
 
+// Mock do react-native para evitar erros de transformação
+jest.mock('react-native', () => {
+  const React = require('react');
+  const make = (type: string) => ({ children, ...props }: any) =>
+    React.createElement(type, props, children);
+
+  return {
+    Dimensions: {
+      get: () => ({ height: 800, width: 400 }),
+    },
+    Image: make('Image'),
+    Pressable: make('Pressable'),
+    SafeAreaView: make('SafeAreaView'),
+    ScrollView: make('ScrollView'),
+    StyleSheet: {
+      create: (s: any) => s,
+      absoluteFillObject: {},
+    },
+    Text: make('Text'),
+    TouchableOpacity: make('TouchableOpacity'),
+    View: make('View'),
+  };
+});
+
 // Mock do react-native-reanimated
 jest.mock('react-native-reanimated', () => {
   const Reanimated = require('react-native-reanimated/mock');

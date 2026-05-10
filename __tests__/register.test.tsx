@@ -4,6 +4,34 @@ import RegisterScreen from '../app/register';
 import { authService } from '../services/auth/authService';
 import { Alert } from 'react-native';
 
+// Mock do react-native para evitar erros de transformação e act()
+jest.mock('react-native', () => {
+  const React = require('react');
+  const make = (type: string) => ({ children, ...props }: any) =>
+    React.createElement(type, props, children);
+
+  return {
+    ActivityIndicator: make('ActivityIndicator'),
+    Alert: {
+      alert: jest.fn(),
+    },
+    KeyboardAvoidingView: make('KeyboardAvoidingView'),
+    Platform: {
+      OS: 'android',
+      select: (values: any) => values.android || values.default,
+    },
+    SafeAreaView: make('SafeAreaView'),
+    ScrollView: make('ScrollView'),
+    StyleSheet: {
+      create: (s: any) => s,
+    },
+    Text: make('Text'),
+    TextInput: make('TextInput'),
+    TouchableOpacity: make('TouchableOpacity'),
+    View: make('View'),
+  };
+});
+
 // Mock do authService
 jest.mock('../services/auth/authService', () => ({
   authService: {

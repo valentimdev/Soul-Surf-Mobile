@@ -1,0 +1,1598 @@
+Run npm test -- --runInBand --watchman=false
+
+> soul-surf-mobile@1.0.0 test
+> jest --runInBand --watchman=false --runInBand --watchman=false
+
+PASS __tests__/map.test.tsx
+  ● Console
+
+    console.error
+      react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+
+      173 |     let tree: ReactTestRenderer;
+      174 |     act(() => {
+    > 175 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      176 |     });
+      177 |
+      178 |     const loadingTexts = findTextContaining((tree as ReactTestRenderer).root, 'Buscando sua localiza');
+
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14598:17)
+      at __tests__/map.test.tsx:175:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:174:5)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      173 |     let tree: ReactTestRenderer;
+      174 |     act(() => {
+    > 175 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      176 |     });
+      177 |
+      178 |     const loadingTexts = findTextContaining((tree as ReactTestRenderer).root, 'Buscando sua localiza');
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12382:10)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12326:7)
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14630:7)
+      at __tests__/map.test.tsx:175:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:174:5)
+
+    console.error
+      react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+
+      185 |     let tree: ReactTestRenderer;
+      186 |     await act(async () => {
+    > 187 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      188 |     });
+      189 |
+      190 |     await flushAsync();
+
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14598:17)
+      at __tests__/map.test.tsx:187:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:186:11)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      185 |     let tree: ReactTestRenderer;
+      186 |     await act(async () => {
+    > 187 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      188 |     });
+      189 |
+      190 |     await flushAsync();
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12382:10)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12326:7)
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14630:7)
+      at __tests__/map.test.tsx:187:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:186:11)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      217 |                 const { status } = await Location.requestForegroundPermissionsAsync();
+      218 |                 if (status !== 'granted') {
+    > 219 |                     setIsLocationReady(true);
+          |                     ^
+      220 |                     return;
+      221 |                 }
+      222 |
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:219:21
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      195 |                     .filter((pin): pin is MapPin => pin !== null);
+      196 |
+    > 197 |                 setAllPins([...beachPins, ...poiPins]);
+          |                 ^
+      198 |             } catch (err) {
+      199 |                 console.error('Erro ao carregar pins do mapa:', err);
+      200 |             } finally {
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:197:17
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      200 |             } finally {
+      201 |                 if (mounted) {
+    > 202 |                     setLoading(false);
+          |                     ^
+      203 |                 }
+      204 |             }
+      205 |         })();
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:202:21
+
+    console.error
+      react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+
+      212 |     let tree: ReactTestRenderer;
+      213 |     await act(async () => {
+    > 214 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      215 |     });
+      216 |
+      217 |     await flushAsync();
+
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14598:17)
+      at __tests__/map.test.tsx:214:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:213:11)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      212 |     let tree: ReactTestRenderer;
+      213 |     await act(async () => {
+    > 214 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      215 |     });
+      216 |
+      217 |     await flushAsync();
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12382:10)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12326:7)
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14630:7)
+      at __tests__/map.test.tsx:214:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:213:11)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      195 |                     .filter((pin): pin is MapPin => pin !== null);
+      196 |
+    > 197 |                 setAllPins([...beachPins, ...poiPins]);
+          |                 ^
+      198 |             } catch (err) {
+      199 |                 console.error('Erro ao carregar pins do mapa:', err);
+      200 |             } finally {
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:197:17
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      200 |             } finally {
+      201 |                 if (mounted) {
+    > 202 |                     setLoading(false);
+          |                     ^
+      203 |                 }
+      204 |             }
+      205 |         })();
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:202:21
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      229 |                 ];
+      230 |                 initialCameraCenterRef.current = currentUserLocation;
+    > 231 |                 setUserLocation(currentUserLocation);
+          |                 ^
+      232 |                 setIsLocationReady(true);
+      233 |
+      234 |                 subscription = await Location.watchPositionAsync(
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:231:17
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      230 |                 initialCameraCenterRef.current = currentUserLocation;
+      231 |                 setUserLocation(currentUserLocation);
+    > 232 |                 setIsLocationReady(true);
+          |                 ^
+      233 |
+      234 |                 subscription = await Location.watchPositionAsync(
+      235 |                     { accuracy: Location.Accuracy.High, distanceInterval: 5 },
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:232:17
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      310 |
+      311 |     const handlePinPress = useCallback((pin: MapPin) => {
+    > 312 |         setSelectedPinData(pin);
+          |         ^
+      313 |     }, []);
+      314 |
+      315 |     const handleCloseSheet = useCallback(() => {
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:312:9
+      at Object.onSelected [as onPress] (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:117:43)
+      at __tests__/map.test.tsx:222:17
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:221:11)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      320 |         if (!pin.beachId) return;
+      321 |
+    > 322 |         setSelectedPinData(null);
+          |         ^
+      323 |         router.push({
+      324 |             pathname: '../beach/[id]',
+      325 |             params: { id: String(pin.beachId) },
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:322:9
+      at Object.onPress (__tests__/map.test.tsx:127:44)
+      at __tests__/map.test.tsx:230:29
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:229:11)
+
+PASS services/__tests__/postService.integration.test.ts
+PASS services/__tests__/poiService.integration.test.ts
+PASS services/__tests__/chatService.integration.test.ts
+PASS services/__tests__/userService.integration.test.ts
+PASS services/__tests__/authService.integration.test.ts
+FAIL __tests__/register.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import RegisterScreen from '../app/register';
+      4 | import { authService } from '../services/auth/authService';
+      5 | import { Alert } from 'react-native';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/register.test.tsx:2:1)
+
+FAIL __tests__/ui-animations.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import BottomSheet from '../components/BottomSheet';
+      4 | import { View, Text, TouchableOpacity } from 'react-native';
+      5 |
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/ui-animations.test.tsx:2:1)
+
+PASS services/__tests__/authService.test.ts
+PASS services/__tests__/beachService.integration.test.ts
+PASS services/__tests__/commentService.integration.test.ts
+PASS services/__tests__/postService.test.ts
+FAIL __tests__/notifications.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import NotificationsScreen from '../app/(tabs)/notifications';
+      4 | import { notificationService } from '../services/notifications/notificationService';
+      5 |
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/notifications.test.tsx:2:1)
+
+FAIL __tests__/chat.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import ChatScreen from '../app/(tabs)/chat';
+      4 | import { chatService } from '../services/chat/chatService';
+      5 | import { userService } from '../services/users/userService';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/chat.test.tsx:2:1)
+
+PASS services/__tests__/apiInterceptor.test.ts
+PASS __tests__/userService.unit.test.ts
+PASS services/__tests__/notificationService.integration.test.ts
+PASS services/__tests__/api_smoke.test.ts
+PASS __tests__/poiService.unit.test.ts
+FAIL __tests__/beach-post.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import BeachDetailsScreen from '../app/beach/[id]';
+      4 | import { beachService } from '../services/beaches/beachService';
+      5 | import { surfConditionsService } from '../services/weather/surfConditionsService';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/beach-post.test.tsx:2:1)
+
+PASS __tests__/authService.unit.test.ts
+PASS __tests__/surfConditionsInterpreter.test.ts
+PASS services/__tests__/weatherService.integration.test.ts
+  ● Console
+
+    console.error
+      Erro ao buscar dados na Open-Meteo: Error: Network error
+          at Object.<anonymous> (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/services/__tests__/weatherService.integration.test.ts:46:51)
+          at Promise.finally.completed (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:1557:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:1497:10)
+          at _callCircusTest (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:1007:40)
+          at _runTest (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:947:3)
+          at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:849:7
+          at _runTestsForDescribeBlock (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:862:11)
+          at _runTestsForDescribeBlock (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:857:11)
+          at run (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:761:3)
+          at runAndTransformResultsToJestFormat (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:1918:21)
+          at jestAdapter (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/runner.js:101:19)
+          at runTestInternal (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-runner/build/index.js:275:16)
+          at runTest (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-runner/build/index.js:343:7)
+
+      23 |       };
+      24 |     } catch (error) {
+    > 25 |       console.error("Erro ao buscar dados na Open-Meteo:", error);
+         |               ^
+      26 |       // Retorna valores zerados para o app não "quebrar" se a internet cair
+      27 |       return { temp: 0, windSpeed: 0, windDirection: 0 };
+      28 |     }
+
+      at Object.getCurrentWeather (services/weather/weatherService.ts:25:15)
+      at Object.<anonymous> (services/__tests__/weatherService.integration.test.ts:48:5)
+
+PASS utils/__tests__/formatters.test.ts
+PASS __tests__/beachService.unit.test.ts
+
+Summary of all failing tests
+FAIL __tests__/register.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import RegisterScreen from '../app/register';
+      4 | import { authService } from '../services/auth/authService';
+      5 | import { Alert } from 'react-native';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/register.test.tsx:2:1)
+
+FAIL __tests__/ui-animations.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import BottomSheet from '../components/BottomSheet';
+      4 | import { View, Text, TouchableOpacity } from 'react-native';
+      5 |
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/ui-animations.test.tsx:2:1)
+
+FAIL __tests__/notifications.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import NotificationsScreen from '../app/(tabs)/notifications';
+      4 | import { notificationService } from '../services/notifications/notificationService';
+      5 |
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/notifications.test.tsx:2:1)
+
+FAIL __tests__/chat.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import ChatScreen from '../app/(tabs)/chat';
+      4 | import { chatService } from '../services/chat/chatService';
+      5 | import { userService } from '../services/users/userService';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/chat.test.tsx:2:1)
+
+FAIL __tests__/beach-post.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import BeachDetailsScreen from '../app/beach/[id]';
+      4 | import { beachService } from '../services/beaches/beachService';
+      5 | import { surfConditionsService } from '../services/weather/surfConditionsService';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/beach-post.test.tsx:2:1)
+
+
+Test Suites: 5 failed, 20 passed, 25 total
+Tests:       3 skipped, 118 passed, 121 total
+Snapshots:   0 total
+Time:        12.188 s
+Ran all test suites.
+
+
+Run npm test -- --runInBand --watchman=false
+
+> soul-surf-mobile@1.0.0 test
+> jest --runInBand --watchman=false --runInBand --watchman=false
+
+PASS __tests__/map.test.tsx
+  ● Console
+
+    console.error
+      react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+
+      173 |     let tree: ReactTestRenderer;
+      174 |     act(() => {
+    > 175 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      176 |     });
+      177 |
+      178 |     const loadingTexts = findTextContaining((tree as ReactTestRenderer).root, 'Buscando sua localiza');
+
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14598:17)
+      at __tests__/map.test.tsx:175:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:174:5)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      173 |     let tree: ReactTestRenderer;
+      174 |     act(() => {
+    > 175 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      176 |     });
+      177 |
+      178 |     const loadingTexts = findTextContaining((tree as ReactTestRenderer).root, 'Buscando sua localiza');
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12382:10)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12326:7)
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14630:7)
+      at __tests__/map.test.tsx:175:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:174:5)
+
+    console.error
+      react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+
+      185 |     let tree: ReactTestRenderer;
+      186 |     await act(async () => {
+    > 187 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      188 |     });
+      189 |
+      190 |     await flushAsync();
+
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14598:17)
+      at __tests__/map.test.tsx:187:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:186:11)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      185 |     let tree: ReactTestRenderer;
+      186 |     await act(async () => {
+    > 187 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      188 |     });
+      189 |
+      190 |     await flushAsync();
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12382:10)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12326:7)
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14630:7)
+      at __tests__/map.test.tsx:187:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:186:11)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      217 |                 const { status } = await Location.requestForegroundPermissionsAsync();
+      218 |                 if (status !== 'granted') {
+    > 219 |                     setIsLocationReady(true);
+          |                     ^
+      220 |                     return;
+      221 |                 }
+      222 |
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:219:21
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      195 |                     .filter((pin): pin is MapPin => pin !== null);
+      196 |
+    > 197 |                 setAllPins([...beachPins, ...poiPins]);
+          |                 ^
+      198 |             } catch (err) {
+      199 |                 console.error('Erro ao carregar pins do mapa:', err);
+      200 |             } finally {
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:197:17
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      200 |             } finally {
+      201 |                 if (mounted) {
+    > 202 |                     setLoading(false);
+          |                     ^
+      203 |                 }
+      204 |             }
+      205 |         })();
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:202:21
+
+    console.error
+      react-test-renderer is deprecated. See https://react.dev/warnings/react-test-renderer
+
+      212 |     let tree: ReactTestRenderer;
+      213 |     await act(async () => {
+    > 214 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      215 |     });
+      216 |
+      217 |     await flushAsync();
+
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14598:17)
+      at __tests__/map.test.tsx:214:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:213:11)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      212 |     let tree: ReactTestRenderer;
+      213 |     await act(async () => {
+    > 214 |       tree = create(React.createElement(MapScreen));
+          |              ^
+      215 |     });
+      216 |
+      217 |     await flushAsync();
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at updateContainerImpl (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12382:10)
+      at updateContainer (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:12326:7)
+      at process.env.NODE_ENV.exports.create (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:14630:7)
+      at __tests__/map.test.tsx:214:14
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:213:11)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      195 |                     .filter((pin): pin is MapPin => pin !== null);
+      196 |
+    > 197 |                 setAllPins([...beachPins, ...poiPins]);
+          |                 ^
+      198 |             } catch (err) {
+      199 |                 console.error('Erro ao carregar pins do mapa:', err);
+      200 |             } finally {
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:197:17
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      200 |             } finally {
+      201 |                 if (mounted) {
+    > 202 |                     setLoading(false);
+          |                     ^
+      203 |                 }
+      204 |             }
+      205 |         })();
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:202:21
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      229 |                 ];
+      230 |                 initialCameraCenterRef.current = currentUserLocation;
+    > 231 |                 setUserLocation(currentUserLocation);
+          |                 ^
+      232 |                 setIsLocationReady(true);
+      233 |
+      234 |                 subscription = await Location.watchPositionAsync(
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:231:17
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      230 |                 initialCameraCenterRef.current = currentUserLocation;
+      231 |                 setUserLocation(currentUserLocation);
+    > 232 |                 setIsLocationReady(true);
+          |                 ^
+      233 |
+      234 |                 subscription = await Location.watchPositionAsync(
+      235 |                     { accuracy: Location.Accuracy.High, distanceInterval: 5 },
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:232:17
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      310 |
+      311 |     const handlePinPress = useCallback((pin: MapPin) => {
+    > 312 |         setSelectedPinData(pin);
+          |         ^
+      313 |     }, []);
+      314 |
+      315 |     const handleCloseSheet = useCallback(() => {
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:312:9
+      at Object.onSelected [as onPress] (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:117:43)
+      at __tests__/map.test.tsx:222:17
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:221:11)
+
+    console.error
+      The current testing environment is not configured to support act(...)
+
+      320 |         if (!pin.beachId) return;
+      321 |
+    > 322 |         setSelectedPinData(null);
+          |         ^
+      323 |         router.push({
+      324 |             pathname: '../beach/[id]',
+      325 |             params: { id: String(pin.beachId) },
+
+      at isConcurrentActEnvironment (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10243:17)
+      at warnIfUpdatesNotWrappedWithActDEV (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:11798:7)
+      at scheduleUpdateOnFiber (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:10326:9)
+      at dispatchSetStateInternal (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4148:13)
+      at dispatchSetState (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:4107:7)
+      at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/app/(tabs)../../../../../map.tsx:322:9
+      at Object.onPress (__tests__/map.test.tsx:127:44)
+      at __tests__/map.test.tsx:230:29
+      at process.env.NODE_ENV.exports.act (node_modules/react/cjs/react.development.js:789:22)
+      at Object.<anonymous> (__tests__/map.test.tsx:229:11)
+
+PASS services/__tests__/postService.integration.test.ts
+PASS services/__tests__/poiService.integration.test.ts
+PASS services/__tests__/chatService.integration.test.ts
+PASS services/__tests__/userService.integration.test.ts
+PASS services/__tests__/authService.integration.test.ts
+FAIL __tests__/register.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import RegisterScreen from '../app/register';
+      4 | import { authService } from '../services/auth/authService';
+      5 | import { Alert } from 'react-native';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/register.test.tsx:2:1)
+
+FAIL __tests__/ui-animations.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import BottomSheet from '../components/BottomSheet';
+      4 | import { View, Text, TouchableOpacity } from 'react-native';
+      5 |
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/ui-animations.test.tsx:2:1)
+
+PASS services/__tests__/authService.test.ts
+PASS services/__tests__/beachService.integration.test.ts
+PASS services/__tests__/commentService.integration.test.ts
+PASS services/__tests__/postService.test.ts
+FAIL __tests__/notifications.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import NotificationsScreen from '../app/(tabs)/notifications';
+      4 | import { notificationService } from '../services/notifications/notificationService';
+      5 |
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/notifications.test.tsx:2:1)
+
+FAIL __tests__/chat.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import ChatScreen from '../app/(tabs)/chat';
+      4 | import { chatService } from '../services/chat/chatService';
+      5 | import { userService } from '../services/users/userService';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/chat.test.tsx:2:1)
+
+PASS services/__tests__/apiInterceptor.test.ts
+PASS __tests__/userService.unit.test.ts
+PASS services/__tests__/notificationService.integration.test.ts
+PASS services/__tests__/api_smoke.test.ts
+PASS __tests__/poiService.unit.test.ts
+FAIL __tests__/beach-post.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import BeachDetailsScreen from '../app/beach/[id]';
+      4 | import { beachService } from '../services/beaches/beachService';
+      5 | import { surfConditionsService } from '../services/weather/surfConditionsService';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/beach-post.test.tsx:2:1)
+
+PASS __tests__/authService.unit.test.ts
+PASS __tests__/surfConditionsInterpreter.test.ts
+PASS services/__tests__/weatherService.integration.test.ts
+  ● Console
+
+    console.error
+      Erro ao buscar dados na Open-Meteo: Error: Network error
+          at Object.<anonymous> (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/services/__tests__/weatherService.integration.test.ts:46:51)
+          at Promise.finally.completed (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:1557:28)
+          at new Promise (<anonymous>)
+          at callAsyncCircusFn (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:1497:10)
+          at _callCircusTest (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:1007:40)
+          at _runTest (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:947:3)
+          at /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:849:7
+          at _runTestsForDescribeBlock (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:862:11)
+          at _runTestsForDescribeBlock (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:857:11)
+          at run (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:761:3)
+          at runAndTransformResultsToJestFormat (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/jestAdapterInit.js:1918:21)
+          at jestAdapter (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-circus/build/runner.js:101:19)
+          at runTestInternal (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-runner/build/index.js:275:16)
+          at runTest (/home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/jest-runner/build/index.js:343:7)
+
+      23 |       };
+      24 |     } catch (error) {
+    > 25 |       console.error("Erro ao buscar dados na Open-Meteo:", error);
+         |               ^
+      26 |       // Retorna valores zerados para o app não "quebrar" se a internet cair
+      27 |       return { temp: 0, windSpeed: 0, windDirection: 0 };
+      28 |     }
+
+      at Object.getCurrentWeather (services/weather/weatherService.ts:25:15)
+      at Object.<anonymous> (services/__tests__/weatherService.integration.test.ts:48:5)
+
+PASS utils/__tests__/formatters.test.ts
+PASS __tests__/beachService.unit.test.ts
+
+Summary of all failing tests
+FAIL __tests__/register.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import RegisterScreen from '../app/register';
+      4 | import { authService } from '../services/auth/authService';
+      5 | import { Alert } from 'react-native';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/register.test.tsx:2:1)
+
+FAIL __tests__/ui-animations.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import BottomSheet from '../components/BottomSheet';
+      4 | import { View, Text, TouchableOpacity } from 'react-native';
+      5 |
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/ui-animations.test.tsx:2:1)
+
+FAIL __tests__/notifications.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import NotificationsScreen from '../app/(tabs)/notifications';
+      4 | import { notificationService } from '../services/notifications/notificationService';
+      5 |
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/notifications.test.tsx:2:1)
+
+FAIL __tests__/chat.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import ChatScreen from '../app/(tabs)/chat';
+      4 | import { chatService } from '../services/chat/chatService';
+      5 | import { userService } from '../services/users/userService';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/chat.test.tsx:2:1)
+
+FAIL __tests__/beach-post.test.tsx
+  ● Test suite failed to run
+
+    Jest encountered an unexpected token
+
+    Jest failed to parse a file. This happens e.g. when your code or its dependencies use non-standard JavaScript syntax, or when Jest is not configured to support such syntax.
+
+    Out of the box Jest supports Babel, which will be used to transform your files into valid JS based on your Babel configuration.
+
+    By default "node_modules" folder is ignored by transformers.
+
+    Here's what you can do:
+     • If you are trying to use ECMAScript Modules, see https://jestjs.io/docs/ecmascript-modules for how to enable it.
+     • If you are trying to use TypeScript, see https://jestjs.io/docs/getting-started#using-typescript
+     • To have some of your "node_modules" files transformed, you can specify a custom "transformIgnorePatterns" in your config.
+     • If you need a custom transformation, specify a "transform" option in your config.
+     • If you simply want to mock your non-JS modules (e.g. binary assets) you can stub them out with the "moduleNameMapper" config option.
+
+    You'll find more details and examples of these config options in the docs:
+    https://jestjs.io/docs/configuration
+    For information about custom transformations, see:
+    https://jestjs.io/docs/code-transformation
+
+    Details:
+
+    /home/runner/work/Soul-Surf-Mobile/Soul-Surf-Mobile/node_modules/react-native/index.js:27
+    import typeof * as ReactNativePublicAPI from './index.js.flow';
+    ^^^^^^
+
+    SyntaxError: Cannot use import statement outside a module
+
+      1 | import React from 'react';
+    > 2 | import { render, fireEvent, waitFor } from '@testing-library/react-native';
+        | ^
+      3 | import BeachDetailsScreen from '../app/beach/[id]';
+      4 | import { beachService } from '../services/beaches/beachService';
+      5 | import { surfConditionsService } from '../services/weather/surfConditionsService';
+
+      at Runtime.createScriptFromCode (node_modules/jest-runtime/build/index.js:1314:40)
+      at Object.require (node_modules/@testing-library/react-native/src/helpers/accessibility.ts:2:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/to-be-busy.ts:5:1)
+      at Object.require (node_modules/@testing-library/react-native/src/matchers/extend-expect.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:2:1)
+      at Object.<anonymous> (__tests__/beach-post.test.tsx:2:1)
+
+
+Test Suites: 5 failed, 20 passed, 25 total
+Tests:       3 skipped, 118 passed, 121 total
+Snapshots:   0 total
+Time:        12.497 s
+Ran all test suites.
+
+
+
+

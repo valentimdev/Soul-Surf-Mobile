@@ -4,6 +4,32 @@ import BeachDetailsScreen from '../app/beach/[id]';
 import { beachService } from '../services/beaches/beachService';
 import { surfConditionsService } from '../services/weather/surfConditionsService';
 
+// Mock do react-native para evitar erros de transformação
+jest.mock('react-native', () => {
+  const React = require('react');
+  const make = (type: string) => ({ children, ...props }: any) =>
+    React.createElement(type, props, children);
+
+  return {
+    ActivityIndicator: make('ActivityIndicator'),
+    Alert: {
+      alert: jest.fn(),
+    },
+    Image: make('Image'),
+    Modal: make('Modal'),
+    RefreshControl: make('RefreshControl'),
+    SafeAreaView: make('SafeAreaView'),
+    ScrollView: make('ScrollView'),
+    StyleSheet: {
+      create: (s: any) => s,
+    },
+    Text: make('Text'),
+    TextInput: make('TextInput'),
+    TouchableOpacity: make('TouchableOpacity'),
+    View: make('View'),
+  };
+});
+
 // Mock dos services
 jest.mock('../services/beaches/beachService', () => ({
   beachService: {

@@ -4,6 +4,29 @@ import ChatScreen from '../app/(tabs)/chat';
 import { chatService } from '../services/chat/chatService';
 import { userService } from '../services/users/userService';
 
+// Mock do react-native para evitar erros de transformação
+jest.mock('react-native', () => {
+  const React = require('react');
+  const make = (type: string) => ({ children, ...props }: any) =>
+    React.createElement(type, props, children);
+
+  return {
+    ActivityIndicator: make('ActivityIndicator'),
+    Alert: {
+      alert: jest.fn(),
+    },
+    FlatList: make('FlatList'),
+    Image: make('Image'),
+    SafeAreaView: make('SafeAreaView'),
+    StyleSheet: {
+      create: (s: any) => s,
+    },
+    Text: make('Text'),
+    TouchableOpacity: make('TouchableOpacity'),
+    View: make('View'),
+  };
+});
+
 // Mock dos services
 jest.mock('../services/chat/chatService', () => ({
   chatService: {
