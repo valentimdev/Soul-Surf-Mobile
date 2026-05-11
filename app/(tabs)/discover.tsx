@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import type { Href } from 'expo-router';
 import { useRouter, useFocusEffect } from 'expo-router';
 
 import { postService } from '@/services/posts/postService';
@@ -73,12 +74,12 @@ const DiscoverPostCard = ({
   return (
     <View style={styles.postCard}>
       <View style={styles.postHeader}>
-        <TouchableOpacity onPress={() => author?.id && router.push(`/user/${author.id}`)}>
+        <TouchableOpacity onPress={() => author?.id && router.push(`/user/${author.id}` as Href)}>
           <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
         </TouchableOpacity>
 
         <View style={styles.postHeaderInfo}>
-          <TouchableOpacity onPress={() => author?.id && router.push(`/user/${author.id}`)}>
+          <TouchableOpacity onPress={() => author?.id && router.push(`/user/${author.id}` as Href)}>
             <Text style={styles.postAuthorName}>{authorName}</Text>
           </TouchableOpacity>
           {beachName && post.beach?.id && (
@@ -239,7 +240,7 @@ export default function DiscoverScreen() {
     <TouchableOpacity
       style={styles.userCard}
       activeOpacity={0.7}
-      onPress={() => router.push(`/user/${item.id}`)}
+      onPress={() => router.push(`/user/${item.id}` as Href)}
     >
       <Image source={{ uri: item.fotoPerfil || FALLBACK_AVATAR }} style={styles.avatar} />
       <View style={{ flex: 1 }}>

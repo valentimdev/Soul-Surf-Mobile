@@ -24,13 +24,6 @@ jest.mock('react-native', () => {
   };
 });
 
-// Mock do react-native-reanimated
-jest.mock('react-native-reanimated', () => {
-  const Reanimated = require('react-native-reanimated/mock');
-  Reanimated.default.call = () => {};
-  return Reanimated;
-});
-
 // Mock do react-native-gesture-handler
 jest.mock('react-native-gesture-handler', () => {
   const React = require('react');

@@ -66,13 +66,17 @@ describe('RegisterScreen', () => {
     });
 
     const inputs = tree.root.findAllByType('TextInput');
-    const button = tree.root.findByType('TouchableOpacity');
 
     await act(async () => {
         inputs[0].props.onChangeText('user');
         inputs[1].props.onChangeText('test@test.com');
         inputs[2].props.onChangeText('pass');
-        button.props.onPress();
+    });
+
+    const button = tree.root.findAllByType('TouchableOpacity')[0];
+
+    await act(async () => {
+        await button.props.onPress();
     });
 
     expect(authService.signup).toHaveBeenCalledWith('test@test.com', 'pass', 'user');

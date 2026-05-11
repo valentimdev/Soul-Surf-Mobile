@@ -3,6 +3,7 @@ import { chatService } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
 import { UserDTO, PostDTO } from '@/types/api';
 import { Ionicons } from '@expo/vector-icons';
+import type { Href } from 'expo-router';
 import { router, useLocalSearchParams, Stack, useFocusEffect} from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
@@ -328,7 +329,7 @@ const fetchProfileData = useCallback(async () => {
                         closeSheet();
                         // Impede que a pessoa fique abrindo um loop infinito do próprio perfil que já está
                         if (item.id !== userId) {
-                            router.push(`/user/${item.id}`);
+                            router.push(`/user/${item.id}` as Href);
                         }
                     }}
                   >
