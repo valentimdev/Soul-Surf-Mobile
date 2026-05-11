@@ -5,6 +5,7 @@ import { SurfConditionsCard } from '@/components/surf/SurfConditionsCard';
 import { surfConditionsService } from '@/services/weather/surfConditionsService';
 import { SurfConditionsResponse } from '@/types/surfConditions';
 import * as SecureStore from 'expo-secure-store';
+import type { Href } from 'expo-router';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
@@ -136,7 +137,10 @@ export function PostCard({ post }: { post: PostDTO }) {
       <View style={styles.postHeader}>
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => post.usuario?.id && router.push(`/user/${post.usuario.id}`)}
+          onPress={() =>
+            post.usuario?.id &&
+            router.push(`/user/${post.usuario.id}` as Href)
+          }
         >
           <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>
             {post.usuario?.username || 'Surfista'}
@@ -192,7 +196,10 @@ function MessageCard({ message }: { message: BeachMessageDTO }) {
       <View style={styles.messageHeader}>
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => message.autor?.id && router.push(`/user/${message.autor.id}`)}
+          onPress={() =>
+            message.autor?.id &&
+            router.push(`/user/${message.autor.id}` as Href)
+          }
           style={{ flex: 1 }}
         >
           <Text testID={`message-author-${message.id}`} style={styles.messageAuthor}>
