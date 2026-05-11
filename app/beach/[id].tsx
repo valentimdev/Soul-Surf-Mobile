@@ -1,10 +1,16 @@
 import { beachService, BeachMessageDTO } from '@/services/beaches/beachService';
 import { formatDate, formatDateTime } from '@/utils/formatters';
 import { BeachDTO, PostDTO } from '@/types/api';
-import { SurfConditionsCard } from '@/components/surf/SurfConditionsCard';
 import { surfConditionsService } from '@/services/weather/surfConditionsService';
 import { SurfConditionsResponse } from '@/types/surfConditions';
+import {
+  buildQuickTips,
+  buildLaymanSummary,
+  formatMetric,
+  toCompass,
+} from '@/utils/surfConditionsInterpreter';
 import * as SecureStore from 'expo-secure-store';
+import * as Linking from 'expo-linking';
 import type { Href } from 'expo-router';
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -79,10 +85,12 @@ function parseCachedMessages(raw: string | null): BeachMessageDTO[] {
   }
 }
 
-export function PostCard({ post }: { post: PostDTO }) {
+export function PostCard({ post, featured = false }: { post: PostDTO; featured?: boolean }) {
   const router = useRouter();
   const initialLikes = normalizeCounter(post.likesCount);
   const commentsCount = normalizeCounter(post.commentsCount);
+  const authorName = post.usuario?.username || 'Surfista';
+  const authorAvatar = post.usuario?.fotoPerfil;
 
   // Estados locais do componente para controle do like
   const [liked, setLiked] = useState<boolean>(false);
@@ -133,7 +141,14 @@ export function PostCard({ post }: { post: PostDTO }) {
   };
 
   return (
-    <View style={styles.postCard}>
+    <View style={[styles.postCard, featured && styles.postCardFeatured]}>
+      {featured ? (
+        <View style={styles.featuredRecordBanner}>
+          <Ionicons name="trophy-outline" size={15} color="#2F6F86" />
+          <Text style={styles.featuredRecordText}>Registro em destaque da praia</Text>
+        </View>
+      ) : null}
+
       <View style={styles.postHeader}>
         <TouchableOpacity
           activeOpacity={0.7}
@@ -141,24 +156,40 @@ export function PostCard({ post }: { post: PostDTO }) {
             post.usuario?.id &&
             router.push(`/user/${post.usuario.id}` as Href)
           }
+          style={styles.authorRow}
         >
-          <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>
-            {post.usuario?.username || 'Surfista'}
-          </Text>
+          {authorAvatar ? (
+            <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
+          ) : (
+            <View style={styles.postAvatarFallback}>
+              <Text style={styles.avatarFallbackText}>{authorName[0]}</Text>
+            </View>
+          )}
+          <View style={styles.authorTextBlock}>
+            <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>
+              {authorName}
+            </Text>
+            <Text testID={`post-date-${post.id}`} style={styles.postDate}>
+              {formatDate(post.data)}
+            </Text>
+          </View>
         </TouchableOpacity>
-        <Text testID={`post-date-${post.id}`} style={styles.postDate}>
-          {formatDate(post.data)}
-        </Text>
-      </View>
 
-      {post.caminhoFoto ? (
-        <Image testID={`post-image-${post.id}`} source={{ uri: post.caminhoFoto }} style={styles.postImage} />
-      ) : null}
+        <View style={styles.recordTypeBadge}>
+          <Text style={styles.recordTypeBadgeText}>Registro</Text>
+        </View>
+      </View>
 
       {post.descricao ? (
         <Text testID={`post-description-${post.id}`} style={styles.postDescription}>
           {post.descricao}
         </Text>
+      ) : null}
+
+      {post.caminhoFoto ? (
+        <View style={styles.postImageFrame}>
+          <Image testID={`post-image-${post.id}`} source={{ uri: post.caminhoFoto }} style={styles.postImage} />
+        </View>
       ) : null}
 
       <View style={styles.postFooter}>
@@ -169,18 +200,18 @@ export function PostCard({ post }: { post: PostDTO }) {
         >
           <Ionicons
             name={liked ? "heart" : "heart-outline"}
-            size={24}
-            color={liked ? "#E1306C" : "#6B7280"}
+            size={18}
+            color={liked ? "#C54A54" : "#6B7280"}
           />
           <Text style={[styles.actionText, liked && styles.actionTextLiked]}>
-            {likesCount} {likesCount === 1 ? 'curtida' : 'curtidas'}
+            {likesCount}
           </Text>
         </TouchableOpacity>
 
         <View style={styles.actionButton}>
-          <Ionicons name="chatbubble-outline" size={22} color="#6B7280" />
+          <Ionicons name="chatbubble-outline" size={17} color="#6B7280" />
           <Text style={styles.actionText}>
-            {commentsCount} {commentsCount === 1 ? 'comentário' : 'comentários'}
+            {commentsCount} {commentsCount === 1 ? 'comentario' : 'comentarios'}
           </Text>
         </View>
       </View>
@@ -190,6 +221,8 @@ export function PostCard({ post }: { post: PostDTO }) {
 
 function MessageCard({ message }: { message: BeachMessageDTO }) {
   const router = useRouter();
+  const authorName = message.autor?.username || 'Surfista';
+  const authorAvatar = message.autor?.fotoPerfil;
 
   return (
     <View style={styles.messageCard}>
@@ -200,15 +233,125 @@ function MessageCard({ message }: { message: BeachMessageDTO }) {
             message.autor?.id &&
             router.push(`/user/${message.autor.id}` as Href)
           }
-          style={{ flex: 1 }}
+          style={styles.authorRow}
         >
-          <Text testID={`message-author-${message.id}`} style={styles.messageAuthor}>
-            {message.autor?.username || 'Surfista'}
-          </Text>
+          {authorAvatar ? (
+            <Image source={{ uri: authorAvatar }} style={styles.messageAvatar} />
+          ) : (
+            <View style={styles.messageAvatarFallback}>
+              <Text style={styles.messageAvatarFallbackText}>{authorName[0]}</Text>
+            </View>
+          )}
+          <View style={styles.authorTextBlock}>
+            <Text testID={`message-author-${message.id}`} style={styles.messageAuthor}>
+              {authorName}
+            </Text>
+            <Text testID={`message-date-${message.id}`} style={styles.messageDate}>{formatDateTime(message.data)}</Text>
+          </View>
         </TouchableOpacity>
-        <Text testID={`message-date-${message.id}`} style={styles.messageDate}>{formatDateTime(message.data)}</Text>
       </View>
       <Text testID={`message-text-${message.id}`} style={styles.messageText}>{message.texto}</Text>
+    </View>
+  );
+}
+
+function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
+  const summary = buildLaymanSummary(data);
+  const quickTips = buildQuickTips(data);
+  const waveHeight = formatMetric(data.marine?.waveHeightMeters, 'm');
+  const wavePeriod = formatMetric(data.marine?.wavePeriodSeconds, 's', 0);
+  const windSpeed = formatMetric(data.wind?.windSpeedKmh, 'km/h');
+  const windDirection = toCompass(data.wind?.windDirectionDegrees);
+  const waterTemp = formatMetric(data.marine?.seaSurfaceTemperatureC, '°C');
+  const balneabilityStatus = data.balneability?.overallStatus ?? 'INDISPONIVEL';
+  const reportUrl = data.balneability?.reportUrl?.trim();
+
+  const openReport = async () => {
+    if (!reportUrl) return;
+    try {
+      await Linking.openURL(reportUrl);
+    } catch {
+      Alert.alert('Nao foi possivel abrir o boletim', 'Tente novamente em alguns instantes.');
+    }
+  };
+
+  return (
+    <View style={styles.simpleSurfContent}>
+      <View style={styles.simpleSurfTitleRow}>
+        <Ionicons name="navigate-outline" size={17} color="#2F6F86" />
+        <Text style={styles.simpleSurfTitle}>Condicoes Atuais</Text>
+      </View>
+
+      <View style={styles.simpleSurfGrid}>
+        <View style={styles.simpleSurfMetric}>
+          <Ionicons name="thermometer-outline" size={18} color="#6B7280" style={styles.simpleSurfMetricIcon} />
+          <View style={styles.simpleSurfMetricBody}>
+            <Text style={styles.simpleSurfLabel}>Temperatura</Text>
+            <Text style={styles.simpleSurfValue}>{waterTemp}</Text>
+          </View>
+        </View>
+
+        <View style={styles.simpleSurfMetric}>
+          <Ionicons name="navigate-outline" size={18} color="#6B7280" style={styles.simpleSurfMetricIcon} />
+          <View style={styles.simpleSurfMetricBody}>
+            <Text style={styles.simpleSurfLabel}>Vento</Text>
+            <Text style={styles.simpleSurfValue}>{windSpeed} {windDirection}</Text>
+          </View>
+        </View>
+
+        <View style={styles.simpleSurfMetric}>
+          <Ionicons name="water-outline" size={18} color="#6B7280" style={styles.simpleSurfMetricIcon} />
+          <View style={styles.simpleSurfMetricBody}>
+            <Text style={styles.simpleSurfLabel}>Ondas</Text>
+            <Text style={styles.simpleSurfValue}>{waveHeight} / {wavePeriod}</Text>
+          </View>
+        </View>
+
+        <View style={styles.simpleSurfMetric}>
+          <Ionicons name="shield-checkmark-outline" size={18} color="#6B7280" style={styles.simpleSurfMetricIcon} />
+          <View style={styles.simpleSurfMetricBody}>
+            <Text style={styles.simpleSurfLabel}>Balneabilidade</Text>
+            <Text style={styles.simpleSurfValue}>{balneabilityStatus}</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.simpleSurfWideMetric}>
+        <Ionicons name="eye-outline" size={18} color="#6B7280" />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.simpleSurfLabel}>Resumo</Text>
+          <Text style={styles.simpleSurfValue}>{summary.title}</Text>
+          <Text style={styles.simpleSurfHelper}>{summary.message}</Text>
+        </View>
+      </View>
+
+      <View style={styles.simpleSurfDivider} />
+
+      <View style={styles.simpleSurfBlock}>
+        <Text style={styles.simpleSurfBlockTitle}>Dicas rapidas</Text>
+        {quickTips.map((tip) => (
+          <View key={tip} style={styles.simpleSurfTipRow}>
+            <View style={styles.simpleSurfTipDot} />
+            <Text style={styles.simpleSurfTipText}>{tip}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.simpleSurfDivider} />
+
+      <View style={styles.simpleSurfBlock}>
+        <View style={styles.simpleSurfReportHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.simpleSurfBlockTitle}>Boletim SEMACE</Text>
+
+          </View>
+          {reportUrl ? (
+            <TouchableOpacity onPress={openReport} style={styles.simpleSurfReportButton}>
+              <Text style={styles.simpleSurfReportButtonText}>Abrir</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
     </View>
   );
 }
@@ -249,6 +392,7 @@ export default function BeachDetailsScreen() {
   const [newPostPhotoUri, setNewPostPhotoUri] = useState<string | null>(null);
   const [newPostBase64, setNewPostBase64] = useState<string | null>(null);
   const [creatingPost, setCreatingPost] = useState(false);
+  const [activeBeachTab, setActiveBeachTab] = useState<'records' | 'comments'>('records');
 
   const messagesCacheKey = useMemo(() => {
     if (!Number.isFinite(beachId)) return null;
@@ -538,17 +682,20 @@ export default function BeachDetailsScreen() {
               <Text testID="beach-experience" style={styles.beachMeta}>Nivel: {beach?.nivelExperiencia || 'Nao informado'}</Text>
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Condicoes do mar agora</Text>
-              <Text style={styles.sectionDescription}>
-                Leitura simples com onda, vento e balneabilidade para facilitar sua decisao no pico.
-              </Text>
+            <View style={[styles.section, styles.surfSection]}>
+              <View style={styles.surfSectionHeader}>
+                <View>
+                  <Text style={styles.sectionEyebrow}>Agora no pico</Text>
+                  <Text style={styles.sectionTitleWithoutMargin}>Condicoes do mar</Text>
+                </View>
+                <Ionicons name="partly-sunny-outline" size={22} color="#2F6F86" />
+              </View>
 
               {surfConditions ? (
-                <SurfConditionsCard beachName={beach?.nome} data={surfConditions} />
+                <SimpleSurfConditions data={surfConditions} />
               ) : loading ? (
                 <View style={styles.surfLoadingBox}>
-                  <ActivityIndicator size="small" color="#5C9DB8" />
+                  <ActivityIndicator size="small" color="#2F6F86" />
                   <Text style={styles.emptyStateText}>Carregando condicoes do mar...</Text>
                 </View>
               ) : surfConditionsError ? (
@@ -558,74 +705,177 @@ export default function BeachDetailsScreen() {
               )}
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Comentarios da praia</Text>
-              <View style={styles.messageComposer}>
-                <TextInput
-                  value={newMessage}
-                  onChangeText={setNewMessage}
-                  style={styles.messageInput}
-                  placeholder="Compartilhe uma dica ou condicao do mar..."
-                  placeholderTextColor="#8B8B8B"
-                  multiline
-                />
-                <TouchableOpacity
-                  style={[styles.sendButton, sendingMessage && { opacity: 0.6 }]}
-                  onPress={handleSendMessage}
-                  disabled={sendingMessage}
-                >
-                  <Text style={styles.sendButtonText}>{sendingMessage ? 'Enviando...' : 'Publicar'}</Text>
-                </TouchableOpacity>
-              </View>
-
-              {todayMessages.length === 0 ? (
-                <Text style={styles.emptyStateText}>Ainda nao ha comentarios de hoje neste mural.</Text>
-              ) : (
-                <ScrollView
-                  style={styles.messagesList}
-                  contentContainerStyle={styles.messagesListContent}
-                  nestedScrollEnabled
-                  showsVerticalScrollIndicator={false}
-                >
-                  {todayMessages.map((message, index) => (
-                    <MessageCard key={message.id ?? `message-${index}`} message={message} />
-                  ))}
-                </ScrollView>
-              )}
-            </View>
-
             <View
               style={styles.section}
               onLayout={(e) => { postsSectionY.current = e.nativeEvent.layout.y; }}
             >
-              <View style={styles.sectionHeaderWithButton}>
-                <Text style={styles.sectionTitleWithoutMargin}>Posts da praia</Text>
-                <TouchableOpacity onPress={() => setIsPostModalVisible(true)} style={styles.addPostBtn}>
-                  <Text style={styles.addPostBtnText}>Adicionar post</Text>
+              <View style={styles.beachTabsHeader}>
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setActiveBeachTab('records')}
+                  style={[
+                    styles.beachTabButton,
+                    activeBeachTab === 'records' && styles.beachTabButtonActive,
+                  ]}
+                >
+                  <Ionicons
+                    name="images-outline"
+                    size={16}
+                    color={activeBeachTab === 'records' ? '#FFFFFF' : '#2F6F86'}
+                  />
+                  <Text
+                    style={[
+                      styles.beachTabText,
+                      activeBeachTab === 'records' && styles.beachTabTextActive,
+                    ]}
+                  >
+                    Registros
+                  </Text>
+                  <View
+                    style={[
+                      styles.beachTabCount,
+                      activeBeachTab === 'records' && styles.beachTabCountActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.beachTabCountText,
+                        activeBeachTab === 'records' && styles.beachTabCountTextActive,
+                      ]}
+                    >
+                      {posts.length}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  onPress={() => setActiveBeachTab('comments')}
+                  style={[
+                    styles.beachTabButton,
+                    activeBeachTab === 'comments' && styles.beachTabButtonActive,
+                  ]}
+                >
+                  <Ionicons
+                    name="chatbubble-ellipses-outline"
+                    size={16}
+                    color={activeBeachTab === 'comments' ? '#FFFFFF' : '#2F6F86'}
+                  />
+                  <Text
+                    style={[
+                      styles.beachTabText,
+                      activeBeachTab === 'comments' && styles.beachTabTextActive,
+                    ]}
+                  >
+                    Comentarios
+                  </Text>
+                  <View
+                    style={[
+                      styles.beachTabCount,
+                      activeBeachTab === 'comments' && styles.beachTabCountActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.beachTabCountText,
+                        activeBeachTab === 'comments' && styles.beachTabCountTextActive,
+                      ]}
+                    >
+                      {todayMessages.length}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               </View>
 
-              {posts.length === 0 ? (
-                <Text style={styles.emptyStateText}>Ainda nao ha posts publicos para esta praia.</Text>
-              ) : (
-                <ScrollView
-                  ref={postsScrollRef}
-                  style={styles.postsList}
-                  contentContainerStyle={styles.postsListContent}
-                  nestedScrollEnabled
-                  showsVerticalScrollIndicator={false}
-                >
-                  {posts.map((post) => (
-                    <View
-                      key={post.id}
-                      onLayout={(e) => {
-                        postLayoutPositions.current[post.id] = e.nativeEvent.layout.y;
-                      }}
-                    >
-                      <PostCard post={post} />
+              {activeBeachTab === 'records' ? (
+                <>
+                  <View style={styles.sectionHeaderWithButton}>
+                    <View>
+                      <Text style={styles.sectionEyebrow}>Historico visual</Text>
+                      <Text style={styles.sectionTitleWithoutMargin}>Registros</Text>
                     </View>
-                  ))}
-                </ScrollView>
+                    <TouchableOpacity onPress={() => setIsPostModalVisible(true)} style={styles.addPostBtn}>
+                      <Ionicons name="add" size={16} color="#FFFFFF" />
+                      <Text style={styles.addPostBtnText}>Novo</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {posts.length === 0 ? (
+                    <View style={styles.emptyStateBox}>
+                      <Ionicons name="images-outline" size={20} color="#6B7280" />
+                      <Text style={styles.emptyStateText}>Ainda nao ha registros publicos para esta praia.</Text>
+                    </View>
+                  ) : (
+                    <ScrollView
+                      ref={postsScrollRef}
+                      style={styles.postsList}
+                      contentContainerStyle={styles.postsListContent}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {posts.map((post) => (
+                        <View
+                          key={post.id}
+                          onLayout={(e) => {
+                            postLayoutPositions.current[post.id] = e.nativeEvent.layout.y;
+                          }}
+                        >
+                          <PostCard post={post} featured={post.id === posts[0]?.id} />
+                        </View>
+                      ))}
+                    </ScrollView>
+                  )}
+                </>
+              ) : (
+                <View>
+                  <View style={styles.sectionHeaderStack}>
+                    <View>
+                      <Text style={styles.sectionEyebrow}>Mural do pico</Text>
+                      <Text style={styles.sectionTitleWithoutMargin}>Comentarios</Text>
+                    </View>
+
+                  </View>
+
+                  <View style={styles.relevanceHint}>
+                    <Ionicons name="trending-up-outline" size={15} color="#6B7280" />
+                    <Text style={styles.relevanceHintText}>
+                      Comentarios recentes aparecem primeiro para mostrar o que esta rolando agora.
+                    </Text>
+                  </View>
+
+                  <View style={styles.messageComposer}>
+                    <TextInput
+                      value={newMessage}
+                      onChangeText={setNewMessage}
+                      style={styles.messageInput}
+                      placeholder="Compartilhe uma dica ou condicao do mar..."
+                      placeholderTextColor="#8B8B8B"
+                      multiline
+                    />
+                    <TouchableOpacity
+                      style={[styles.sendButton, sendingMessage && { opacity: 0.6 }]}
+                      onPress={handleSendMessage}
+                      disabled={sendingMessage}
+                    >
+                      <Text style={styles.sendButtonText}>{sendingMessage ? 'Enviando...' : 'Publicar'}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {todayMessages.length === 0 ? (
+                    <Text style={styles.emptyStateText}>Ainda nao ha comentarios de hoje neste mural.</Text>
+                  ) : (
+                    <ScrollView
+                      style={styles.messagesList}
+                      contentContainerStyle={styles.messagesListContent}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {todayMessages.map((message, index) => (
+                        <MessageCard key={message.id ?? `message-${index}`} message={message} />
+                      ))}
+                    </ScrollView>
+                  )}
+                </View>
               )}
             </View>
           </>
@@ -641,9 +891,12 @@ export default function BeachDetailsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Novo Post</Text>
-              <TouchableOpacity onPress={closePostModal}>
-                <Ionicons name="close" size={26} color="#1F4A63" />
+              <View>
+                <Text style={styles.modalEyebrow}>Historico visual</Text>
+                <Text style={styles.modalTitle}>Novo registro</Text>
+              </View>
+              <TouchableOpacity onPress={closePostModal} style={styles.modalCloseButton}>
+                <Ionicons name="close" size={22} color="#1F4A63" />
               </TouchableOpacity>
             </View>
 
@@ -663,13 +916,13 @@ export default function BeachDetailsScreen() {
             ) : (
               <TouchableOpacity style={styles.addPhotoBtn} onPress={handlePickImage}>
                 <Ionicons name="image-outline" size={24} color="#5C9DB8" />
-                <Text style={styles.addPhotoText}>Adicionar Foto (Opcional)</Text>
+                <Text style={styles.addPhotoText}>Adicionar foto</Text>
               </TouchableOpacity>
             )}
 
             <TextInput
               style={styles.modalTextInput}
-              placeholder="O que rolou no mar hoje? (Opcional)"
+              placeholder="O que rolou no mar hoje?"
               placeholderTextColor="#8B8B8B"
               value={newPostDesc}
               onChangeText={setNewPostDesc}
@@ -684,7 +937,7 @@ export default function BeachDetailsScreen() {
               {creatingPost ? (
                 <ActivityIndicator size="small" color="#FFF" />
               ) : (
-                <Text style={styles.modalButtonText}>Publicar Post</Text>
+                <Text style={styles.modalButtonText}>Publicar registro</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -741,10 +994,15 @@ const styles = StyleSheet.create({
   },
   section: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#E2DEC3',
+    borderColor: '#E7E2D3',
     padding: 14,
+    shadowColor: '#1F4A63',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
@@ -755,24 +1013,112 @@ const styles = StyleSheet.create({
   sectionHeaderWithButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 14,
+    gap: 12,
+  },
+  sectionHeaderStack: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    gap: 12,
+  },
+  sectionEyebrow: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+    marginBottom: 3,
   },
   sectionTitleWithoutMargin: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1F4A63',
   },
-  addPostBtn: {
-    backgroundColor: '#E2DEC3',
-    paddingHorizontal: 12,
+  sectionCounterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 999,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: '#E7F1F4',
+  },
+  sectionCounterText: {
+    color: '#2F6F86',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  beachTabsHeader: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: '#F3F1EA',
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 16,
+  },
+  beachTabButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 13,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  beachTabButtonActive: {
+    backgroundColor: '#2F6F86',
+    shadowColor: '#2F6F86',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  beachTabText: {
+    color: '#2F6F86',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  beachTabTextActive: {
+    color: '#FFFFFF',
+  },
+  beachTabCount: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  beachTabCountActive: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  beachTabCountText: {
+    color: '#2F6F86',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  beachTabCountTextActive: {
+    color: '#FFFFFF',
+  },
+  addPostBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#2F6F86',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
   },
   addPostBtnText: {
-    color: '#1F4A63',
+    color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '800',
   },
   sectionDescription: {
     fontSize: 13,
@@ -780,8 +1126,131 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginBottom: 10,
   },
+  surfSection: {
+    backgroundColor: '##FAF5E8',
+    borderColor: '#DED5C3',
+  },
+  surfSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 14,
+  },
+  simpleSurfContent: {
+    gap: 14,
+  },
+  simpleSurfTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  simpleSurfTitle: {
+    color: '#2F6F86',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  simpleSurfGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -6,
+    marginVertical: -6,
+  },
+  simpleSurfMetric: {
+    width: '50%',
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  simpleSurfMetricIcon: {
+    marginTop: 1,
+  },
+  simpleSurfMetricBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  simpleSurfLabel: {
+    color: '#667085',
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 3,
+  },
+  simpleSurfValue: {
+    color: '#1F4A63',
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+  simpleSurfHelper: {
+    color: '#4B5563',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  simpleSurfWideMetric: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  simpleSurfDivider: {
+    height: 1,
+    backgroundColor: 'rgba(31,74,99,0.14)',
+  },
+  simpleSurfBlock: {
+    gap: 8,
+  },
+  simpleSurfBlockTitle: {
+    color: '#1F4A63',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  simpleSurfTipRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  simpleSurfTipDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#2F6F86',
+    marginTop: 7,
+  },
+  simpleSurfTipText: {
+    flex: 1,
+    color: '#334155',
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  simpleSurfReportHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  simpleSurfReportText: {
+    color: '#4B5563',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  simpleSurfReportButton: {
+    backgroundColor: '#2F6F86',
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+  },
+  simpleSurfReportButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
   messageComposer: {
-    marginBottom: 12,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E7E2D3',
+    borderRadius: 16,
+    backgroundColor: '#FBFAF6',
+    padding: 10,
   },
   messagesList: {
     maxHeight: 320,
@@ -796,23 +1265,21 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   messageInput: {
-    borderWidth: 1,
-    borderColor: '#E2DEC3',
-    borderRadius: 12,
-    minHeight: 84,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderWidth: 0,
+    minHeight: 74,
+    paddingHorizontal: 4,
+    paddingVertical: 4,
     fontSize: 14,
     color: '#1F4A63',
-    backgroundColor: '#FAFAF9',
+    backgroundColor: 'transparent',
     textAlignVertical: 'top',
   },
   sendButton: {
     alignSelf: 'flex-end',
     marginTop: 8,
-    backgroundColor: '#1F4A63',
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    backgroundColor: '#2F6F86',
+    borderRadius: 999,
+    paddingHorizontal: 16,
     paddingVertical: 9,
   },
   sendButtonText: {
@@ -822,48 +1289,117 @@ const styles = StyleSheet.create({
   },
   messageCard: {
     borderWidth: 1,
-    borderColor: '#EAE7DA',
-    borderRadius: 12,
-    padding: 10,
+    borderColor: '#E7E2D3',
+    borderRadius: 16,
+    padding: 12,
     marginBottom: 10,
-    backgroundColor: '#FCFBF6',
+    backgroundColor: '#FFFFFF',
   },
   messageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 10,
     gap: 8,
+  },
+  authorRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minWidth: 0,
+  },
+  authorTextBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  messageAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#E8E5D4',
+  },
+  messageAvatarFallback: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E7F1F4',
+  },
+  messageAvatarFallbackText: {
+    color: '#2F6F86',
+    fontSize: 13,
+    fontWeight: '800',
   },
   messageAuthor: {
     fontSize: 13,
     fontWeight: '700',
     color: '#1F4A63',
-    flex: 1, // Impede que o texto "empurre" a data se for muito grande
   },
   messageDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
+    marginTop: 2,
   },
   messageText: {
     fontSize: 14,
-    color: '#374151',
-    lineHeight: 20,
+    color: '#273846',
+    lineHeight: 21,
   },
   postCard: {
     borderWidth: 1,
-    borderColor: '#EAE7DA',
-    borderRadius: 12,
-    padding: 10,
+    borderColor: '#E7E2D3',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 14,
+    backgroundColor: '#FFFFFF',
+  },
+  postCardFeatured: {
+    borderColor: '#8AB7C3',
+    backgroundColor: '#F4FAFB',
+    shadowColor: '#2F6F86',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  featuredRecordBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
     marginBottom: 12,
-    backgroundColor: '#FCFBF6',
+  },
+  featuredRecordText: {
+    color: '#2F6F86',
+    fontSize: 12,
+    fontWeight: '800',
   },
   postHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: 12,
     gap: 8,
+  },
+  postAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E8E5D4',
+  },
+  postAvatarFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#E7F1F4',
+  },
+  avatarFallbackText: {
+    color: '#2F6F86',
+    fontSize: 15,
+    fontWeight: '800',
   },
   postAuthor: {
     fontSize: 14,
@@ -871,28 +1407,47 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   postDate: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
+    marginTop: 2,
+  },
+  recordTypeBadge: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#E7F1F4',
+  },
+  recordTypeBadgeText: {
+    color: '#2F6F86',
+    fontSize: 11,
+    fontWeight: '800',
   },
   postImage: {
     width: '100%',
-    height: 170,
-    borderRadius: 10,
-    marginBottom: 8,
+    height: '100%',
+    backgroundColor: '#E8E5D4',
+  },
+  postImageFrame: {
+    width: '100%',
+    height: 210,
+    borderRadius: 14,
+    marginBottom: 12,
+    overflow: 'hidden',
     backgroundColor: '#E8E5D4',
   },
   postDescription: {
     fontSize: 14,
-    color: '#374151',
-    marginBottom: 8,
+    color: '#273846',
+    lineHeight: 21,
+    marginBottom: 12,
   },
   postFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    marginTop: 8,
+    marginTop: 2,
     borderTopWidth: 1,
-    borderTopColor: '#EAE7DA',
+    borderTopColor: '#E7E2D3',
     paddingTop: 12,
   },
   actionButton: {
@@ -906,12 +1461,39 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   actionTextLiked: {
-    color: '#E1306C',
+    color: '#C54A54',
     fontWeight: '700',
   },
   emptyStateText: {
     fontSize: 13,
     color: '#6B7280',
+    lineHeight: 18,
+  },
+  emptyStateBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E7E2D3',
+    borderRadius: 14,
+    backgroundColor: '#FBFAF6',
+    padding: 12,
+  },
+  relevanceHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 14,
+    backgroundColor: '#F3F1EA',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  relevanceHintText: {
+    flex: 1,
+    color: '#6B7280',
+    fontSize: 12,
+    lineHeight: 17,
   },
   warningText: {
     fontSize: 13,
@@ -953,33 +1535,51 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContainer: {
-    backgroundColor: '#F6F4EB',
-    borderRadius: 20,
-    padding: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 20,
     width: '100%',
+    borderWidth: 1,
+    borderColor: '#E7E2D3',
     elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 20,
   },
+  modalEyebrow: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+    marginBottom: 4,
+  },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#1F4A63',
+  },
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F1EA',
   },
   addPhotoBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E5F0F5',
+    backgroundColor: '#F4FAFB',
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#5C9DB8',
-    borderRadius: 12,
-    paddingVertical: 20,
+    borderColor: '#8AB7C3',
+    borderRadius: 16,
+    paddingVertical: 22,
     marginBottom: 16,
     gap: 10,
   },
@@ -990,8 +1590,8 @@ const styles = StyleSheet.create({
   },
   imagePreviewContainer: {
     width: '100%',
-    height: 150,
-    borderRadius: 12,
+    height: 180,
+    borderRadius: 16,
     marginBottom: 16,
     overflow: 'hidden',
     position: 'relative',
@@ -1010,10 +1610,10 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   modalTextInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FBFAF6',
     borderWidth: 1,
-    borderColor: '#E2DEC3',
-    borderRadius: 12,
+    borderColor: '#E7E2D3',
+    borderRadius: 16,
     padding: 16,
     fontSize: 15,
     color: '#1F4A63',
@@ -1022,9 +1622,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   modalButton: {
-    backgroundColor: '#5C9DB8',
-    borderRadius: 12,
-    paddingVertical: 14,
+    backgroundColor: '#2F6F86',
+    borderRadius: 999,
+    paddingVertical: 15,
     alignItems: 'center',
   },
   modalButtonText: {
