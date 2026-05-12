@@ -1,4 +1,5 @@
 import BottomSheet from '@/components/BottomSheet';
+import { useAppAlert } from '@/components/AppAlert';
 import { chatService } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
 import { UserDTO, PostDTO } from '@/types/api';
@@ -8,7 +9,6 @@ import { router, useLocalSearchParams, Stack, useFocusEffect} from 'expo-router'
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   SafeAreaView,
@@ -24,6 +24,7 @@ const COVER_FALLBACK = 'https://images.unsplash.com/photo-1502680390469-be75c86b
 const AVATAR_FALLBACK = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
 export default function OtherUserProfileScreen() {
+  const { showAlert } = useAppAlert();
   const { id } = useLocalSearchParams();
   const userId = Number(id);
 
@@ -96,7 +97,7 @@ const fetchProfileData = useCallback(async () => {
         ...prev,
         seguidoresCount: prev.seguidoresCount + (previousState ? 1 : -1)
       } : prev);
-      Alert.alert('Erro', 'Não foi possível atualizar. Tente novamente.');
+      showAlert('Erro', 'Não foi possível atualizar. Tente novamente.');
     }
   };
 
@@ -116,7 +117,7 @@ const fetchProfileData = useCallback(async () => {
       });
     } catch (err) {
       console.error('Erro ao iniciar chat', err);
-      Alert.alert('Erro', 'Não foi possível abrir a conversa no momento.');
+      showAlert('Erro', 'Não foi possível abrir a conversa no momento.');
     } finally {
       setStartingChat(false);
     }

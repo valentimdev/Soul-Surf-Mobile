@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { useAppAlert } from '@/components/AppAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { authService } from '../services/auth/authService';
 
 export default function RegisterScreen() {
+  const { showAlert } = useAppAlert();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +24,7 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!username || !email || !password) {
-      Alert.alert('Aviso', 'Por favor, preencha todos os campos.');
+      showAlert('Aviso', 'Por favor, preencha todos os campos.');
       return;
     }
 
@@ -30,18 +32,18 @@ export default function RegisterScreen() {
 
     try {
       await authService.signup(email, password, username);
-      Alert.alert('Sucesso', 'Conta criada com sucesso!', [
+      showAlert('Sucesso', 'Conta criada com sucesso!', [
         { text: 'Ir para o Login', onPress: () => router.replace('/') },
       ]);
     } catch (error: any) {
       console.log('Erro no cadastro:', error.response?.data || error.message);
 
       if (error.response?.status === 400) {
-        Alert.alert('Erro', 'O e-mail ou usuário já está em uso.');
+        showAlert('Erro', 'O e-mail ou usuário já está em uso.');
       } else if (error.response?.status === 404) {
-        Alert.alert('Erro', 'Rota de cadastro não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
+        showAlert('Erro', 'Rota de cadastro não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
       } else {
-        Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor.');
+        showAlert('Erro de Conexão', 'Não foi possível conectar ao servidor.');
       }
     } finally {
       setIsLoading(false);

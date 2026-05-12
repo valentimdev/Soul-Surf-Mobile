@@ -9,12 +9,12 @@ import {
   FlatList,
   ActivityIndicator,
   Image,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
 import { useRouter, useFocusEffect } from 'expo-router';
 
+import { useAppAlert } from '@/components/AppAlert';
 import { postService } from '@/services/posts/postService';
 import { userService } from '@/services/users/userService';
 import { beachService } from '@/services/beaches/beachService';
@@ -36,6 +36,7 @@ const DiscoverPostCard = ({
   onUpdateFollow: (userId: number, isNowFollowing: boolean) => void;
 }) => {
   const router = useRouter();
+  const { showAlert } = useAppAlert();
   const [loadingFollow, setLoadingFollow] = useState(false);
 
   const postImage = post.caminhoFoto;
@@ -59,7 +60,7 @@ const DiscoverPostCard = ({
       console.error('Erro ao alternar follow:', error);
       // 2. Reverte na tela principal se a API falhar
       onUpdateFollow(author.id, previousState);
-      Alert.alert('Erro', 'Não foi possível atualizar o status de seguir.');
+      showAlert('Erro', 'Não foi possível atualizar o status de seguir.');
     } finally {
       setLoadingFollow(false);
     }

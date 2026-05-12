@@ -180,7 +180,7 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.postsSection}>
-            <Text style={styles.sectionTitle}>Minhas Contribuicoes</Text>
+            <Text style={styles.sectionTitle}>Meus posts</Text>
             {posts.length > 0 ? (
                           posts.map((post) => (
                             <TouchableOpacity
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   statNumber: { fontSize: 18, fontWeight: 'bold', color: '#1F4A63' },
   statLabel: { fontSize: 12, color: '#5C9DB8' },
   postsSection: { paddingHorizontal: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F4A63', marginBottom: 15 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F4A63', marginBottom: 15, textAlign: 'center' },
   postCard: { flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 12, padding: 10, marginBottom: 10, elevation: 2 },
   postImage: { width: 60, height: 60, borderRadius: 8 },
   postInfo: { marginLeft: 15, justifyContent: 'center', flex: 1 },
