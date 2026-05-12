@@ -29,9 +29,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   Modal,
 } from 'react-native';
+
+const FALLBACK_BEACH_IMAGE =
+  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80';
 
 function normalizeCounter(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -279,7 +283,7 @@ function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
     <View style={styles.simpleSurfContent}>
       <View style={styles.simpleSurfTitleRow}>
         <Ionicons name="navigate-outline" size={17} color="#2F6F86" />
-        <Text style={styles.simpleSurfTitle}>Condicoes Atuais</Text>
+        <Text style={styles.simpleSurfTitle}>Condições atuais</Text>
       </View>
 
       <View style={styles.simpleSurfGrid}>
@@ -343,20 +347,23 @@ function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
         <View style={styles.simpleSurfReportHeader}>
           <View style={{ flex: 1 }}>
             <Text style={styles.simpleSurfBlockTitle}>Boletim SEMACE</Text>
-
           </View>
-          {reportUrl ? (
-            <TouchableOpacity onPress={openReport} style={styles.simpleSurfReportButton}>
-              <Text style={styles.simpleSurfReportButtonText}>Abrir</Text>
-            </TouchableOpacity>
-          ) : null}
         </View>
+        {reportUrl ? (
+          <TouchableOpacity onPress={openReport} style={styles.simpleSurfReportButton}>
+            <Ionicons name="open-outline" size={15} color="#FFFFFF" />
+            <Text style={styles.simpleSurfReportButtonText}>Abrir boletim da SEMACE</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.simpleSurfReportText}>Boletim oficial indisponível para este pico agora.</Text>
+        )}
       </View>
     </View>
   );
 }
 
 export default function BeachDetailsScreen() {
+  const { width: windowWidth } = useWindowDimensions();
   const params = useLocalSearchParams<{ id?: string | string[], targetPostId?: string, scrollToPost?: string }>();
   // Alterado para aceitar tanto targetPostId quanto scrollToPost (usado na tela de Discover)
   const targetPostId = useMemo(() => {
@@ -538,7 +545,19 @@ export default function BeachDetailsScreen() {
 
   useEffect(() => {
     if (beach?.nome) {
-      navigation.setOptions({ title: beach.nome });
+      navigation.setOptions({
+        title: beach.nome,
+        headerTitle: () => (
+          <View style={styles.navigationHeaderTitle}>
+            <Text numberOfLines={1} style={styles.navigationHeaderName}>
+              {beach.nome}
+            </Text>
+            <Text numberOfLines={1} style={styles.navigationHeaderSubtitle}>
+              Pico de surf
+            </Text>
+          </View>
+        ),
+      });
     }
   }, [beach?.nome, navigation]);
 
@@ -674,19 +693,18 @@ export default function BeachDetailsScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.heroCard}>
-              {beach?.caminhoFoto ? <Image testID="beach-image" source={{ uri: beach.caminhoFoto }} style={styles.heroImage} /> : null}
-              <Text testID="beach-name" style={styles.beachName}>{beach?.nome}</Text>
-              {beach?.descricao ? <Text testID="beach-description" style={styles.beachDescription}>{beach.descricao}</Text> : null}
-              <Text testID="beach-location" style={styles.beachMeta}>Local: {beach?.localizacao || 'Nao informado'}</Text>
-              <Text testID="beach-experience" style={styles.beachMeta}>Nivel: {beach?.nivelExperiencia || 'Nao informado'}</Text>
-            </View>
+            <Image
+              testID="beach-image"
+              source={{ uri: beach?.caminhoFoto || FALLBACK_BEACH_IMAGE }}
+              style={[styles.beachPhoto, { width: windowWidth }]}
+              resizeMode="cover"
+            />
 
             <View style={[styles.section, styles.surfSection]}>
               <View style={styles.surfSectionHeader}>
                 <View>
                   <Text style={styles.sectionEyebrow}>Agora no pico</Text>
-                  <Text style={styles.sectionTitleWithoutMargin}>Condicoes do mar</Text>
+                  <Text style={styles.sectionTitleWithoutMargin}>Condições do mar</Text>
                 </View>
                 <Ionicons name="partly-sunny-outline" size={22} color="#2F6F86" />
               </View>
@@ -696,12 +714,12 @@ export default function BeachDetailsScreen() {
               ) : loading ? (
                 <View style={styles.surfLoadingBox}>
                   <ActivityIndicator size="small" color="#2F6F86" />
-                  <Text style={styles.emptyStateText}>Carregando condicoes do mar...</Text>
+                  <Text style={styles.emptyStateText}>Carregando condições do mar...</Text>
                 </View>
               ) : surfConditionsError ? (
                 <Text style={styles.warningText}>{surfConditionsError}</Text>
               ) : (
-                <Text style={styles.emptyStateText}>Sem dados de condicoes para este pico agora.</Text>
+                <Text style={styles.emptyStateText}>Sem dados de condições para este pico agora.</Text>
               )}
             </View>
 
@@ -960,37 +978,27 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     gap: 16,
   },
-  heroCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2DEC3',
-    padding: 14,
+  navigationHeaderTitle: {
+    minWidth: 0,
   },
-  heroImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-    marginBottom: 12,
-    backgroundColor: '#E8E5D4',
+  navigationHeaderName: {
+    color: '#2A4B7C',
+    fontSize: 20,
+    fontWeight: '800',
+    lineHeight: 23,
   },
-  beachName: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1F4A63',
-    marginBottom: 8,
-  },
-  beachDescription: {
+  navigationHeaderSubtitle: {
+    color: '#5D9AB6',
     fontSize: 14,
-    color: '#374151',
-    marginBottom: 10,
-    lineHeight: 20,
+    fontWeight: '700',
+    lineHeight: 17,
   },
-  beachMeta: {
-    fontSize: 13,
-    color: '#5C9DB8',
-    fontWeight: '600',
-    marginBottom: 4,
+  beachPhoto: {
+    width: '100%',
+    height: 210,
+    marginHorizontal: -20,
+    marginTop: -16,
+    backgroundColor: '#E7E2D3',
   },
   section: {
     backgroundColor: '#FFFFFF',
@@ -1127,8 +1135,8 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   surfSection: {
-    backgroundColor: '##FAF5E8',
-    borderColor: '#DED5C3',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E7E2D3',
   },
   surfSectionHeader: {
     flexDirection: 'row',
@@ -1234,10 +1242,14 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   simpleSurfReportButton: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: '#2F6F86',
     borderRadius: 999,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
   simpleSurfReportButtonText: {
     color: '#FFFFFF',
