@@ -1,4 +1,5 @@
 import { beachService, BeachMessageDTO } from '@/services/beaches/beachService';
+import { useAppAlert } from '@/components/AppAlert';
 import { formatDate, formatDateTime } from '@/utils/formatters';
 import { BeachDTO, PostDTO } from '@/types/api';
 import { surfConditionsService } from '@/services/weather/surfConditionsService';
@@ -20,7 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { postService } from '@/services/posts/postService';
 import {
   ActivityIndicator,
-  Alert,
+  Dimensions,
   Image,
   RefreshControl,
   SafeAreaView,
@@ -29,7 +30,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useWindowDimensions,
   View,
   Modal,
 } from 'react-native';
@@ -91,6 +91,7 @@ function parseCachedMessages(raw: string | null): BeachMessageDTO[] {
 
 export function PostCard({ post, featured = false }: { post: PostDTO; featured?: boolean }) {
   const router = useRouter();
+  const { showAlert } = useAppAlert();
   const initialLikes = normalizeCounter(post.likesCount);
   const commentsCount = normalizeCounter(post.commentsCount);
   const authorName = post.usuario?.username || 'Surfista';
@@ -138,7 +139,7 @@ export function PostCard({ post, featured = false }: { post: PostDTO; featured?:
       console.error('Erro ao curtir:', error);
       setLiked(previousLiked);
       setLikesCount(previousCount);
-      Alert.alert('Erro', 'Não foi possível curtir o post.');
+      showAlert('Erro', 'Não foi possível curtir o post.');
     } finally {
       setIsLiking(false);
     }
@@ -260,6 +261,7 @@ function MessageCard({ message }: { message: BeachMessageDTO }) {
 }
 
 function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
+  const { showAlert } = useAppAlert();
   const summary = buildLaymanSummary(data);
   const quickTips = buildQuickTips(data);
   const waveHeight = formatMetric(data.marine?.waveHeightMeters, 'm');
@@ -275,7 +277,7 @@ function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
     try {
       await Linking.openURL(reportUrl);
     } catch {
-      Alert.alert('Nao foi possivel abrir o boletim', 'Tente novamente em alguns instantes.');
+      showAlert('Nao foi possivel abrir o boletim', 'Tente novamente em alguns instantes.');
     }
   };
 
@@ -345,25 +347,24 @@ function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
 
       <View style={styles.simpleSurfBlock}>
         <View style={styles.simpleSurfReportHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.simpleSurfBlockTitle}>Boletim SEMACE</Text>
-          </View>
+          <Text style={styles.simpleSurfBlockTitle}>Boletim SEMACE</Text>
+          {reportUrl ? (
+            <TouchableOpacity onPress={openReport} style={styles.simpleSurfReportButton}>
+              <Ionicons name="open-outline" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : null}
         </View>
-        {reportUrl ? (
-          <TouchableOpacity onPress={openReport} style={styles.simpleSurfReportButton}>
-            <Ionicons name="open-outline" size={15} color="#FFFFFF" />
-            <Text style={styles.simpleSurfReportButtonText}>Abrir boletim da SEMACE</Text>
-          </TouchableOpacity>
-        ) : (
+        {!reportUrl ? (
           <Text style={styles.simpleSurfReportText}>Boletim oficial indisponível para este pico agora.</Text>
-        )}
+        ) : null}
       </View>
     </View>
   );
 }
 
 export default function BeachDetailsScreen() {
-  const { width: windowWidth } = useWindowDimensions();
+  const windowWidth = Dimensions?.get?.('window')?.width ?? 390;
+  const { showAlert } = useAppAlert();
   const params = useLocalSearchParams<{ id?: string | string[], targetPostId?: string, scrollToPost?: string }>();
   // Alterado para aceitar tanto targetPostId quanto scrollToPost (usado na tela de Discover)
   const targetPostId = useMemo(() => {
@@ -584,7 +585,7 @@ export default function BeachDetailsScreen() {
   const handleSendMessage = useCallback(async () => {
     if (!Number.isFinite(beachId)) return;
     if (!newMessage.trim()) {
-      Alert.alert('Aviso', 'Escreva uma mensagem antes de enviar.');
+      showAlert('Aviso', 'Escreva uma mensagem antes de enviar.');
       return;
     }
 
@@ -600,11 +601,11 @@ export default function BeachDetailsScreen() {
       void loadBeachDetails(true);
     } catch (e) {
         console.error(e);
-      Alert.alert('Erro', 'Nao foi possivel publicar sua mensagem.');
+      showAlert('Erro', 'Nao foi possivel publicar sua mensagem.');
     } finally {
       setSendingMessage(false);
     }
-  }, [beachId, newMessage, loadBeachDetails, persistMessagesCache]);
+  }, [beachId, newMessage, loadBeachDetails, persistMessagesCache, showAlert]);
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -629,7 +630,7 @@ export default function BeachDetailsScreen() {
 
   const handleCreatePost = async () => {
     if (!newPostDesc.trim() && !newPostPhotoUri) {
-      Alert.alert('Aviso', 'Seu post precisa ter ao menos uma foto ou uma descrição.');
+      showAlert('Aviso', 'Seu post precisa ter ao menos uma foto ou uma descrição.');
       return;
     }
 
@@ -659,11 +660,11 @@ export default function BeachDetailsScreen() {
       setPosts(prev => [response.data, ...prev]);
 
       closePostModal();
-      Alert.alert('Sucesso', 'Post publicado com sucesso!');
+      showAlert('Sucesso', 'Post publicado com sucesso!');
 
     } catch (error: any) {
       console.error(error?.response?.data || error.message);
-      Alert.alert('Erro', 'Não foi possível criar o post.');
+      showAlert('Erro', 'Não foi possível criar o post.');
     } finally {
       setCreatingPost(false);
     }
@@ -1233,8 +1234,9 @@ const styles = StyleSheet.create({
   },
   simpleSurfReportHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
   },
   simpleSurfReportText: {
     color: '#4B5563',
@@ -1242,19 +1244,12 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   simpleSurfReportButton: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    width: 34,
+    height: 34,
     backgroundColor: '#2F6F86',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  simpleSurfReportButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '800',
+    borderRadius: 17,
   },
   messageComposer: {
     marginBottom: 14,

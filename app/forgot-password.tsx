@@ -6,23 +6,24 @@ import {
   TouchableOpacity,
   Image,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
+import { useAppAlert } from '@/components/AppAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import { authService } from '../services/auth/authService';
 
 export default function ForgotPasswordScreen() {
+  const { showAlert } = useAppAlert();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRecover = async () => {
     if (!email) {
-      Alert.alert('Aviso', 'Por favor, digite seu e-mail cadastrado.');
+      showAlert('Aviso', 'Por favor, digite seu e-mail cadastrado.');
       return;
     }
 
@@ -30,7 +31,7 @@ export default function ForgotPasswordScreen() {
 
     try {
       const response = await authService.forgotPassword(email);
-      Alert.alert(
+      showAlert(
         'E-mail Enviado',
         response.message || 'Se o e-mail estiver cadastrado, você receberá um link de recuperação.',
         [{ text: 'Voltar ao Login', onPress: () => router.replace('/login') }]
@@ -39,11 +40,11 @@ export default function ForgotPasswordScreen() {
       console.error('Erro ao solicitar recuperação:', error.response?.data || error.message);
 
       if (error.response?.status === 400) {
-        Alert.alert('Erro', 'Formato de e-mail inválido.');
+        showAlert('Erro', 'Formato de e-mail inválido.');
       } else if (error.response?.status === 404) {
-        Alert.alert('Erro', 'Rota de recuperação não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
+        showAlert('Erro', 'Rota de recuperação não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
       } else {
-        Alert.alert('Erro', 'Não foi possível solicitar a recuperação. Verifique sua conexão.');
+        showAlert('Erro', 'Não foi possível solicitar a recuperação. Verifique sua conexão.');
       }
     } finally {
       setIsLoading(false);

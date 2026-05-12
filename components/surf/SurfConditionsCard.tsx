@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import {
-  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import * as Linking from 'expo-linking';
+import { useAppAlert } from '@/components/AppAlert';
 import { SurfConditionsResponse } from '@/types/surfConditions';
 import {
   buildLaymanSummary,
@@ -44,6 +45,7 @@ export function SurfConditionsCard({
   beachName?: string;
   data: SurfConditionsResponse;
 }) {
+  const { showAlert } = useAppAlert();
   const summary = useMemo(() => buildLaymanSummary(data), [data]);
   const colors = useMemo(() => toneColors(summary.tone), [summary.tone]);
   const quickTips = useMemo(() => buildQuickTips(data), [data]);
@@ -65,7 +67,7 @@ export function SurfConditionsCard({
     try {
       await Linking.openURL(reportUrl);
     } catch {
-      Alert.alert('Nao foi possivel abrir o boletim', 'Tente novamente em alguns instantes.');
+      showAlert('Nao foi possivel abrir o boletim', 'Tente novamente em alguns instantes.');
     }
   };
 
@@ -117,7 +119,14 @@ export function SurfConditionsCard({
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Boletim oficial</Text>
+        <View style={styles.reportHeader}>
+          <Text style={styles.sectionTitle}>Boletim SEMACE</Text>
+          {hasReportUrl ? (
+            <TouchableOpacity onPress={openReport} style={styles.reportButton}>
+              <Ionicons name="open-outline" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
         <Text style={styles.metaText}>
           {data.balneability?.period
             ? `Periodo analisado: ${data.balneability.period}`
@@ -126,11 +135,6 @@ export function SurfConditionsCard({
         <Text style={styles.metaText}>
           {data.balneability?.observation ?? 'Sem observacoes extras para este pico.'}
         </Text>
-        {hasReportUrl ? (
-          <TouchableOpacity onPress={openReport} style={styles.reportButton}>
-            <Text style={styles.reportButtonText}>Abrir boletim da SEMACE</Text>
-          </TouchableOpacity>
-        ) : null}
       </View>
     </View>
   );
@@ -215,17 +219,18 @@ const styles = StyleSheet.create({
     color: '#4A6279',
     lineHeight: 18,
   },
-  reportButton: {
-    marginTop: 6,
-    backgroundColor: '#18324A',
-    borderRadius: 10,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  reportHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
   },
-  reportButtonText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
+  reportButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 34,
+    height: 34,
+    backgroundColor: '#18324A',
+    borderRadius: 17,
   },
 });

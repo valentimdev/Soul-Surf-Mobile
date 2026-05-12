@@ -7,24 +7,25 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
+import { useAppAlert } from '@/components/AppAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { authService } from '../services/auth/authService';
 
 export default function LoginScreen() {
+  const { showAlert } = useAppAlert();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Aviso', 'Por favor, preencha o e-mail e a senha.');
+      showAlert('Aviso', 'Por favor, preencha o e-mail e a senha.');
       return;
     }
 
@@ -42,21 +43,21 @@ export default function LoginScreen() {
         console.log('Login efetuado com sucesso! Token salvo.');
         router.replace('/map');
       } else {
-        Alert.alert('Erro', 'Autenticação falhou: Token não recebido do servidor.');
+        showAlert('Erro', 'Autenticação falhou: Token não recebido do servidor.');
       }
     } catch (error: any) {
       console.error('Detalhe do erro no login:', error.response?.data || error.message);
 
       if (error.message === 'Network Error') {
-        Alert.alert('Erro de Rede', 'O servidor não respondeu. Verifique EXPO_PUBLIC_API_URL e o protocolo (http/https) do backend. Se alterou o .env, reinicie o Expo com cache limpo.');
+        showAlert('Erro de Rede', 'O servidor não respondeu. Verifique EXPO_PUBLIC_API_URL e o protocolo (http/https) do backend. Se alterou o .env, reinicie o Expo com cache limpo.');
       } else if (error.response?.status === 401 || error.response?.status === 403) {
-        Alert.alert('Erro', 'E-mail ou senha incorretos.');
+        showAlert('Erro', 'E-mail ou senha incorretos.');
       } else if (error.response?.status === 404) {
-        Alert.alert('Erro', 'Rota de login não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
+        showAlert('Erro', 'Rota de login não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
       } else if (error.response?.status === 400) {
-        Alert.alert('Erro', 'Formato de dados inválido. Verifique o e-mail digitado.');
+        showAlert('Erro', 'Formato de dados inválido. Verifique o e-mail digitado.');
       } else {
-        Alert.alert('Erro de Conexão', 'Não foi possível conectar ao servidor.');
+        showAlert('Erro de Conexão', 'Não foi possível conectar ao servidor.');
       }
     } finally {
       setIsLoading(false);
