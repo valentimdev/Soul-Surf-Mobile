@@ -1,4 +1,4 @@
-import BottomSheet from '@/components/BottomSheet'; // Importando seu componente customizado
+import BottomSheet from '@/components/BottomSheet';
 import { postService } from '@/services/posts/postService';
 import { userService } from '@/services/users/userService';
 import { PostDTO, UserDTO } from '@/types/api';
@@ -9,14 +9,13 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-// Importação necessária para o BottomSheet funcionar corretamente
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const COVER_FALLBACK = 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=800';
@@ -28,8 +27,6 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [imgKey, setImgKey] = useState(Date.now());
 
-  // Adiciona um timestamp na URL da imagem para forçar o React Native
-  // a baixar a versão atualizada em vez de usar o cache.
   const bustCache = (uri?: string) => {
     if (!uri) return undefined;
     const separator = uri.includes('?') ? '&' : '?';
@@ -270,8 +267,29 @@ const styles = StyleSheet.create({
   container: { paddingBottom: 40 },
   loadingContainer: { flex: 1, justifyContent: 'center', backgroundColor: '#F6F4EB' },
   coverImage: { width: '100%', height: 180, position: 'absolute' },
-  headerActions: { alignItems: 'flex-end', padding: 20, height: 120 },
-  iconBadge: { backgroundColor: 'rgba(255,255,255,0.8)', padding: 8, borderRadius: 20 },
+
+  // Atualizações na Header e Badge do Botão
+  headerActions: {
+    alignItems: 'flex-end',
+    paddingTop: 15,
+    paddingRight: 20,
+    height: 120,
+    zIndex: 10, // Garante que o botão fique acima da imagem
+  },
+  iconBadge: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    width: 44, // Largura fixa
+    height: 44, // Altura fixa
+    borderRadius: 22, // Círculo perfeito
+    alignItems: 'center', // Centraliza ícone (horizontal)
+    justifyContent: 'center', // Centraliza ícone (vertical)
+    elevation: 4, // Sombra para Android
+    shadowColor: '#000', // Sombra para iOS
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+
   userInfoSection: { alignItems: 'center', marginTop: 10 },
   avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: '#F6F4EB' },
   userName: { fontSize: 22, fontWeight: 'bold', color: '#1F4A63', marginTop: 10 },
