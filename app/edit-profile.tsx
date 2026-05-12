@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { useAppAlert } from '@/components/AppAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
@@ -10,6 +11,7 @@ const COVER_FALLBACK = 'https://images.unsplash.com/photo-1502680390469-be75c86b
 const AVATAR_FALLBACK = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300';
 
 export default function EditProfileScreen() {
+  const { showAlert } = useAppAlert();
   const params = useLocalSearchParams();
   const [username, setUsername] = useState((params.currentUsername as string) || '');
   const [bio, setBio] = useState((params.currentBio as string) || '');
@@ -42,7 +44,7 @@ export default function EditProfileScreen() {
         coverImg?.uri
       );
 
-      Alert.alert("Sucesso", "Perfil atualizado!");
+      showAlert('Sucesso', 'Perfil atualizado!');
       router.back();
     } catch (error: any) {
       const apiMessage = error?.response?.data?.message;
@@ -56,7 +58,7 @@ export default function EditProfileScreen() {
         data: error?.response?.data,
         message: error?.message,
       });
-      Alert.alert('Erro', errorMessage);
+      showAlert('Erro', errorMessage);
     } finally {
       setLoading(false);
     }

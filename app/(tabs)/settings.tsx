@@ -1,13 +1,16 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useAppAlert } from '@/components/AppAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
+  const { showAlert } = useAppAlert();
+
   const handleLogout = async () => {
-      Alert.alert(
+      showAlert(
         'Sair',
         'Tem certeza que deseja sair da sua conta?',
         [
@@ -28,7 +31,7 @@ export default function SettingsScreen() {
 
               } catch (error) {
                 console.error('Erro ao fazer logout:', error);
-                Alert.alert('Erro', 'Não foi possível sair no momento.');
+                showAlert('Erro', 'Não foi possível sair no momento.');
               }
             }
           }

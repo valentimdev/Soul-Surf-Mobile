@@ -8,8 +8,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   SafeAreaView,
-  Alert,
 } from 'react-native';
+import { useAppAlert } from '@/components/AppAlert';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { userService } from '@/services/users/userService';
@@ -28,6 +28,7 @@ const UserCardItem = memo(({
   user: UserDTO;
   onToggleFollow: (userId: number, wasFollowing: boolean) => Promise<void>
 }) => {
+  const { showAlert } = useAppAlert();
   // Estado local para mudança instantânea!
   const [isFollowing, setIsFollowing] = useState(user.following);
 
@@ -40,10 +41,10 @@ const UserCardItem = memo(({
     try {
       // 2. Chama a função pai que faz o request
       await onToggleFollow(user.id, previousStatus);
-    } catch (_error) {
+    } catch {
       // 3. Se der erro na API (ex: sem net), desfaz a animação do botão
       setIsFollowing(previousStatus);
-      Alert.alert('Erro', 'Não foi possível atualizar o status.');
+      showAlert('Erro', 'Não foi possível atualizar o status.');
     }
   };
 
@@ -77,6 +78,7 @@ UserCardItem.displayName = 'UserCardItem';
 // TELA PRINCIPAL
 // ==========================================
 export default function UsersScreen() {
+  const { showAlert } = useAppAlert();
   const router = useRouter();
 
   const [users, setUsers] = useState<UserDTO[]>([]);
@@ -110,12 +112,12 @@ export default function UsersScreen() {
       setUsers(prev => isRefresh ? filteredData : [...prev, ...filteredData]);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
-      Alert.alert('Erro', 'Não foi possível carregar a lista de usuários.');
+      showAlert('Erro', 'Não foi possível carregar a lista de usuários.');
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [myUserId]);
+  }, [myUserId, showAlert]);
 
   useEffect(() => {
     fetchUsers(0, true);

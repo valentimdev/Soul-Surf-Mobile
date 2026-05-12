@@ -6,7 +6,6 @@ import React, { useCallback, useState } from 'react';
 
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Image,
   SafeAreaView,
@@ -15,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useAppAlert } from '@/components/AppAlert';
 
 type ConversationItemView = {
   id: string;
@@ -115,6 +115,7 @@ function ConversationCard({ item, onPress }: { item: ConversationItemView; onPre
 
 export default function ChatScreen() {
   const router = useRouter();
+  const { showAlert } = useAppAlert();
 
   const [conversations, setConversations] = useState<ConversationItemView[]>([]);
   const [following, setFollowing] = useState<UserDTO[]>([]);
@@ -204,7 +205,7 @@ export default function ChatScreen() {
       });
     } catch (err) {
       console.error('Erro ao iniciar chat', err);
-      Alert.alert('Erro', 'Não foi possível abrir a conversa no momento.');
+      showAlert('Erro', 'Não foi possível abrir a conversa no momento.');
     } finally {
       setStartingChat(false);
     }
