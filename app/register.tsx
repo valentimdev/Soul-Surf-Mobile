@@ -10,6 +10,16 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const handleUsernameChange = (text: string) => {
+    const cleanText = text
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s/g, '')
+      .toLowerCase();
+
+    setUsername(cleanText);
+  };
+
   const handleRegister = async () => {
     if (!username || !email || !password) {
       Alert.alert('Aviso', 'Por favor, preencha todos os campos.');
@@ -60,7 +70,7 @@ export default function RegisterScreen() {
             placeholderTextColor="#8C8A80"
             autoCapitalize="none"
             value={username}
-            onChangeText={setUsername}
+            onChangeText={handleUsernameChange}
           />
 
           <TextInput
