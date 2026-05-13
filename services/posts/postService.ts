@@ -39,7 +39,7 @@ export const postService = {
   },
 
   // Dar ou Tirar Like
-  toggleLike: async (postId: number): Promise<{ liked: boolean }> => {
+  toggleLike: async (postId: number): Promise<{ liked: boolean; likesCount: number }> => {
     const response = await api.post(`/api/posts/${postId}/likes`);
     return response.data;
   },
