@@ -135,6 +135,7 @@ export function PostCard({ post, featured = false }: { post: PostDTO; featured?:
     try {
       const res = await postService.toggleLike(post.id);
       setLiked(res.liked);
+      setLikesCount(normalizeCounter(res.likesCount));
     } catch (error) {
       console.error('Erro ao curtir:', error);
       setLiked(previousLiked);

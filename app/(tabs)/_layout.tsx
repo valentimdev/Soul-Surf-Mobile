@@ -3,7 +3,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { notificationService } from '@/services/notifications/notificationService';
 import { Tabs, useFocusEffect } from 'expo-router';
 import { Map, MessageCircle, Bell, User, Compass } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 export default function TabLayout() {
@@ -25,6 +25,12 @@ export default function TabLayout() {
       loadUnreadCount();
     }, [loadUnreadCount])
   );
+
+  useEffect(() => {
+    loadUnreadCount();
+    const intervalId = setInterval(loadUnreadCount, 30000);
+    return () => clearInterval(intervalId);
+  }, [loadUnreadCount]);
 
   return (
     <Tabs
