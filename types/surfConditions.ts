@@ -1,5 +1,5 @@
 export type SurfQualityLabel = 'BOA' | 'REGULAR' | 'RUIM' | 'INDISPONIVEL';
-export type BalneabilityStatus = 'PROPRIA' | 'EM_ALERTA' | 'IMPROPRIA' | 'NAO_ENCONTRADO' | 'INDISPONIVEL';
+export type BalneabilityStatus = 'PROPRIA' | 'EM_ALERTA' | 'IMPROPRIA' | 'INDISPONIVEL' | 'INDISPONIVEL';
 
 export interface SurfConditionsLocation {
   latitude?: number | null;

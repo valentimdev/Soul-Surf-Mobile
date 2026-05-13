@@ -47,8 +47,6 @@ export function describeBalneability(status: BalneabilityStatus | undefined): st
       return 'Agua em alerta, entre com cautela.';
     case 'IMPROPRIA':
       return 'Agua impropria, melhor evitar entrar.';
-    case 'NAO_ENCONTRADO':
-      return 'Nao foi encontrado ponto exato da praia no boletim.';
     case 'INDISPONIVEL':
     default:
       return 'Balneabilidade indisponivel no momento.';

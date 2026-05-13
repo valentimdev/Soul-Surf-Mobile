@@ -34,6 +34,39 @@ function toTimeLabel(value?: string): string {
   });
 }
 
+function startOfLocalDay(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function toDateKey(value?: string): string {
+  if (!value) return 'invalid-date';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'invalid-date';
+
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function toDateSeparatorLabel(value?: string): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const today = startOfLocalDay(new Date());
+  const messageDay = startOfLocalDay(date);
+  const diffInDays = Math.round((today.getTime() - messageDay.getTime()) / 86400000);
+
+  if (diffInDays === 0) return 'Hoje';
+  if (diffInDays === 1) return 'Ontem';
+
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
 function sortMessages(items: ChatMessageResponse[]): ChatMessageResponse[] {
   return [...items].sort((a, b) => {
     const first = new Date(a.createdAt).getTime();
@@ -43,6 +76,48 @@ function sortMessages(items: ChatMessageResponse[]): ChatMessageResponse[] {
     const safeSecond = Number.isNaN(second) ? 0 : second;
     return safeFirst - safeSecond;
   });
+}
+
+type ChatListItem =
+  | { type: 'date'; id: string; label: string }
+  | { type: 'message'; id: string; message: ChatMessageResponse };
+
+function buildChatListItems(items: ChatMessageResponse[]): ChatListItem[] {
+  const listItems: ChatListItem[] = [];
+  let currentDateKey = '';
+
+  items.forEach((message, index) => {
+    const dateKey = toDateKey(message.createdAt);
+
+    if (dateKey !== currentDateKey) {
+      currentDateKey = dateKey;
+      const label = toDateSeparatorLabel(message.createdAt);
+
+      if (label) {
+        listItems.push({
+          type: 'date',
+          id: `date-${dateKey}-${index}`,
+          label,
+        });
+      }
+    }
+
+    listItems.push({
+      type: 'message',
+      id: message.id || `message-${message.createdAt}-${index}`,
+      message,
+    });
+  });
+
+  return listItems;
+}
+
+function DateSeparator({ label }: { label: string }) {
+  return (
+    <View style={styles.dateSeparatorContainer}>
+      <Text style={styles.dateSeparatorText}>{label}</Text>
+    </View>
+  );
 }
 
 function MessageBubble({
@@ -80,7 +155,8 @@ export default function ChatConversationScreen() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const listRef = useRef<FlatList<ChatMessageResponse>>(null);
+  const chatItems = useMemo(() => buildChatListItems(messages), [messages]);
+  const listRef = useRef<FlatList<ChatListItem>>(null);
   const insets = useSafeAreaInsets();
 
   // Pegamos a altura exata do Header (Cabeçalho do Expo Router)
@@ -189,11 +265,20 @@ export default function ChatConversationScreen() {
         ) : (
           <FlatList
             ref={listRef}
-            data={messages}
-            keyExtractor={(item, index) => item.id || `${item.createdAt}-${index}`}
-            renderItem={({ item }) => (
-              <MessageBubble message={item} isMine={!!currentUserId && String(item.senderId) === currentUserId} />
-            )}
+            data={chatItems}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => {
+              if (item.type === 'date') {
+                return <DateSeparator label={item.label} />;
+              }
+
+              return (
+                <MessageBubble
+                  message={item.message}
+                  isMine={!!currentUserId && String(item.message.senderId) === currentUserId}
+                />
+              );
+            }}
             contentContainerStyle={[
               styles.listContent,
               messages.length === 0 && styles.listContentEmpty,
@@ -287,6 +372,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#5C9DB8',
     textAlign: 'center',
+  },
+  dateSeparatorContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  dateSeparatorText: {
+    overflow: 'hidden',
+    borderRadius: 12,
+    backgroundColor: '#E2DEC3',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    color: '#1F4A63',
+    fontSize: 12,
+    fontWeight: '700',
   },
   messageRow: {
     width: '100%',
