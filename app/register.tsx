@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, ScrollView, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAppAlert } from '@/components/AppAlert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -11,6 +11,9 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Novo estado para controlar o Checkbox
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleUsernameChange = (text: string) => {
     const cleanText = text
@@ -25,6 +28,12 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     if (!username || !email || !password) {
       showAlert('Aviso', 'Por favor, preencha todos os campos.');
+      return;
+    }
+
+    // Validação dos Termos de Uso
+    if (!acceptedTerms) {
+      showAlert('Aviso', 'Você precisa aceitar os Termos de uso para se cadastrar.');
       return;
     }
 
@@ -94,7 +103,30 @@ export default function RegisterScreen() {
             onChangeText={setPassword}
           />
 
-          <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={isLoading}>
+          {/* Componente Customizado de Checkbox */}
+          <View style={styles.checkboxWrapper}>
+            <TouchableOpacity
+              style={styles.checkbox}
+              onPress={() => setAcceptedTerms(!acceptedTerms)}
+              activeOpacity={0.7}
+            >
+              {acceptedTerms && <View style={styles.checkboxInner} />}
+            </TouchableOpacity>
+
+            <Text style={styles.termsText}>
+              Eu aceito os{' '}
+              <Text style={styles.termsLink} onPress={() => router.push('/terms' as any)}>
+                Termos de uso
+              </Text>
+            </Text>
+          </View>
+
+          {/* Botão de Cadastrar com estilo dinâmico */}
+          <TouchableOpacity
+            style={[styles.button, !acceptedTerms && styles.buttonDisabled]}
+            onPress={handleRegister}
+            disabled={isLoading || !acceptedTerms}
+          >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
@@ -142,6 +174,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333333',
   },
+
+  /* Novos Estilos do Checkbox */
+  checkboxWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 20,
+    paddingHorizontal: 5,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#5C9DB8',
+    borderRadius: 6,
+    marginRight: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxInner: {
+    width: 12,
+    height: 12,
+    backgroundColor: '#5C9DB8',
+    borderRadius: 2,
+  },
+  termsText: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  termsLink: {
+    color: '#5C9DB8',
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
+  },
+
   button: {
     width: '100%',
     height: 60,
@@ -149,8 +216,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 15,
+    marginTop: 5,
     marginBottom: 25,
+  },
+  /* Estilo para quando o botão estiver bloqueado */
+  buttonDisabled: {
+    backgroundColor: '#A3C6D4',
   },
   buttonText: {
     color: '#FFFFFF',
