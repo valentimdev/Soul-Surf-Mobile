@@ -1,7 +1,8 @@
 import { NotificationDTO, notificationService } from '@/services/notifications/notificationService';
+import { postService } from '@/services/posts/postService';
 import { useFocusEffect } from 'expo-router';
 import { Clock, MessageSquare, Star, Waves } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -11,9 +12,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from 'react-native';
 
 type NotificationVisualType = 'review' | 'message' | 'alert';
+
+const FALLBACK_AVATAR = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
 const ICON_MAP: Record<NotificationVisualType, { icon: React.ElementType; bg: string }> = {
   review: { icon: Star, bg: '#EDE8D6' },
@@ -23,34 +27,34 @@ const ICON_MAP: Record<NotificationVisualType, { icon: React.ElementType; bg: st
 
 function getVisualType(type: string): NotificationVisualType {
   const normalized = type.toUpperCase();
-
-  if (normalized.includes('ALERT') || normalized.includes('WEATHER')) {
-    return 'alert';
-  }
-
-  if (
-    normalized.includes('COMMENT') ||
-    normalized.includes('REPLY') ||
-    normalized.includes('MENTION') ||
-    normalized.includes('MESSAGE')
-  ) {
-    return 'message';
-  }
-
+  if (normalized.includes('ALERT') || normalized.includes('WEATHER')) return 'alert';
+  if (normalized.includes('COMMENT') || normalized.includes('REPLY') || normalized.includes('MENTION') || normalized.includes('MESSAGE')) return 'message';
   return 'review';
 }
 
 function formatNotificationTitle(type: string) {
   const normalized = type.toUpperCase();
-
   if (normalized === 'LIKE') return 'Novo like';
-  if (normalized === 'COMMENT') return 'Novo comentario';
+  if (normalized === 'COMMENT') return 'Novo comentário';
   if (normalized === 'REPLY') return 'Nova resposta';
   if (normalized === 'FOLLOW') return 'Novo seguidor';
-  if (normalized === 'MENTION') return 'Voce foi mencionado';
+  if (normalized === 'MENTION') return 'Você foi mencionado';
   if (normalized === 'ALERT') return 'Alerta';
+  return 'Notificação';
+}
 
-  return 'Notificacao';
+function formatNotificationAction(item: NotificationDTO) {
+  const type = item.type?.toUpperCase() || '';
+  if (type === 'LIKE') return 'curtiu seu registro';
+  if (type === 'COMMENT') return 'comentou no seu registro';
+  if (type === 'REPLY') return 'respondeu ao seu comentário';
+  if (type === 'FOLLOW') return 'começou a seguir você';
+  if (type === 'MENTION') return 'mencionou você';
+
+  if (item.sender && item.sender.username && item.message.startsWith(item.sender.username)) {
+    return item.message.replace(item.sender.username, '').trim();
+  }
+  return item.message;
 }
 
 function formatTimeAgo(createdAt: string) {
@@ -63,19 +67,16 @@ function formatTimeAgo(createdAt: string) {
   if (diffMs < 60 * 1000) return 'agora';
 
   const diffMinutes = Math.floor(diffMs / (60 * 1000));
-  if (diffMinutes < 60) return `${diffMinutes} min atras`;
+  if (diffMinutes < 60) return `${diffMinutes} min atrás`;
 
   const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours} h atras`;
+  if (diffHours < 24) return `${diffHours} h atrás`;
 
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays === 1) return 'ontem';
-  if (diffDays < 7) return `${diffDays} dias atras`;
+  if (diffDays < 7) return `${diffDays} dias atrás`;
 
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-  });
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
 function NotificationCard({
@@ -85,6 +86,68 @@ function NotificationCard({
   item: NotificationDTO;
   onPress: (item: NotificationDTO) => void;
 }) {
+  const [postImage, setPostImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isActive = true;
+    if (item.postId) {
+      postService.getPostById(item.postId)
+        .then(post => {
+          if (isActive && post?.caminhoFoto) {
+            setPostImage(post.caminhoFoto);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => { isActive = false; };
+  }, [item.postId]);
+
+  if (item.sender) {
+    return (
+      <TouchableOpacity
+        style={[styles.card, !item.read && styles.cardUnread]}
+        activeOpacity={0.8}
+        onPress={() => onPress(item)}
+      >
+        <Image source={{ uri: item.sender.fotoPerfil || FALLBACK_AVATAR }} style={styles.senderAvatar} />
+
+        <View style={styles.cardContent}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.senderName}>{item.sender.username}</Text>
+            {!item.read && <View style={styles.unreadDot} />}
+          </View>
+          <Text style={styles.cardAction}>{formatNotificationAction(item)}</Text>
+
+          <View style={styles.timeRow}>
+            <Text style={styles.timeText}>{formatTimeAgo(item.createdAt)}</Text>
+            {!item.read && (
+              <>
+                <Text style={styles.dotSeparator}>•</Text>
+                <TouchableOpacity onPress={() => onPress(item)} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+                  <Text style={styles.markReadMiniText}>Marcar lida</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+
+        {item.postId && (
+          <View style={styles.rightActions}>
+            <View style={styles.postPreviewContainer}>
+              {postImage ? (
+                <Image source={{ uri: postImage }} style={styles.postPreviewImage} />
+              ) : (
+                <View style={styles.postPreviewFallback}>
+                  <Star size={14} color="#999" />
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
   const visualType = getVisualType(item.type);
   const iconConfig = ICON_MAP[visualType];
   const IconComponent = iconConfig.icon;
@@ -108,8 +171,17 @@ function NotificationCard({
         <Text style={styles.cardDescription}>{item.message}</Text>
 
         <View style={styles.timeRow}>
-          <Clock size={14} color="#999" />
+          <Clock size={12} color="#999" style={{marginRight: 4}} />
           <Text style={styles.timeText}>{formatTimeAgo(item.createdAt)}</Text>
+
+          {!item.read && (
+            <>
+              <Text style={styles.dotSeparator}>•</Text>
+              <TouchableOpacity onPress={() => onPress(item)} hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}>
+                <Text style={styles.markReadMiniText}>Marcar lida</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -132,7 +204,7 @@ export default function NotificationsScreen() {
       setNotifications(data);
     } catch (e) {
       console.error('Erro ao carregar notificacoes:', e);
-      setError('Nao foi possivel carregar as notificacoes.');
+      setError('Não foi possível carregar as notificações.');
     } finally {
       if (isRefresh) setRefreshing(false);
       else setLoading(false);
@@ -169,12 +241,12 @@ export default function NotificationsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadNotifications(true)} />}
       >
-        <Text style={styles.title}>Notificacoes</Text>
+        <Text style={styles.title}>Notificações</Text>
 
         {loading && notifications.length === 0 ? (
           <View style={styles.centerState}>
             <ActivityIndicator size="large" color="#5C9DB8" />
-            <Text style={styles.centerStateText}>Carregando notificacoes...</Text>
+            <Text style={styles.centerStateText}>Carregando notificações...</Text>
           </View>
         ) : error && notifications.length === 0 ? (
           <View style={styles.centerState}>
@@ -185,11 +257,15 @@ export default function NotificationsScreen() {
           </View>
         ) : notifications.length === 0 ? (
           <View style={styles.centerState}>
-            <Text style={styles.centerStateText}>Nenhuma notificacao no momento.</Text>
+            <Text style={styles.centerStateText}>Nenhuma notificação no momento.</Text>
           </View>
         ) : (
           notifications.map((item) => (
-            <NotificationCard key={item.id} item={item} onPress={handleNotificationPress} />
+            <NotificationCard
+              key={item.id}
+              item={item}
+              onPress={handleNotificationPress}
+            />
           ))
         )}
       </ScrollView>
@@ -198,100 +274,32 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F6F4EB',
-  },
-  container: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 40,
-    flexGrow: 1,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1F4A63',
-    marginBottom: 20,
-  },
-  card: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2DEC3',
-    padding: 16,
-    marginBottom: 14,
-    alignItems: 'flex-start',
-  },
-  cardUnread: {
-    backgroundColor: '#F0F7FA',
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-    gap: 8,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1F4A63',
-    flex: 1,
-  },
-  unreadDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#5C9DB8',
-  },
-  cardDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeText: {
-    fontSize: 12,
-    color: '#999',
-    marginLeft: 4,
-  },
-  centerState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    marginTop: 20,
-  },
-  centerStateText: {
-    color: '#5C9DB8',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  retryButton: {
-    backgroundColor: '#5C9DB8',
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
+  safeArea: { flex: 1, backgroundColor: '#F6F4EB' },
+  container: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 40, flexGrow: 1 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#1F4A63', marginBottom: 20 },
+  card: { flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E2DEC3', padding: 14, marginBottom: 14, alignItems: 'center' },
+  cardUnread: { backgroundColor: '#F0F7FA', borderColor: '#CDE5EF' },
+  iconContainer: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  senderAvatar: { width: 44, height: 44, borderRadius: 22, marginRight: 12, backgroundColor: '#E2DEC3' },
+  cardContent: { flex: 1 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 2, gap: 6 },
+  senderName: { fontSize: 15, fontWeight: '700', color: '#1F4A63' },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: '#1F4A63', flex: 1 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#5C9DB8' },
+  cardAction: { fontSize: 13, color: '#4B647A', marginBottom: 4 },
+  cardDescription: { fontSize: 13, color: '#666', lineHeight: 18, marginBottom: 6 },
+
+  timeRow: { flexDirection: 'row', alignItems: 'center' },
+  timeText: { fontSize: 11, color: '#999' },
+  dotSeparator: { fontSize: 11, color: '#999', marginHorizontal: 6 },
+  markReadMiniText: { fontSize: 11, color: '#5C9DB8', fontWeight: '700' },
+
+  rightActions: { flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 8 },
+  postPreviewContainer: { justifyContent: 'center', alignItems: 'center' },
+  postPreviewImage: { width: 40, height: 40, borderRadius: 6, backgroundColor: '#E2DEC3' },
+  postPreviewFallback: { width: 40, height: 40, borderRadius: 6, backgroundColor: '#F0F7FA', justifyContent: 'center', alignItems: 'center' },
+  centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 20 },
+  centerStateText: { color: '#5C9DB8', fontSize: 14, textAlign: 'center' },
+  retryButton: { backgroundColor: '#5C9DB8', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 16 },
+  retryButtonText: { color: '#FFFFFF', fontWeight: '600' },
 });

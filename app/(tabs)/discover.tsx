@@ -50,7 +50,6 @@ const DiscoverPostCard = ({
 
     const previousState = isFollowing;
 
-    // 1. Atualização Otimista: Avisa a tela principal na mesma hora!
     onUpdateFollow(author.id, !previousState);
     setLoadingFollow(true);
 
@@ -58,7 +57,6 @@ const DiscoverPostCard = ({
       await userService.toggleFollow(author.id, previousState);
     } catch (error) {
       console.error('Erro ao alternar follow:', error);
-      // 2. Reverte na tela principal se a API falhar
       onUpdateFollow(author.id, previousState);
       showAlert('Erro', 'Não foi possível atualizar o status de seguir.');
     } finally {
@@ -125,9 +123,6 @@ const DiscoverPostCard = ({
   );
 };
 
-// =====================================================================
-// TELA PRINCIPAL
-// =====================================================================
 export default function DiscoverScreen() {
   const router = useRouter();
 
@@ -142,7 +137,6 @@ export default function DiscoverScreen() {
   const [myId, setMyId] = useState<number | null>(null);
   const [followedIds, setFollowedIds] = useState<Set<number>>(new Set());
 
-  // Carrega feeds gerais uma vez só
   const loadInitialData = useCallback(async () => {
     setLoading(true);
     try {
@@ -166,7 +160,6 @@ export default function DiscoverScreen() {
     loadInitialData();
   }, [loadInitialData]);
 
-  // NOVO: Atualiza a lista de seguidos silenciosamente toda vez que a tela ganha foco (ex: volta do perfil)
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
@@ -179,14 +172,12 @@ export default function DiscoverScreen() {
           setFollowedIds(new Set(myFollowing.map(u => u.id)));
         }
       }).catch(() => {
-        // Ignora erros silenciosamente se não tiver token etc.
       });
 
       return () => { isActive = false; };
     }, [])
   );
 
-  // Função que o PostCard usa para atualizar o estado global da tela na mesma hora
   const handleUpdateFollow = useCallback((userId: number, isFollowingNow: boolean) => {
     setFollowedIds(prev => {
       const next = new Set(prev);
@@ -216,9 +207,12 @@ export default function DiscoverScreen() {
     let filtered = posts;
     if (searchQuery.trim()) {
       const lowerQuery = searchQuery.toLowerCase();
-      filtered = posts.filter(
-        (p) => p.descricao?.toLowerCase().includes(lowerQuery)
-      );
+      filtered = posts.filter((p) => {
+        // Checa se tem na descrição OU no nome da praia
+        const matchDesc = p.descricao?.toLowerCase().includes(lowerQuery);
+        const matchBeach = p.beach?.nome?.toLowerCase().includes(lowerQuery);
+        return matchDesc || matchBeach;
+      });
     }
     return [...filtered].sort((a, b) => {
       const aHasPhoto = a.caminhoFoto ? 1 : 0;
@@ -285,9 +279,9 @@ export default function DiscoverScreen() {
       renderItem = ({ item }: { item: PostDTO }) => (
         <DiscoverPostCard
           post={item}
-          isFollowing={followedIds.has(item.usuario?.id || -1)} // <-- Lê sempre da "fonte da verdade"
+          isFollowing={followedIds.has(item.usuario?.id || -1)}
           isMe={myId === item.usuario?.id}
-          onUpdateFollow={handleUpdateFollow} // <-- Passa a função de atualizar
+          onUpdateFollow={handleUpdateFollow}
         />
       );
       emptyMessage = 'Nenhum post encontrado.';
@@ -320,8 +314,12 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+        <View style={styles.headerContainer}>
+          <Text style={styles.headerTitle}>Descobrir</Text>
+        </View>
+
         <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+          <Ionicons name="search" size={20} color="#5C9DB8" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Buscar em todo o app..."
@@ -362,10 +360,30 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F6F4EB' },
   container: { flex: 1, paddingTop: 10 },
-  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E2DEC3', borderRadius: 20, marginHorizontal: 20, paddingHorizontal: 12, height: 40, marginBottom: 16 },
+  headerContainer: { paddingHorizontal: 20, paddingBottom: 16 },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1F4A63' },
+
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 25,
+    marginHorizontal: 20,
+    paddingHorizontal: 16,
+    height: 50,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#E2DEC3',
+  },
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, fontSize: 16, color: '#1F4A63', height: '100%' },
   clearButton: { padding: 4 },
+
   tabsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 16, gap: 10 },
   tabButton: { flex: 1, paddingVertical: 8, borderRadius: 20, backgroundColor: '#E2DEC3', alignItems: 'center' },
   tabButtonActive: { backgroundColor: '#1F4A63' },
@@ -373,7 +391,6 @@ const styles = StyleSheet.create({
   tabTextActive: { color: '#FFFFFF' },
   listContainer: { paddingHorizontal: 20, paddingBottom: 20, gap: 16 },
 
-  /* ESTILOS DE POSTS */
   postCard: { backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2DEC3', overflow: 'hidden' },
   postHeader: { flexDirection: 'row', alignItems: 'center', padding: 12 },
   postAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E2DEC3', marginRight: 12 },
@@ -381,7 +398,6 @@ const styles = StyleSheet.create({
   postAuthorName: { fontSize: 15, fontWeight: 'bold', color: '#1F4A63' },
   postBeachName: { fontSize: 12, color: '#5C9DB8', marginTop: 2 },
 
-  /* ESTILOS DO BOTÃO DE SEGUIR NO POST */
   followButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -411,18 +427,15 @@ const styles = StyleSheet.create({
   postAuthorNameBold: { fontWeight: 'bold', color: '#1F4A63' },
   postDescription: { fontSize: 14, color: '#333', lineHeight: 20 },
 
-  /* ESTILOS DE PESSOAS */
   userCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#E2DEC3' },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#E2DEC3', marginRight: 12 },
   userName: { fontSize: 16, fontWeight: 'bold', color: '#1F4A63' },
   userBio: { fontSize: 14, color: '#999', marginTop: 2 },
 
-  /* ESTILOS DE PRAIAS */
   beachCard: { backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2DEC3', overflow: 'hidden' },
   beachTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F4A63', padding: 16 },
   beachImage: { width: '100%', height: 150, backgroundColor: '#f0f0f0' },
 
-  /* UTILIDADES */
   centerState: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { alignItems: 'center', paddingTop: 40 },
   emptyText: { fontSize: 15, color: '#999' },

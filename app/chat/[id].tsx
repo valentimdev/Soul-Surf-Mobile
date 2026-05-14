@@ -243,11 +243,10 @@ export default function ChatConversationScreen() {
   const isInitialError = !!error && !loading && messages.length === 0;
 
   return (
-    // Removemos o SafeAreaView da raiz e tornamos o KeyboardAvoidingView o principal
     <KeyboardAvoidingView
       style={styles.safeArea}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={headerHeight} // Usando o cálculo exato dinâmico
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={styles.contentContainer}>
         {loading && messages.length === 0 ? (
@@ -298,7 +297,6 @@ export default function ChatConversationScreen() {
         <View
           style={[
             styles.composerContainer,
-            // A matemática de insets.bottom já garante que fica bom no iPhone com entalhe e no Android
             { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 12) : Math.max(insets.bottom, 8) },
           ]}
         >
