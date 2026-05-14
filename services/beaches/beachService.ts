@@ -9,6 +9,7 @@ export interface BeachMessageDTO {
     id: number;
     username: string;
     fotoPerfil: string;
+    following?: boolean;
   };
   praiaId: number;
 }
