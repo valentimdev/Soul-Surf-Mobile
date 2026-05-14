@@ -13,9 +13,13 @@ import {
   buildLaymanSummary,
   buildQuickTips,
   describeBalneability,
+  describeTide,
   describeWave,
   describeWind,
   formatMetric,
+  formatPercent,
+  formatTideEvent,
+  formatTideWindow,
   toCompass,
   toneColors,
 } from '@/utils/surfConditionsInterpreter';
@@ -49,12 +53,16 @@ export function SurfConditionsCard({
   const summary = useMemo(() => buildLaymanSummary(data), [data]);
   const colors = useMemo(() => toneColors(summary.tone), [summary.tone]);
   const quickTips = useMemo(() => buildQuickTips(data), [data]);
+  const tideWindows = data.tide?.bestSurfWindows?.slice(0, 3) ?? [];
 
   const waveHeight = formatMetric(data.marine?.waveHeightMeters, 'm');
   const wavePeriod = formatMetric(data.marine?.wavePeriodSeconds, 's', 0);
   const windSpeed = formatMetric(data.wind?.windSpeedKmh, 'km/h');
-  const waterTemp = formatMetric(data.marine?.seaSurfaceTemperatureC, '°C');
+  const waterTemp = formatMetric(data.marine?.seaSurfaceTemperatureC, 'C');
   const windDirection = toCompass(data.wind?.windDirectionDegrees);
+  const tideLabel = data.tide?.currentLabel ?? 'Mare indisponivel';
+  const tideHeight = formatMetric(data.tide?.currentHeightMeters, 'm');
+  const tidePercent = formatPercent(data.tide?.fillPercent);
 
   const balneabilityStatus = data.balneability?.overallStatus ?? 'INDISPONIVEL';
   const balneabilityText = describeBalneability(balneabilityStatus);
@@ -103,9 +111,22 @@ export function SurfConditionsCard({
           helper="Temperatura da superficie do mar."
         />
         <MetricTile
+          label="Mare"
+          value={`${tideLabel} (${tidePercent})`}
+          helper={`${tideHeight}. ${describeTide(data.tide)}`}
+        />
+      </View>
+
+      <View style={styles.metricsRow}>
+        <MetricTile
           label="Balneabilidade"
           value={balneabilityStatus}
           helper={balneabilityText}
+        />
+        <MetricTile
+          label="Proxima virada"
+          value={data.tide?.nextTurnLabel ?? 'Sem dados'}
+          helper={data.tide?.nextEvent ? formatTideEvent(data.tide.nextEvent) : 'Sem horario de mare.'}
         />
       </View>
 
@@ -113,9 +134,28 @@ export function SurfConditionsCard({
         <Text style={styles.sectionTitle}>Dicas rapidas</Text>
         {quickTips.map((tip) => (
           <Text key={tip} style={styles.tipItem}>
-            • {tip}
+            {`\u2022 ${tip}`}
           </Text>
         ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Melhores janelas de mare</Text>
+        {tideWindows.length > 0 ? (
+          tideWindows.map((window) => (
+            <View key={`${window.startsAt}-${window.endsAt}`} style={styles.windowRow}>
+              <View style={[styles.windowDot, window.activeNow && styles.windowDotActive]} />
+              <View style={styles.windowBody}>
+                <Text style={styles.windowTime}>{formatTideWindow(window)}</Text>
+                <Text style={styles.windowText}>{window.reason ?? 'Mare enchendo em faixa favoravel.'}</Text>
+              </View>
+            </View>
+          ))
+        ) : (
+          <Text style={styles.metaText}>
+            Sem janela diurna favoravel encontrada na tabua carregada.
+          </Text>
+        )}
       </View>
 
       <View style={styles.section}>
@@ -218,6 +258,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#4A6279',
     lineHeight: 18,
+  },
+  windowRow: {
+    flexDirection: 'row',
+    gap: 9,
+    alignItems: 'flex-start',
+  },
+  windowDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#8DA5B8',
+    marginTop: 6,
+  },
+  windowDotActive: {
+    backgroundColor: '#1E6F3D',
+  },
+  windowBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  windowTime: {
+    fontSize: 13,
+    color: '#18324A',
+    fontWeight: '800',
+  },
+  windowText: {
+    marginTop: 2,
+    fontSize: 12,
+    color: '#4A6279',
+    lineHeight: 17,
   },
   reportHeader: {
     flexDirection: 'row',

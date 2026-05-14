@@ -3,10 +3,17 @@ import {
   LaymanSummary,
   LaymanTone,
   SurfConditionsResponse,
+  SurfConditionsTide,
+  SurfConditionsTideEvent,
+  SurfConditionsTideWindow,
 } from '@/types/surfConditions';
 
 function isValidNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
+}
+
+function clampPercent(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 export function formatMetric(value: number | null | undefined, unit: string, digits = 1): string {
@@ -14,8 +21,13 @@ export function formatMetric(value: number | null | undefined, unit: string, dig
   return `${value.toFixed(digits)} ${unit}`;
 }
 
+export function formatPercent(value: number | null | undefined): string {
+  if (!isValidNumber(value)) return 'Sem dados';
+  return `${clampPercent(value)}%`;
+}
+
 export function toCompass(degrees: number | null | undefined): string {
-  if (!isValidNumber(degrees)) return 'Sem direção';
+  if (!isValidNumber(degrees)) return 'Sem direcao';
   const normalized = ((degrees % 360) + 360) % 360;
   const directions = ['N', 'NE', 'L', 'SE', 'S', 'SO', 'O', 'NO'];
   const index = Math.round(normalized / 45) % 8;
@@ -27,7 +39,7 @@ export function describeWave(heightMeters: number | null | undefined): string {
   if (heightMeters < 0.4) return 'Ondas bem fracas.';
   if (heightMeters < 0.8) return 'Ondas pequenas e mais tranquilas.';
   if (heightMeters <= 2.2) return 'Ondas em faixa boa para a maioria.';
-  if (heightMeters <= 3.0) return 'Ondas grandes, exige experiência.';
+  if (heightMeters <= 3.0) return 'Ondas grandes, exige experiencia.';
   return 'Mar muito grande e exigente.';
 }
 
@@ -53,15 +65,103 @@ export function describeBalneability(status: BalneabilityStatus | undefined): st
   }
 }
 
+export function describeTide(tide: SurfConditionsTide | null | undefined): string {
+  if (!tide || tide.currentStatus === 'INDISPONIVEL') return 'Sem leitura de mare agora.';
+  if (tide.recommendation) return tide.recommendation;
+
+  switch (tide.currentStatus) {
+    case 'ENCHENDO':
+      return 'Mare enchendo, geralmente uma boa tendencia para beach breaks.';
+    case 'SECANDO':
+      return 'Mare secando, pode deixar a onda mais irregular.';
+    case 'VIRANDO':
+      return 'Mare perto da virada, confira no pico.';
+    default:
+      return 'Sem leitura de mare agora.';
+  }
+}
+
+export function formatTideEvent(event: SurfConditionsTideEvent | null | undefined): string {
+  if (!event) return 'Sem dados';
+  const type = event.type === 'ALTA' ? 'Alta' : event.type === 'BAIXA' ? 'Baixa' : 'Mare';
+  const time = event.timeLabel ?? formatIsoTime(event.dateTime) ?? '--:--';
+  const height = formatMetric(event.heightMeters, 'm', 2);
+  return `${type} ${time} (${height})`;
+}
+
+export function formatTideWindow(window: SurfConditionsTideWindow | null | undefined): string {
+  if (!window?.startsAt || !window?.endsAt) return 'Sem janela';
+
+  const startDate = formatIsoDate(window.startsAt);
+  const endDate = formatIsoDate(window.endsAt);
+  const startTime = formatIsoTime(window.startsAt);
+  const endTime = formatIsoTime(window.endsAt);
+
+  if (!startTime || !endTime) return 'Sem janela';
+  if (startDate && endDate && startDate !== endDate) {
+    return `${startDate} ${startTime} - ${endDate} ${endTime}`;
+  }
+  return `${startTime} - ${endTime}`;
+}
+
+function formatIsoTime(value: string | null | undefined): string | null {
+  const match = value?.match(/T(\d{2}):(\d{2})/);
+  if (!match) return null;
+  return `${match[1]}h${match[2]}`;
+}
+
+function formatIsoDate(value: string | null | undefined): string | null {
+  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+  return `${match[3]}/${match[2]}`;
+}
+
+function hasGoodTideNow(tide: SurfConditionsTide | undefined): boolean {
+  if (!tide || tide.currentStatus !== 'ENCHENDO' || !isValidNumber(tide.fillPercent)) {
+    return false;
+  }
+  return tide.fillPercent >= 35 && tide.fillPercent <= 75;
+}
+
+function hasExtremeTide(tide: SurfConditionsTide | undefined): boolean {
+  if (!tide || !isValidNumber(tide.fillPercent)) return false;
+  return tide.fillPercent <= 15 || tide.fillPercent >= 90;
+}
+
 export function buildLaymanSummary(data: SurfConditionsResponse): LaymanSummary {
   const quality = data.surfQuality?.label;
   const balneability = data.balneability?.overallStatus;
+  const tide = data.tide;
 
   if (balneability === 'IMPROPRIA') {
     return {
       tone: 'bad',
       title: 'Melhor evitar entrar hoje',
       message: 'A balneabilidade esta impropria. Mesmo com onda boa, a agua nao esta recomendada.',
+    };
+  }
+
+  if (quality === 'BOA' && hasGoodTideNow(tide) && balneability === 'PROPRIA') {
+    return {
+      tone: 'good',
+      title: 'Boa para surfar agora',
+      message: 'Onda, vento, agua e mare enchendo estao em uma janela favoravel.',
+    };
+  }
+
+  if (quality === 'BOA' && hasGoodTideNow(tide)) {
+    return {
+      tone: 'good',
+      title: 'Mar bom para surfar',
+      message: 'As condicoes estao positivas e a mare enchendo ajuda a formacao das ondas.',
+    };
+  }
+
+  if (quality === 'BOA' && hasExtremeTide(tide)) {
+    return {
+      tone: 'attention',
+      title: 'Mar bom, mas a mare pede atencao',
+      message: 'Onda e vento ajudam, porem a mare esta em extremo e pode mexer na formacao.',
     };
   }
 
@@ -93,7 +193,7 @@ export function buildLaymanSummary(data: SurfConditionsResponse): LaymanSummary 
     return {
       tone: 'bad',
       title: 'Condicao ruim no momento',
-      message: 'Vento, onda ou maré podem estar desfavoraveis para boa sessao.',
+      message: 'Vento, onda ou mare podem estar desfavoraveis para boa sessao.',
     };
   }
 
@@ -110,11 +210,26 @@ export function buildQuickTips(data: SurfConditionsResponse): string[] {
   const wavePeriod = data.marine?.wavePeriodSeconds;
   const windSpeed = data.wind?.windSpeedKmh;
   const balneability = data.balneability?.overallStatus;
+  const tide = data.tide;
+  const firstWindow = tide?.bestSurfWindows?.[0];
+  const activeWindow = tide?.bestSurfWindows?.find((window) => window.activeNow);
 
   if (balneability === 'IMPROPRIA') {
     tips.push('Evite banho de mar devido ao risco sanitario informado no boletim.');
   } else if (balneability === 'EM_ALERTA') {
     tips.push('Se entrar no mar, redobre cuidado e evite permanecer muito tempo na agua.');
+  }
+
+  if (tide?.currentStatus === 'ENCHENDO') {
+    tips.push('Mare enchendo: costuma ser a melhor tendencia para beach breaks.');
+  } else if (tide?.currentStatus === 'SECANDO') {
+    tips.push('Mare secando: confira se a onda nao esta fechando ou perdendo forca.');
+  }
+
+  if (activeWindow) {
+    tips.push(`Janela boa de mare agora: ${formatTideWindow(activeWindow)}.`);
+  } else if (firstWindow) {
+    tips.push(`Proxima janela boa de mare: ${formatTideWindow(firstWindow)}.`);
   }
 
   if (isValidNumber(waveHeight)) {

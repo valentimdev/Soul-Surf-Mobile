@@ -2,6 +2,8 @@ import {
   buildLaymanSummary,
   buildQuickTips,
   describeBalneability,
+  describeTide,
+  formatTideWindow,
   describeWave,
   describeWind,
   toCompass,
@@ -48,5 +50,32 @@ describe('surfConditionsInterpreter', () => {
     expect(describeWave(0.3)).toContain('fracas');
     expect(describeWind(10)).toContain('fraco');
     expect(describeBalneability('PROPRIA')).toContain('propria');
+  });
+
+  it('usa mare enchendo em meia mare para resumo bom de surf', () => {
+    const summary = buildLaymanSummary({
+      surfQuality: { label: 'BOA' },
+      balneability: { overallStatus: 'PROPRIA' },
+      tide: {
+        currentStatus: 'ENCHENDO',
+        currentLabel: 'Mar enchendo',
+        fillPercent: 55,
+      },
+    });
+
+    expect(summary.title).toContain('Boa para surfar');
+    expect(summary.tone).toBe('good');
+  });
+
+  it('formata janela de mare e descreve tendencia', () => {
+    expect(formatTideWindow({
+      startsAt: '2026-05-13T10:17:00-03:00',
+      endsAt: '2026-05-13T12:47:00-03:00',
+    })).toBe('10h17 - 12h47');
+
+    expect(describeTide({
+      currentStatus: 'SECANDO',
+      currentLabel: 'Mar secando',
+    })).toContain('secando');
   });
 });
