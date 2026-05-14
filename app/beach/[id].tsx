@@ -1,7 +1,7 @@
 import { beachService, BeachMessageDTO } from '@/services/beaches/beachService';
 import { useAppAlert } from '@/components/AppAlert';
 import { formatDate, formatDateTime } from '@/utils/formatters';
-import { BeachDTO, PostDTO } from '@/types/api';
+import { BeachDTO, PostDTO, CommentDTO, UserDTO } from '@/types/api';
 import { surfConditionsService } from '@/services/weather/surfConditionsService';
 import { SurfConditionsResponse } from '@/types/surfConditions';
 import {
@@ -19,6 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import api from '@/services/api';
 import * as ImagePicker from 'expo-image-picker';
 import { postService } from '@/services/posts/postService';
+import { commentService } from '@/services/posts/commentService';
+import { userService } from '@/services/users/userService';
 import {
   ActivityIndicator,
   Dimensions,
@@ -89,7 +91,15 @@ function parseCachedMessages(raw: string | null): BeachMessageDTO[] {
   }
 }
 
-export function PostCard({ post, featured = false }: { post: PostDTO; featured?: boolean }) {
+export function PostCard({ 
+  post, 
+  featured = false,
+  currentUser 
+}: { 
+  post: PostDTO; 
+  featured?: boolean;
+  currentUser?: UserDTO | null;
+}) {
   const router = useRouter();
   const { showAlert } = useAppAlert();
   const initialLikes = normalizeCounter(post.likesCount);
@@ -97,10 +107,18 @@ export function PostCard({ post, featured = false }: { post: PostDTO; featured?:
   const authorName = post.usuario?.username || 'Surfista';
   const authorAvatar = post.usuario?.fotoPerfil;
 
-  // Estados locais do componente para controle do like
   const [liked, setLiked] = useState<boolean>(false);
   const [likesCount, setLikesCount] = useState<number>(initialLikes);
   const [isLiking, setIsLiking] = useState(false);
+
+  const [isFollowingAuthor, setIsFollowingAuthor] = useState(post.usuario?.following || false);
+  const [isTogglingFollow, setIsTogglingFollow] = useState(false);
+
+  const [isCommentsVisible, setIsCommentsVisible] = useState(false);
+  const [postComments, setPostComments] = useState<CommentDTO[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [newCommentText, setNewCommentText] = useState('');
+  const [sendingComment, setSendingComment] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -146,6 +164,58 @@ export function PostCard({ post, featured = false }: { post: PostDTO; featured?:
     }
   };
 
+  const handleToggleFollow = async (userId: number, currentStatus: boolean, setStatus: (s: boolean) => void) => {
+    if (isTogglingFollow) return;
+    
+    setIsTogglingFollow(true);
+    const originalStatus = currentStatus;
+    setStatus(!originalStatus);
+
+    try {
+      await userService.toggleFollow(userId, originalStatus);
+    } catch (error) {
+      console.error('Erro ao seguir/deixar de seguir:', error);
+      setStatus(originalStatus);
+      showAlert('Erro', 'Não foi possível completar a ação.');
+    } finally {
+      setIsTogglingFollow(false);
+    }
+  };
+
+  const handleOpenComments = async () => {
+    setIsCommentsVisible(true);
+    setLoadingComments(true);
+    try {
+      const data = await commentService.getPostComments(post.id);
+      setPostComments(data);
+    } catch (error) {
+      console.error('Erro ao carregar comentários:', error);
+      showAlert('Erro', 'Não foi possível carregar os comentários.');
+    } finally {
+      setLoadingComments(false);
+    }
+  };
+
+  const handleAddComment = async () => {
+    if (!newCommentText.trim()) return;
+    setSendingComment(true);
+    try {
+      const created = await commentService.addComment(post.id, newCommentText.trim());
+      setPostComments(prev => [created, ...prev]);
+      setNewCommentText('');
+    } catch (error) {
+      console.error('Erro ao comentar:', error);
+      showAlert('Erro', 'Não foi possível enviar seu comentário.');
+    } finally {
+      setSendingComment(false);
+    }
+  };
+
+  const shouldShowFollowButton = (user: UserDTO | undefined, isFollowing: boolean) => {
+    if (!user || !currentUser) return false;
+    return user.id !== currentUser.id && !isFollowing;
+  };
+
   return (
     <View style={[styles.postCard, featured && styles.postCardFeatured]}>
       {featured ? (
@@ -156,33 +226,45 @@ export function PostCard({ post, featured = false }: { post: PostDTO; featured?:
       ) : null}
 
       <View style={styles.postHeader}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() =>
-            post.usuario?.id &&
-            router.push(`/user/${post.usuario.id}` as Href)
-          }
-          style={styles.authorRow}
-        >
-          {authorAvatar ? (
-            <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
-          ) : (
-            <View style={styles.postAvatarFallback}>
-              <Text style={styles.avatarFallbackText}>{authorName[0]}</Text>
+        <View style={styles.postHeaderMain}>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() =>
+              post.usuario?.id &&
+              router.push(`/user/${post.usuario.id}` as Href)
+            }
+            style={styles.authorRow}
+          >
+            {authorAvatar ? (
+              <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
+            ) : (
+              <View style={styles.postAvatarFallback}>
+                <Text style={styles.avatarFallbackText}>{authorName[0]}</Text>
+              </View>
+            )}
+            <View style={styles.authorTextBlock}>
+              <View style={styles.nameFollowRow}>
+                <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>
+                  {authorName}
+                </Text>
+                {shouldShowFollowButton(post.usuario, isFollowingAuthor) && (
+                  <>
+                    <Text style={styles.followDot}> • </Text>
+                    <TouchableOpacity onPress={() => handleToggleFollow(post.usuario!.id, false, setIsFollowingAuthor)}>
+                      <Text style={styles.followLinkText}>Seguir</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+              <Text testID={`post-date-${post.id}`} style={styles.postDate}>
+                {formatDate(post.data)}
+              </Text>
             </View>
-          )}
-          <View style={styles.authorTextBlock}>
-            <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>
-              {authorName}
-            </Text>
-            <Text testID={`post-date-${post.id}`} style={styles.postDate}>
-              {formatDate(post.data)}
-            </Text>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
 
-        <View style={styles.recordTypeBadge}>
-          <Text style={styles.recordTypeBadgeText}>Registro</Text>
+          <View style={styles.recordTypeBadge}>
+            <Text style={styles.recordTypeBadgeText}>Registro</Text>
+          </View>
         </View>
       </View>
 
@@ -214,24 +296,141 @@ export function PostCard({ post, featured = false }: { post: PostDTO; featured?:
           </Text>
         </TouchableOpacity>
 
-        <View style={styles.actionButton}>
+        <TouchableOpacity style={styles.actionButton} onPress={handleOpenComments}>
           <Ionicons name="chatbubble-outline" size={17} color="#6B7280" />
           <Text style={styles.actionText}>
             {commentsCount} {commentsCount === 1 ? 'comentario' : 'comentarios'}
           </Text>
-        </View>
+        </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={isCommentsVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsCommentsVisible(false)}
+      >
+        <View style={styles.commentModalOverlay}>
+          <View style={styles.commentModalContainer}>
+            <View style={styles.commentModalHeader}>
+              <Text style={styles.commentModalTitle}>Comentários</Text>
+              <TouchableOpacity onPress={() => setIsCommentsVisible(false)} style={styles.commentModalClose}>
+                <Ionicons name="close" size={24} color="#1F4A63" />
+              </TouchableOpacity>
+            </View>
+
+            {loadingComments ? (
+              <ActivityIndicator style={{ marginVertical: 40 }} color="#2F6F86" />
+            ) : (
+              <ScrollView style={styles.commentModalList}>
+                {postComments.length === 0 ? (
+                  <Text style={styles.emptyCommentsText}>Seja o primeiro a comentar!</Text>
+                ) : (
+                  postComments.map((comment) => (
+                    <View key={comment.id} style={styles.commentItem}>
+                      <View style={styles.commentAuthorRow}>
+                        <TouchableOpacity
+                          onPress={() =>
+                            comment.usuario?.id &&
+                            router.push(`/user/${comment.usuario.id}` as Href)
+                          }
+                        >
+                          {comment.usuario?.fotoPerfil ? (
+                            <Image source={{ uri: comment.usuario.fotoPerfil }} style={styles.commentAvatar} />
+                          ) : (
+                            <View style={styles.commentAvatarFallback}>
+                              <Text style={styles.commentAvatarText}>{comment.usuario?.username?.[0] || 'S'}</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                        <View style={{ flex: 1 }}>
+                          <View style={styles.nameFollowRow}>
+                            <Text style={styles.commentAuthorName}>{comment.usuario?.username || 'Surfista'}</Text>
+                            {shouldShowFollowButton(comment.usuario, !!comment.usuario?.following) && (
+                              <>
+                                <Text style={styles.followDot}> • </Text>
+                                <TouchableOpacity onPress={() => handleToggleFollow(comment.usuario!.id, false, (s) => {
+                                  setPostComments(prev => prev.map(c => 
+                                    c.usuario?.id === comment.usuario?.id ? { ...c, usuario: { ...c.usuario!, following: s } } : c
+                                  ));
+                                })}>
+                                  <Text style={styles.followLinkTextSmall}>Seguir</Text>
+                                </TouchableOpacity>
+                              </>
+                            )}
+                          </View>
+                          <Text style={styles.commentDate}>{formatDate(comment.data)}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.commentText}>{comment.texto}</Text>
+                    </View>
+                  ))
+                )}
+              </ScrollView>
+            )}
+
+            <View style={styles.commentInputRow}>
+              <TextInput
+                style={styles.commentInputBox}
+                placeholder="Escreva um comentário..."
+                value={newCommentText}
+                onChangeText={setNewCommentText}
+                multiline
+              />
+              <TouchableOpacity 
+                onPress={handleAddComment} 
+                disabled={sendingComment || !newCommentText.trim()}
+                style={[styles.commentSendBtn, (!newCommentText.trim() || sendingComment) && { opacity: 0.5 }]}
+              >
+                {sendingComment ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Ionicons name="send" size={20} color="#FFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-function MessageCard({ message }: { message: BeachMessageDTO }) {
+function MessageCard({
+  message,
+  onReply,
+  currentUser,
+  onToggleFollow,
+}: {
+  message: BeachMessageDTO;
+  onReply?: (message: BeachMessageDTO) => void;
+  currentUser?: UserDTO | null;
+  onToggleFollow?: (userId: number, status: boolean) => Promise<void>;
+}) {
   const router = useRouter();
   const authorName = message.autor?.username || 'Surfista';
   const authorAvatar = message.autor?.fotoPerfil;
 
+  const isReply = message.texto.trim().startsWith('@');
+  
+  const renderMessageText = (text: string) => {
+    if (!text.trim().startsWith('@')) return <Text style={styles.messageText}>{text}</Text>;
+    
+    const parts = text.split(' ');
+    const mention = parts[0];
+    const rest = parts.slice(1).join(' ');
+    
+    return (
+      <Text style={styles.messageText}>
+        <Text style={styles.mentionText}>{mention}</Text> {rest}
+      </Text>
+    );
+  };
+
+  const shouldShowFollow = currentUser && message.autor?.id && message.autor.id !== currentUser.id && !message.autor.following;
+
   return (
-    <View style={styles.messageCard}>
+    <View style={[styles.messageCard, isReply && styles.messageReplyCard]}>
       <View style={styles.messageHeader}>
         <TouchableOpacity
           activeOpacity={0.7}
@@ -249,14 +448,34 @@ function MessageCard({ message }: { message: BeachMessageDTO }) {
             </View>
           )}
           <View style={styles.authorTextBlock}>
-            <Text testID={`message-author-${message.id}`} style={styles.messageAuthor}>
-              {authorName}
-            </Text>
+            <View style={styles.nameFollowRow}>
+              <Text testID={`message-author-${message.id}`} style={styles.messageAuthor}>
+                {authorName}
+              </Text>
+              {shouldShowFollow && onToggleFollow && (
+                <>
+                  <Text style={styles.followDot}> • </Text>
+                  <TouchableOpacity onPress={() => onToggleFollow(message.autor.id, false)}>
+                    <Text style={styles.followLinkTextSmall}>Seguir</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
             <Text testID={`message-date-${message.id}`} style={styles.messageDate}>{formatDateTime(message.data)}</Text>
           </View>
         </TouchableOpacity>
+        
+        {onReply && (
+          <TouchableOpacity 
+            onPress={() => onReply(message)}
+            style={styles.replyButtonSmall}
+          >
+            <Ionicons name="arrow-undo-outline" size={14} color="#2F6F86" />
+            <Text style={styles.replyButtonSmallText}>Responder</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      <Text testID={`message-text-${message.id}`} style={styles.messageText}>{message.texto}</Text>
+      {renderMessageText(message.texto)}
     </View>
   );
 }
@@ -367,7 +586,6 @@ export default function BeachDetailsScreen() {
   const windowWidth = Dimensions?.get?.('window')?.width ?? 390;
   const { showAlert } = useAppAlert();
   const params = useLocalSearchParams<{ id?: string | string[], targetPostId?: string, scrollToPost?: string }>();
-  // Alterado para aceitar tanto targetPostId quanto scrollToPost (usado na tela de Discover)
   const targetPostId = useMemo(() => {
     const target = params.targetPostId || params.scrollToPost;
     return target ? Number(target) : null;
@@ -385,12 +603,14 @@ export default function BeachDetailsScreen() {
   }, [params.id]);
 
   const [beach, setBeach] = useState<BeachDTO | null>(null);
+  const [currentUser, setCurrentUser] = useState<UserDTO | null>(null);
   const [posts, setPosts] = useState<PostDTO[]>([]);
   const [messages, setMessages] = useState<BeachMessageDTO[]>([]);
   const [surfConditions, setSurfConditions] = useState<SurfConditionsResponse | null>(null);
   const [surfConditionsError, setSurfConditionsError] = useState<string | null>(null);
 
   const [newMessage, setNewMessage] = useState('');
+  const [replyTarget, setReplyTarget] = useState<BeachMessageDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -454,6 +674,7 @@ export default function BeachDetailsScreen() {
       const publicPostsPromise = beachService.getBeachPostsPublic(beachId);
       const myPostsPromise = beachService.getMyPosts();
       const messagesPromise = beachService.getBeachMessages(beachId);
+      const currentUserPromise = userService.getMyProfile().catch(() => null);
 
       const beachData = await beachPromise;
 
@@ -469,12 +690,13 @@ export default function BeachDetailsScreen() {
           })
         : Promise.resolve(null);
 
-      const [publicPostsResult, myPostsResult, messagesResult, surfResult] =
+      const [publicPostsResult, myPostsResult, messagesResult, surfResult, currentUserResult] =
         await Promise.allSettled([
           publicPostsPromise,
           myPostsPromise,
           messagesPromise,
           surfPromise,
+          currentUserPromise,
         ]);
 
       const publicPosts =
@@ -515,6 +737,10 @@ export default function BeachDetailsScreen() {
         setSurfConditionsError(
           'Este pico ainda nao tem coordenadas para leitura automatica do mar.'
         );
+      }
+
+      if (currentUserResult.status === 'fulfilled') {
+        setCurrentUser(currentUserResult.value);
       }
 
       setBeach(beachData);
@@ -585,20 +811,28 @@ export default function BeachDetailsScreen() {
 
   const handleSendMessage = useCallback(async () => {
     if (!Number.isFinite(beachId)) return;
-    if (!newMessage.trim()) {
+    const trimmedMessage = newMessage.trim();
+    if (!trimmedMessage) {
       showAlert('Aviso', 'Escreva uma mensagem antes de enviar.');
       return;
     }
 
+    const replyName = replyTarget?.autor?.username?.trim();
+    const replyPrefix = replyName ? `@${replyName} ` : '';
+    const outgoingMessage = replyTarget && !trimmedMessage.startsWith(replyPrefix.trim())
+      ? `${replyPrefix}${trimmedMessage}`
+      : trimmedMessage;
+
     setSendingMessage(true);
     try {
-      const created = await beachService.postBeachMessage(beachId, newMessage.trim());
+      const created = await beachService.postBeachMessage(beachId, outgoingMessage);
       setMessages((prev) => {
         const next = sortMessagesByDateDesc([created, ...prev]);
         void persistMessagesCache(next);
         return next;
       });
       setNewMessage('');
+      setReplyTarget(null);
       void loadBeachDetails(true);
     } catch (e) {
         console.error(e);
@@ -606,7 +840,7 @@ export default function BeachDetailsScreen() {
     } finally {
       setSendingMessage(false);
     }
-  }, [beachId, newMessage, loadBeachDetails, persistMessagesCache, showAlert]);
+  }, [beachId, newMessage, replyTarget, loadBeachDetails, persistMessagesCache, showAlert]);
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -840,7 +1074,11 @@ export default function BeachDetailsScreen() {
                             postLayoutPositions.current[post.id] = e.nativeEvent.layout.y;
                           }}
                         >
-                          <PostCard post={post} featured={post.id === posts[0]?.id} />
+                          <PostCard 
+                            post={post} 
+                            featured={post.id === posts[0]?.id} 
+                            currentUser={currentUser}
+                          />
                         </View>
                       ))}
                     </ScrollView>
@@ -864,11 +1102,25 @@ export default function BeachDetailsScreen() {
                   </View>
 
                   <View style={styles.messageComposer}>
+                    {replyTarget && (
+                      <View style={styles.replyBanner}>
+                        <Ionicons name="arrow-undo-outline" size={16} color="#2F6F86" />
+                        <Text style={styles.replyBannerText} numberOfLines={1}>
+                          Respondendo a <Text style={{ fontWeight: '800' }}>@{replyTarget.autor?.username || 'surfista'}</Text>
+                        </Text>
+                        <TouchableOpacity 
+                          onPress={() => setReplyTarget(null)}
+                          style={styles.replyCloseButton}
+                        >
+                          <Ionicons name="close" size={14} color="#6B7280" />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     <TextInput
                       value={newMessage}
                       onChangeText={setNewMessage}
                       style={styles.messageInput}
-                      placeholder="Compartilhe uma dica ou condicao do mar..."
+                      placeholder={replyTarget ? "Escreva sua resposta..." : "Compartilhe uma dica ou condicao do mar..."}
                       placeholderTextColor="#8B8B8B"
                       multiline
                     />
@@ -891,7 +1143,27 @@ export default function BeachDetailsScreen() {
                       showsVerticalScrollIndicator={false}
                     >
                       {todayMessages.map((message, index) => (
-                        <MessageCard key={message.id ?? `message-${index}`} message={message} />
+                        <MessageCard 
+                          key={message.id ?? `message-${index}`} 
+                          message={message} 
+                          onReply={(target) => setReplyTarget(target)}
+                          currentUser={currentUser}
+                          onToggleFollow={async (userId, status) => {
+                            try {
+                              await userService.toggleFollow(userId, status);
+                              setMessages((prev) => 
+                                prev.map((m) => 
+                                  m.autor.id === userId 
+                                    ? { ...m, autor: { ...m.autor, following: !status } } 
+                                    : m
+                                )
+                              );
+                            } catch (e) {
+                              console.error(e);
+                              showAlert('Erro', 'Nao foi possivel seguir o usuario.');
+                            }
+                          }}
+                        />
                       ))}
                     </ScrollView>
                   )}
@@ -1303,6 +1575,53 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     backgroundColor: '#FFFFFF',
   },
+  messageReplyCard: {
+    marginLeft: 24,
+    backgroundColor: '#F9FBFB',
+    borderColor: '#D0E1E7',
+  },
+  mentionText: {
+    color: '#2F6F86',
+    fontWeight: '800',
+  },
+  replyButtonSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#E7F1F4',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  replyButtonSmallText: {
+    color: '#2F6F86',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  replyBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#E7F1F4',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginBottom: 8,
+  },
+  replyBannerText: {
+    flex: 1,
+    color: '#2F6F86',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  replyCloseButton: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
   messageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1389,6 +1708,30 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
     gap: 8,
+  },
+  postHeaderMain: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  nameFollowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  followDot: {
+    color: '#6B7280',
+    fontSize: 14,
+  },
+  followLinkText: {
+    color: '#2F6F86',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  followLinkTextSmall: {
+    color: '#2F6F86',
+    fontSize: 12,
+    fontWeight: '800',
   },
   postAvatar: {
     width: 40,
@@ -1639,5 +1982,110 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  commentModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  commentModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '80%',
+    padding: 20,
+  },
+  commentModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  commentModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1F4A63',
+  },
+  commentModalClose: {
+    padding: 4,
+  },
+  commentModalList: {
+    flex: 1,
+  },
+  emptyCommentsText: {
+    textAlign: 'center',
+    color: '#6B7280',
+    marginTop: 40,
+    fontSize: 14,
+  },
+  commentItem: {
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F1EA',
+    paddingBottom: 12,
+  },
+  commentAuthorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  commentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  commentAvatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E7F1F4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentAvatarText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#2F6F86',
+  },
+  commentAuthorName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1F4A63',
+  },
+  commentDate: {
+    fontSize: 10,
+    color: '#9CA3AF',
+  },
+  commentText: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 20,
+    paddingLeft: 42,
+  },
+  commentInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F1EA',
+  },
+  commentInputBox: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    fontSize: 14,
+    maxHeight: 100,
+  },
+  commentSendBtn: {
+    backgroundColor: '#2F6F86',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
