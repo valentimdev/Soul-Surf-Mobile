@@ -1,36 +1,14 @@
 import { Colors } from '@/constants/theme';
+import { NotificationProvider, useNotifications } from '@/contexts/NotificationContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { notificationService } from '@/services/notifications/notificationService';
-import { Tabs, useFocusEffect } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { Map, MessageCircle, Bell, User, Compass } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 
-export default function TabLayout() {
+function TabNavigator() {
   const colorScheme = useColorScheme();
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  const loadUnreadCount = useCallback(async () => {
-    try {
-      const count = await notificationService.getUnreadCount();
-      setUnreadCount(count);
-    } catch (error) {
-      console.error('Erro ao carregar badge de notificacoes:', error);
-      setUnreadCount(0);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadUnreadCount();
-    }, [loadUnreadCount])
-  );
-
-  useEffect(() => {
-    loadUnreadCount();
-    const intervalId = setInterval(loadUnreadCount, 30000);
-    return () => clearInterval(intervalId);
-  }, [loadUnreadCount]);
+  const { unreadCount } = useNotifications();
 
   return (
     <Tabs
@@ -110,5 +88,13 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+  );
+}
+
+export default function TabLayout() {
+  return (
+    <NotificationProvider>
+      <TabNavigator />
+    </NotificationProvider>
   );
 }
