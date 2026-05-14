@@ -293,8 +293,8 @@ export default function ChatConversationScreen() {
     // Removemos o SafeAreaView da raiz e tornamos o KeyboardAvoidingView o principal
     <KeyboardAvoidingView
       style={styles.safeArea}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={headerHeight} // Usando o cálculo exato dinâmico
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <View style={styles.contentContainer}>
         {loading && messages.length === 0 ? (
@@ -312,6 +312,7 @@ export default function ChatConversationScreen() {
         ) : (
           <FlatList
             ref={listRef}
+            style={styles.messagesList}
             data={chatItems}
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => {
@@ -378,7 +379,9 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'space-between',
+  },
+  messagesList: {
+    flex: 1,
   },
   centerState: {
     flex: 1,

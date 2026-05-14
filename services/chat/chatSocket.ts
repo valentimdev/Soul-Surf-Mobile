@@ -14,17 +14,22 @@ type ChatSocketHandlers = {
 function resolveWsBaseUrl(): string {
   const configuredUrl = process.env.EXPO_PUBLIC_WS_URL?.trim();
   if (configuredUrl) {
-    return configuredUrl.replace(/\/+$/, '');
+    return configuredUrl
+      .replace(/^https:\/\//i, 'wss://')
+      .replace(/^http:\/\//i, 'ws://')
+      .replace(/\/+$/, '');
   }
 
   return API_BASE_URL
-    .replace(/^https:\/\//, 'wss://')
-    .replace(/^http:\/\//, 'ws://');
+    .replace(/^https:\/\//i, 'wss://')
+    .replace(/^http:\/\//i, 'ws://')
+    .replace(/\/+$/, '');
 }
 
 function buildChatSocketUrl(token: string): string {
   const baseUrl = resolveWsBaseUrl();
-  return `${baseUrl}/ws?access_token=${encodeURIComponent(token)}`;
+  const endpointUrl = baseUrl.endsWith('/ws') ? baseUrl : `${baseUrl}/ws`;
+  return `${endpointUrl}?access_token=${encodeURIComponent(token)}`;
 }
 
 export async function connectChatSocket(
