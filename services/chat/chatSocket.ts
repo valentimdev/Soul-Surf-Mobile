@@ -4,6 +4,10 @@ import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '@/services/api';
 import type { ChatMessageResponse } from './chatService';
 
+const IS_DEV = typeof __DEV__ !== 'undefined'
+  ? __DEV__
+  : process.env.NODE_ENV !== 'production';
+
 type ChatSocketHandlers = {
   onMessage: (message: ChatMessageResponse) => void;
   onError?: (error: unknown) => void;
@@ -43,14 +47,17 @@ export async function connectChatSocket(
   }
 
   let subscription: StompSubscription | null = null;
+  const socketUrl = buildChatSocketUrl(token);
 
   const client = new Client({
-    webSocketFactory: () => new WebSocket(buildChatSocketUrl(token)),
+    webSocketFactory: () => new WebSocket(socketUrl),
     reconnectDelay: 5000,
-    heartbeatIncoming: 4000,
-    heartbeatOutgoing: 4000,
+    heartbeatIncoming: 10000,
+    heartbeatOutgoing: 10000,
+    debug: IS_DEV ? (message) => console.log('[CHAT_WS]', message) : () => undefined,
     connectHeaders: {
       Authorization: `Bearer ${token}`,
+      authorization: `Bearer ${token}`,
     },
     onConnect: () => {
       subscription = client.subscribe(`/topic/conversations/${conversationId}`, (frame: IMessage) => {
@@ -61,12 +68,39 @@ export async function connectChatSocket(
         }
       });
 
+      if (IS_DEV) {
+        console.log('[CHAT_WS] connected', {
+          conversationId,
+          socketUrl: socketUrl.replace(/access_token=[^&]+/, 'access_token=***'),
+        });
+      }
       handlers.onConnect?.();
     },
-    onStompError: (frame) => handlers.onError?.(frame),
-    onWebSocketError: (event) => handlers.onError?.(event),
-    onWebSocketClose: () => {
+    onDisconnect: () => {
+      handlers.onDisconnect?.();
+    },
+    onStompError: (frame) => {
+      if (IS_DEV) {
+        console.error('[CHAT_WS] stomp error', {
+          message: frame.headers.message,
+          body: frame.body,
+        });
+      }
+      handlers.onError?.(frame);
+    },
+    onWebSocketError: (event) => {
+      if (IS_DEV) console.error('[CHAT_WS] websocket error', event);
+      handlers.onError?.(event);
+    },
+    onWebSocketClose: (event) => {
       subscription = null;
+      if (IS_DEV) {
+        console.log('[CHAT_WS] websocket closed', {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+        });
+      }
       handlers.onDisconnect?.();
     },
   });
