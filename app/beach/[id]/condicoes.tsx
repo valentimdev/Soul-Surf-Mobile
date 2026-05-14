@@ -111,7 +111,7 @@ export default function BeachConditionsScreen() {
         <View style={styles.headerBox}>
           <Text style={styles.headerTitle}>Como entender o pico</Text>
           <Text style={styles.headerText}>
-            Esta leitura junta onda, vento e balneabilidade em linguagem simples para facilitar sua decisao.
+            Esta leitura junta onda, vento, mare e balneabilidade em linguagem simples para facilitar sua decisao.
           </Text>
           {beach?.localizacao ? (
             <Text style={styles.headerMeta}>Local: {beach.localizacao}</Text>

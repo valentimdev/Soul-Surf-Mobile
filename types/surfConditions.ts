@@ -1,5 +1,6 @@
 export type SurfQualityLabel = 'BOA' | 'REGULAR' | 'RUIM' | 'INDISPONIVEL';
 export type BalneabilityStatus = 'PROPRIA' | 'EM_ALERTA' | 'IMPROPRIA' | 'NAO_ENCONTRADO' | 'INDISPONIVEL';
+export type TideStatus = 'ENCHENDO' | 'SECANDO' | 'VIRANDO' | 'INDISPONIVEL';
 
 export interface SurfConditionsLocation {
   latitude?: number | null;
@@ -49,6 +50,43 @@ export interface SurfConditionsBalneability {
   observation?: string | null;
 }
 
+export interface SurfConditionsTideEvent {
+  type?: 'ALTA' | 'BAIXA' | string | null;
+  dateTime?: string | null;
+  timeLabel?: string | null;
+  heightMeters?: number | null;
+}
+
+export interface SurfConditionsTideWindow {
+  startsAt?: string | null;
+  endsAt?: string | null;
+  label?: string | null;
+  score?: number | null;
+  activeNow?: boolean | null;
+  reason?: string | null;
+}
+
+export interface SurfConditionsTide {
+  provider?: string | null;
+  station?: string | null;
+  sourceUrl?: string | null;
+  timezone?: string | null;
+  updatedAt?: string | null;
+  expiresAt?: string | null;
+  currentStatus?: TideStatus;
+  currentLabel?: string | null;
+  currentHeightMeters?: number | null;
+  fillPercent?: number | null;
+  nextTurnLabel?: string | null;
+  previousEvent?: SurfConditionsTideEvent | null;
+  nextEvent?: SurfConditionsTideEvent | null;
+  nextEvents?: SurfConditionsTideEvent[];
+  bestSurfWindows?: SurfConditionsTideWindow[];
+  recommendationLabel?: string | null;
+  recommendation?: string | null;
+  observation?: string | null;
+}
+
 export interface SurfConditionsResponse {
   requestedAt?: string | null;
   location?: SurfConditionsLocation;
@@ -56,6 +94,7 @@ export interface SurfConditionsResponse {
   wind?: SurfConditionsWind;
   surfQuality?: SurfConditionsQuality;
   balneability?: SurfConditionsBalneability;
+  tide?: SurfConditionsTide;
   sources?: string[];
 }
 

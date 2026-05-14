@@ -7,7 +7,10 @@ import { SurfConditionsResponse } from '@/types/surfConditions';
 import {
   buildQuickTips,
   buildLaymanSummary,
+  describeTide,
   formatMetric,
+  formatPercent,
+  formatTideWindow,
   toCompass,
 } from '@/utils/surfConditionsInterpreter';
 import * as SecureStore from 'expo-secure-store';
@@ -269,7 +272,10 @@ function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
   const wavePeriod = formatMetric(data.marine?.wavePeriodSeconds, 's', 0);
   const windSpeed = formatMetric(data.wind?.windSpeedKmh, 'km/h');
   const windDirection = toCompass(data.wind?.windDirectionDegrees);
-  const waterTemp = formatMetric(data.marine?.seaSurfaceTemperatureC, '°C');
+  const waterTemp = formatMetric(data.marine?.seaSurfaceTemperatureC, 'C');
+  const tideLabel = data.tide?.currentLabel ?? 'Mare indisponivel';
+  const tidePercent = formatPercent(data.tide?.fillPercent);
+  const tideWindow = data.tide?.bestSurfWindows?.[0];
   const balneabilityStatus = data.balneability?.overallStatus ?? 'INDISPONIVEL';
   const reportUrl = data.balneability?.reportUrl?.trim();
 
@@ -315,6 +321,14 @@ function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
         </View>
 
         <View style={styles.simpleSurfMetric}>
+          <Ionicons name="swap-vertical-outline" size={18} color="#6B7280" style={styles.simpleSurfMetricIcon} />
+          <View style={styles.simpleSurfMetricBody}>
+            <Text style={styles.simpleSurfLabel}>Mare</Text>
+            <Text style={styles.simpleSurfValue}>{tideLabel} ({tidePercent})</Text>
+          </View>
+        </View>
+
+        <View style={styles.simpleSurfMetric}>
           <Ionicons name="shield-checkmark-outline" size={18} color="#6B7280" style={styles.simpleSurfMetricIcon} />
           <View style={styles.simpleSurfMetricBody}>
             <Text style={styles.simpleSurfLabel}>Balneabilidade</Text>
@@ -329,6 +343,19 @@ function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
           <Text style={styles.simpleSurfLabel}>Resumo</Text>
           <Text style={styles.simpleSurfValue}>{summary.title}</Text>
           <Text style={styles.simpleSurfHelper}>{summary.message}</Text>
+        </View>
+      </View>
+
+      <View style={styles.simpleSurfWideMetric}>
+        <Ionicons name="time-outline" size={18} color="#6B7280" />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.simpleSurfLabel}>Mare e melhor horario</Text>
+          <Text style={styles.simpleSurfValue}>{data.tide?.recommendationLabel ?? 'Sem leitura de mare'}</Text>
+          <Text style={styles.simpleSurfHelper}>
+            {tideWindow
+              ? `${formatTideWindow(tideWindow)} - ${tideWindow.reason ?? 'mare enchendo em faixa favoravel.'}`
+              : describeTide(data.tide)}
+          </Text>
         </View>
       </View>
 
@@ -505,7 +532,7 @@ export default function BeachDetailsScreen() {
 
       if (surfResult.status === 'rejected') {
         setSurfConditionsError(
-          'Nao foi possivel carregar onda, vento e balneabilidade agora.'
+          'Nao foi possivel carregar onda, vento, mare e balneabilidade agora.'
         );
       } else if (surfResult.value) {
         setSurfConditions(surfResult.value);
