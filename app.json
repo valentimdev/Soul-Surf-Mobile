@@ -1,9 +1,10 @@
 {
   "expo": {
-    "name": "soul-surf-mobile",
+    "name": "Soul Surf",
     "slug": "soul-surf-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/images/soulsurf.jpg",
     "scheme": "soulsurfmobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
