@@ -1,5 +1,8 @@
 import { ChatMessageResponse, chatService } from '@/services/chat/chatService';
+import { connectChatSocket } from '@/services/chat/chatSocket';
 import { userService } from '@/services/users/userService';
+import type { Client } from '@stomp/stompjs';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -14,8 +17,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-// NOVO: Importamos o useHeaderHeight para calcular a distância do teclado perfeitamente
-import { useHeaderHeight } from '@react-navigation/elements';
 
 function parseStringParam(value?: string | string[]): string {
   if (!value) return '';
@@ -76,6 +77,18 @@ function sortMessages(items: ChatMessageResponse[]): ChatMessageResponse[] {
     const safeSecond = Number.isNaN(second) ? 0 : second;
     return safeFirst - safeSecond;
   });
+}
+
+function mergeMessage(items: ChatMessageResponse[], message: ChatMessageResponse): ChatMessageResponse[] {
+  const existingIndex = items.findIndex((item) => item.id === message.id);
+
+  if (existingIndex >= 0) {
+    const next = [...items];
+    next[existingIndex] = message;
+    return sortMessages(next);
+  }
+
+  return sortMessages([...items, message]);
 }
 
 type ChatListItem =
@@ -157,6 +170,7 @@ export default function ChatConversationScreen() {
 
   const chatItems = useMemo(() => buildChatListItems(messages), [messages]);
   const listRef = useRef<FlatList<ChatListItem>>(null);
+  const socketRef = useRef<Client | null>(null);
   const insets = useSafeAreaInsets();
 
   // Pegamos a altura exata do Header (Cabeçalho do Expo Router)
@@ -215,6 +229,39 @@ export default function ChatConversationScreen() {
   }, [loadMessages]);
 
   useEffect(() => {
+    let cancelled = false;
+
+    socketRef.current?.deactivate();
+    socketRef.current = null;
+
+    if (!conversationId) {
+      return;
+    }
+
+    connectChatSocket(conversationId, {
+      onMessage: (message) => {
+        setMessages((prev) => mergeMessage(prev, message));
+      },
+      onError: (socketError) => {
+        console.error('Erro no WebSocket do chat:', socketError);
+      },
+    }).then((client) => {
+      if (cancelled) {
+        client?.deactivate();
+        return;
+      }
+
+      socketRef.current = client;
+    });
+
+    return () => {
+      cancelled = true;
+      socketRef.current?.deactivate();
+      socketRef.current = null;
+    };
+  }, [conversationId]);
+
+  useEffect(() => {
     if (messages.length === 0) return;
     setTimeout(() => {
         listRef.current?.scrollToEnd({ animated: true });
@@ -230,7 +277,7 @@ export default function ChatConversationScreen() {
     setSending(true);
     try {
       const sentMessage = await chatService.sendMessage(conversationId, content);
-      setMessages((prev) => sortMessages([...prev, sentMessage]));
+      setMessages((prev) => mergeMessage(prev, sentMessage));
       setDraft('');
     } catch (e) {
       console.error('Erro ao enviar mensagem:', e);
