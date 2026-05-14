@@ -32,7 +32,7 @@ function resolveApiBaseUrl(): string {
   return DEV_FALLBACK_API_URL;
 }
 
-const API_BASE_URL = resolveApiBaseUrl();
+export const API_BASE_URL = resolveApiBaseUrl();
 
 function getHeaderValue(headers: any, key: string): string | undefined {
   if (!headers) return undefined;

@@ -79,6 +79,50 @@ function isMessageFromToday(value?: string): boolean {
   return messageDate >= startOfToday && messageDate <= endOfToday;
 }
 
+function getMentionedUsername(text: string): string | null {
+  const match = text.trim().match(/^@(\S+)/);
+  return match?.[1]?.toLowerCase() ?? null;
+}
+
+function isReplyMessage(message: BeachMessageDTO): boolean {
+  return Boolean(getMentionedUsername(message.texto));
+}
+
+function groupRepliesUnderMessages(items: BeachMessageDTO[]): BeachMessageDTO[] {
+  const topLevel = items.filter((message) => !isReplyMessage(message));
+  const replies = items.filter(isReplyMessage);
+  const usedReplyIds = new Set<number>();
+  const grouped: BeachMessageDTO[] = [];
+
+  topLevel.forEach((message) => {
+    grouped.push(message);
+
+    const authorName = message.autor?.username?.toLowerCase();
+    if (!authorName) return;
+
+    const messageReplies = replies
+      .filter((reply) => !usedReplyIds.has(reply.id) && getMentionedUsername(reply.texto) === authorName)
+      .sort((a, b) => {
+        const first = new Date(a.data).getTime();
+        const second = new Date(b.data).getTime();
+        return (Number.isNaN(first) ? 0 : first) - (Number.isNaN(second) ? 0 : second);
+      });
+
+    messageReplies.forEach((reply) => {
+      usedReplyIds.add(reply.id);
+      grouped.push(reply);
+    });
+  });
+
+  replies.forEach((reply) => {
+    if (!usedReplyIds.has(reply.id)) {
+      grouped.push(reply);
+    }
+  });
+
+  return grouped;
+}
+
 function getBeachMessagesCacheKey(beachId: number): string {
   return `beach_messages_${beachId}`;
 }
@@ -402,11 +446,23 @@ export function PostCard({
 function MessageCard({
   message,
   onReply,
+  isReplyInputVisible,
+  replyText,
+  onChangeReplyText,
+  onCancelReply,
+  onSubmitReply,
+  submittingReply,
   currentUser,
   onToggleFollow,
 }: {
   message: BeachMessageDTO;
   onReply?: (message: BeachMessageDTO) => void;
+  isReplyInputVisible?: boolean;
+  replyText?: string;
+  onChangeReplyText?: (text: string) => void;
+  onCancelReply?: () => void;
+  onSubmitReply?: () => void;
+  submittingReply?: boolean;
   currentUser?: UserDTO | null;
   onToggleFollow?: (userId: number, status: boolean) => Promise<void>;
 }) {
@@ -479,6 +535,42 @@ function MessageCard({
         )}
       </View>
       {renderMessageText(message.texto)}
+      {isReplyInputVisible && (
+        <View style={styles.inlineReplyComposer}>
+          <TextInput
+            value={replyText}
+            onChangeText={onChangeReplyText}
+            style={styles.inlineReplyInput}
+            placeholder={`Responder @${authorName}`}
+            placeholderTextColor="#8B8B8B"
+            multiline
+            autoFocus
+          />
+          <View style={styles.inlineReplyActions}>
+            <TouchableOpacity
+              onPress={onCancelReply}
+              style={styles.inlineReplyCancelButton}
+              disabled={submittingReply}
+            >
+              <Text style={styles.inlineReplyCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onSubmitReply}
+              style={[
+                styles.inlineReplySendButton,
+                (!replyText?.trim() || submittingReply) && styles.inlineReplySendButtonDisabled,
+              ]}
+              disabled={!replyText?.trim() || submittingReply}
+            >
+              {submittingReply ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.inlineReplySendText}>Enviar</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -637,7 +729,9 @@ export default function BeachDetailsScreen() {
   const [surfConditionsError, setSurfConditionsError] = useState<string | null>(null);
 
   const [newMessage, setNewMessage] = useState('');
-  const [replyTarget, setReplyTarget] = useState<BeachMessageDTO | null>(null);
+  const [activeReplyTarget, setActiveReplyTarget] = useState<BeachMessageDTO | null>(null);
+  const [replyDraft, setReplyDraft] = useState('');
+  const [sendingReplyId, setSendingReplyId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -658,6 +752,11 @@ export default function BeachDetailsScreen() {
   const todayMessages = useMemo(
     () => messages.filter((message) => isMessageFromToday(message.data)),
     [messages]
+  );
+
+  const displayedTodayMessages = useMemo(
+    () => groupRepliesUnderMessages(todayMessages),
+    [todayMessages]
   );
 
   const persistMessagesCache = useCallback(async (nextMessages: BeachMessageDTO[]) => {
@@ -844,22 +943,15 @@ export default function BeachDetailsScreen() {
       return;
     }
 
-    const replyName = replyTarget?.autor?.username?.trim();
-    const replyPrefix = replyName ? `@${replyName} ` : '';
-    const outgoingMessage = replyTarget && !trimmedMessage.startsWith(replyPrefix.trim())
-      ? `${replyPrefix}${trimmedMessage}`
-      : trimmedMessage;
-
     setSendingMessage(true);
     try {
-      const created = await beachService.postBeachMessage(beachId, outgoingMessage);
+      const created = await beachService.postBeachMessage(beachId, trimmedMessage);
       setMessages((prev) => {
         const next = sortMessagesByDateDesc([created, ...prev]);
         void persistMessagesCache(next);
         return next;
       });
       setNewMessage('');
-      setReplyTarget(null);
       void loadBeachDetails(true);
     } catch (e) {
         console.error(e);
@@ -867,7 +959,53 @@ export default function BeachDetailsScreen() {
     } finally {
       setSendingMessage(false);
     }
-  }, [beachId, newMessage, replyTarget, loadBeachDetails, persistMessagesCache, showAlert]);
+  }, [beachId, newMessage, loadBeachDetails, persistMessagesCache, showAlert]);
+
+  const handleStartReply = useCallback((target: BeachMessageDTO) => {
+    setActiveReplyTarget((current) => {
+      const isSameTarget = current?.id === target.id;
+      if (!isSameTarget) {
+        setReplyDraft('');
+      }
+      return isSameTarget ? null : target;
+    });
+  }, []);
+
+  const handleCancelReply = useCallback(() => {
+    setActiveReplyTarget(null);
+    setReplyDraft('');
+  }, []);
+
+  const handleSendReply = useCallback(async () => {
+    if (!Number.isFinite(beachId) || !activeReplyTarget) return;
+
+    const trimmedReply = replyDraft.trim();
+    if (!trimmedReply) return;
+
+    const replyName = activeReplyTarget.autor?.username?.trim();
+    const replyPrefix = replyName ? `@${replyName} ` : '';
+    const outgoingMessage = trimmedReply.startsWith(replyPrefix.trim())
+      ? trimmedReply
+      : `${replyPrefix}${trimmedReply}`;
+
+    setSendingReplyId(activeReplyTarget.id);
+    try {
+      const created = await beachService.postBeachMessage(beachId, outgoingMessage);
+      setMessages((prev) => {
+        const next = sortMessagesByDateDesc([created, ...prev]);
+        void persistMessagesCache(next);
+        return next;
+      });
+      setReplyDraft('');
+      setActiveReplyTarget(null);
+      void loadBeachDetails(true);
+    } catch (e) {
+      console.error(e);
+      showAlert('Erro', 'Nao foi possivel publicar sua resposta.');
+    } finally {
+      setSendingReplyId(null);
+    }
+  }, [activeReplyTarget, beachId, loadBeachDetails, persistMessagesCache, replyDraft, showAlert]);
 
   const handlePickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -1129,25 +1267,11 @@ export default function BeachDetailsScreen() {
                   </View>
 
                   <View style={styles.messageComposer}>
-                    {replyTarget && (
-                      <View style={styles.replyBanner}>
-                        <Ionicons name="arrow-undo-outline" size={16} color="#2F6F86" />
-                        <Text style={styles.replyBannerText} numberOfLines={1}>
-                          Respondendo a <Text style={{ fontWeight: '800' }}>@{replyTarget.autor?.username || 'surfista'}</Text>
-                        </Text>
-                        <TouchableOpacity 
-                          onPress={() => setReplyTarget(null)}
-                          style={styles.replyCloseButton}
-                        >
-                          <Ionicons name="close" size={14} color="#6B7280" />
-                        </TouchableOpacity>
-                      </View>
-                    )}
                     <TextInput
                       value={newMessage}
                       onChangeText={setNewMessage}
                       style={styles.messageInput}
-                      placeholder={replyTarget ? "Escreva sua resposta..." : "Compartilhe uma dica ou condicao do mar..."}
+                      placeholder="Compartilhe uma dica ou condicao do mar..."
                       placeholderTextColor="#8B8B8B"
                       multiline
                     />
@@ -1169,11 +1293,17 @@ export default function BeachDetailsScreen() {
                       nestedScrollEnabled
                       showsVerticalScrollIndicator={false}
                     >
-                      {todayMessages.map((message, index) => (
+                      {displayedTodayMessages.map((message, index) => (
                         <MessageCard 
                           key={message.id ?? `message-${index}`} 
                           message={message} 
-                          onReply={(target) => setReplyTarget(target)}
+                          onReply={handleStartReply}
+                          isReplyInputVisible={activeReplyTarget?.id === message.id}
+                          replyText={replyDraft}
+                          onChangeReplyText={setReplyDraft}
+                          onCancelReply={handleCancelReply}
+                          onSubmitReply={handleSendReply}
+                          submittingReply={sendingReplyId === message.id}
                           currentUser={currentUser}
                           onToggleFollow={async (userId, status) => {
                             try {
@@ -1624,6 +1754,61 @@ const styles = StyleSheet.create({
     color: '#2F6F86',
     fontSize: 11,
     fontWeight: '700',
+  },
+  inlineReplyComposer: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#EEF2F3',
+    paddingTop: 10,
+  },
+  inlineReplyInput: {
+    minHeight: 46,
+    maxHeight: 110,
+    borderWidth: 1,
+    borderColor: '#D0E1E7',
+    borderRadius: 12,
+    backgroundColor: '#F9FBFB',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    color: '#1F4A63',
+    fontSize: 13,
+    lineHeight: 18,
+    textAlignVertical: 'top',
+  },
+  inlineReplyActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  inlineReplyCancelButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  inlineReplyCancelText: {
+    color: '#6B7280',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  inlineReplySendButton: {
+    minWidth: 72,
+    minHeight: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2F6F86',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  inlineReplySendButtonDisabled: {
+    opacity: 0.55,
+  },
+  inlineReplySendText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
   },
   replyBanner: {
     flexDirection: 'row',
