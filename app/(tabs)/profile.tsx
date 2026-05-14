@@ -3,7 +3,7 @@ import { postService } from '@/services/posts/postService';
 import { userService } from '@/services/users/userService';
 import { PostDTO, UserDTO } from '@/types/api';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -154,6 +154,17 @@ export default function ProfileScreen() {
             >
               <Text style={styles.editButtonText}>Editar Perfil</Text>
             </TouchableOpacity>
+
+            {user.admin ? (
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={() => router.push('/admin' as Href)}
+                activeOpacity={0.82}
+              >
+                <Ionicons name="shield-checkmark-outline" size={18} color="#FFF" />
+                <Text style={styles.adminButtonText}>Gestao admin</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           <View style={styles.statsContainer}>
@@ -296,6 +307,18 @@ const styles = StyleSheet.create({
   bioText: { fontSize: 14, color: '#666', textAlign: 'center', marginVertical: 10, paddingHorizontal: 40 },
   editButton: { paddingHorizontal: 25, paddingVertical: 10, backgroundColor: '#5C9DB8', borderRadius: 20 },
   editButtonText: { color: '#FFF', fontWeight: 'bold' },
+  adminButton: {
+    marginTop: 10,
+    minHeight: 40,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    backgroundColor: '#1F4A63',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  adminButtonText: { color: '#FFF', fontWeight: 'bold' },
   statsContainer: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 25, paddingHorizontal: 20 },
   statCard: { alignItems: 'center', minWidth: 80 },
   statNumber: { fontSize: 18, fontWeight: 'bold', color: '#1F4A63' },
