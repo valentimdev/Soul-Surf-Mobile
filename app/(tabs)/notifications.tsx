@@ -1,7 +1,8 @@
-import { NotificationDTO, notificationService } from '@/services/notifications/notificationService';
+import { useNotifications } from '@/contexts/NotificationContext';
+import type { NotificationDTO } from '@/services/notifications/notificationService';
 import { useFocusEffect } from 'expo-router';
 import { Clock, MessageSquare, Star, Waves } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -117,27 +118,14 @@ function NotificationCard({
 }
 
 export default function NotificationsScreen() {
-  const [notifications, setNotifications] = useState<NotificationDTO[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadNotifications = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      setError(null);
-      const data = await notificationService.getUserNotifications();
-      setNotifications(data);
-    } catch (e) {
-      console.error('Erro ao carregar notificacoes:', e);
-      setError('Nao foi possivel carregar as notificacoes.');
-    } finally {
-      if (isRefresh) setRefreshing(false);
-      else setLoading(false);
-    }
-  }, []);
+  const {
+    notifications,
+    loading,
+    refreshing,
+    error,
+    loadNotifications,
+    markAsRead,
+  } = useNotifications();
 
   useFocusEffect(
     useCallback(() => {
@@ -149,18 +137,11 @@ export default function NotificationsScreen() {
     if (item.read) return;
 
     try {
-      await notificationService.markAsRead(item.id);
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === item.id
-            ? { ...notification, read: true }
-            : notification
-        )
-      );
+      await markAsRead(item.id);
     } catch (e) {
       console.error('Erro ao marcar notificacao como lida:', e);
     }
-  }, []);
+  }, [markAsRead]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
