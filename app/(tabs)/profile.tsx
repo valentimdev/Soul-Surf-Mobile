@@ -20,6 +20,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const COVER_FALLBACK = 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=800';
 const AVATAR_FALLBACK = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+const imagemFallback = require('../../assets/images/registrosemimagem.png');
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserDTO | null>(null);
@@ -27,26 +28,27 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [imgKey, setImgKey] = useState(Date.now());
 
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [modalType, setModalType] = useState<'followers' | 'following' | null>(null);
+  const [modalUsers, setModalUsers] = useState<UserDTO[]>([]);
+  const [loadingModal, setLoadingModal] = useState(false);
+
   const bustCache = (uri?: string) => {
     if (!uri) return undefined;
     const separator = uri.includes('?') ? '&' : '?';
     return `${uri}${separator}t=${imgKey}`;
   };
 
-  // Estados do BottomSheet (Substituindo o Modal)
-  const [sheetVisible, setSheetVisible] = useState(false);
-  const [modalType, setModalType] = useState<'followers' | 'following' | null>(null);
-  const [modalUsers, setModalUsers] = useState<UserDTO[]>([]);
-  const [loadingModal, setLoadingModal] = useState(false);
-
   const fetchProfile = useCallback(async () => {
     setLoading(true);
     try {
       const profile = await userService.getMyProfile();
       setUser(profile);
-      setImgKey(Date.now()); // força reload das imagens
+      setImgKey(Date.now());
+
       const userPosts = await postService.getMyPosts(0, 20);
       setPosts(userPosts.content || []);
+
     } catch (error: any) {
       console.error('Erro ao buscar perfil:', error.message);
       setUser(null);
@@ -86,7 +88,6 @@ export default function ProfileScreen() {
 
   const closeSheet = () => {
     setSheetVisible(false);
-    // Pequeno delay para limpar os dados após a animação de fechar
     setTimeout(() => {
       setModalUsers([]);
       setModalType(null);
@@ -105,9 +106,9 @@ export default function ProfileScreen() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Nao foi possivel carregar seu perfil.</Text>
-          <TouchableOpacity style={styles.editButton} onPress={fetchProfile}>
-            <Text style={styles.editButtonText}>Tentar novamente</Text>
+          <Text style={styles.emptyText}>Não foi possível carregar seu perfil.</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchProfile}>
+            <Text style={styles.retryButtonText}>Tentar novamente</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -115,10 +116,10 @@ export default function ProfileScreen() {
   }
 
   return (
-    // GestureHandlerRootView é obrigatório para o BottomSheet funcionar
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+
           <Image
             source={{ uri: bustCache(user.fotoCapa) || COVER_FALLBACK }}
             style={styles.coverImage}
@@ -130,94 +131,122 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.userInfoSection}>
-            <Image
-              source={{ uri: bustCache(user.fotoPerfil) || AVATAR_FALLBACK }}
-              style={styles.avatar}
-            />
-            <Text style={styles.userName}>{user.username || 'Surfista'}</Text>
-            <Text style={styles.bioText}>{user.bio || 'Nenhuma bio definida.'}</Text>
+          {/* NOVA ESTRUTURA DO CABEÇALHO */}
+          <View style={styles.mainProfileSection}>
 
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() =>
-                router.push({
-                  pathname: '/edit-profile',
-                  params: {
-                    currentUsername: user.username,
-                    currentBio: user.bio,
-                    currentAvatar: user.fotoPerfil,
-                    currentCover: user.fotoCapa,
-                  },
-                })
-              }
-            >
-              <Text style={styles.editButtonText}>Editar Perfil</Text>
-            </TouchableOpacity>
-          </View>
+            {/* Linha do Avatar + Nome e Status */}
+            <View style={styles.topRow}>
+              <Image
+                source={{ uri: bustCache(user.fotoPerfil) || AVATAR_FALLBACK }}
+                style={styles.avatarLeft}
+              />
 
-          <View style={styles.statsContainer}>
-            <TouchableOpacity
-              style={styles.statCard}
-              onPress={() => openFollowSheet('followers', user.seguidoresCount)}
-            >
-              <Text style={styles.statNumber}>{user.seguidoresCount || 0}</Text>
-              <Text style={styles.statLabel}>Seguidores</Text>
-            </TouchableOpacity>
+              <View style={styles.topRowRight}>
 
-            <TouchableOpacity
-              style={styles.statCard}
-              onPress={() => openFollowSheet('following', user.seguindoCount)}
-            >
-              <Text style={styles.statNumber}>{user.seguindoCount || 0}</Text>
-              <Text style={styles.statLabel}>Seguindo</Text>
-            </TouchableOpacity>
+                {/* Linha do Nome + Lápis de Edição */}
+                <View style={styles.nameRow}>
+                  <Text style={styles.userNameLeft} numberOfLines={1}>
+                    {user.username || 'Surfista'}
+                  </Text>
 
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{posts.length}</Text>
-              <Text style={styles.statLabel}>Posts</Text>
+                  <TouchableOpacity
+                    style={styles.editIconButton}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/edit-profile',
+                        params: {
+                          currentUsername: user.username,
+                          currentBio: user.bio,
+                          currentAvatar: user.fotoPerfil,
+                          currentCover: user.fotoCapa,
+                        },
+                      })
+                    }
+                  >
+                    <Ionicons name="pencil" size={16} color="#1F4A63" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Bolhas menores lado a lado abaixo do nome */}
+                <View style={styles.statsInlineRow}>
+                  <TouchableOpacity
+                    style={styles.miniStatBubble}
+                    onPress={() => openFollowSheet('followers', user.seguidoresCount)}
+                  >
+                    <Text style={styles.miniStatNumber}>{user.seguidoresCount || 0}</Text>
+                    <Text style={styles.miniStatLabel}>Seguidores</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.miniStatBubble}
+                    onPress={() => openFollowSheet('following', user.seguindoCount)}
+                  >
+                    <Text style={styles.miniStatNumber}>{user.seguindoCount || 0}</Text>
+                    <Text style={styles.miniStatLabel}>Seguindo</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
+
+            {/* Bio abaixo de tudo */}
+            <Text style={styles.bioTextLeft}>{user.bio || 'Nenhuma bio definida.'}</Text>
           </View>
 
-          <View style={styles.postsSection}>
-            <Text style={styles.sectionTitle}>Meus posts</Text>
+          {/* SEÇÃO DOS POSTS */}
+          <View style={styles.contentSection}>
+
+            {/* Contagem colada no canto esquerdo acima do 1º post */}
+            <View style={styles.registrosHeader}>
+              <Text style={styles.registrosCountText}>{posts.length} Registros</Text>
+            </View>
+
             {posts.length > 0 ? (
-                          posts.map((post) => (
-                            <TouchableOpacity
-                              key={post.id}
-                              style={styles.postCard}
-                              onPress={() => {
-                                if (post.beach?.id) {
-                                  router.push({
-                                    pathname: '/beach/[id]',
-                                    params: {
-                                      id: post.beach.id,
-                                      targetPostId: post.id
-                                    }
-                                  });
-                                }
-                              }}
-                            >
-                              <Image source={{ uri: post.caminhoFoto }} style={styles.postImage} />
-                              <View style={styles.postInfo}>
-                                <Text style={styles.postDesc} numberOfLines={1}>
-                                  {post.descricao}
-                                </Text>
-                                <Text style={styles.postBeach}>{post.beach?.nome || 'Local desconhecido'}</Text>
-                              </View>
-                            </TouchableOpacity>
-                          ))
-                        ) : (
-              <Text style={styles.emptyPostsText}>Voce ainda nao fez nenhum post.</Text>
+              posts.map((post) => (
+                <TouchableOpacity
+                  key={post.id}
+                  style={styles.postCard}
+                  onPress={() => {
+                    if (post.beach?.id) {
+                      router.push({
+                        pathname: '/beach/[id]',
+                        params: {
+                          id: post.beach.id,
+                          targetPostId: post.id
+                        }
+                      });
+                    }
+                  }}
+                >
+                  <Image
+                    source={post.caminhoFoto ? { uri: post.caminhoFoto } : imagemFallback}
+                    style={styles.postImage}
+                  />
+                  <View style={styles.postInfo}>
+                    <Text style={styles.postDesc} numberOfLines={2}>
+                      {post.descricao}
+                    </Text>
+                    <Text style={styles.postBeach}>{post.beach?.nome || 'Local desconhecido'}</Text>
+                  </View>
+
+                  <View style={styles.postStatsRight}>
+                    <View style={styles.statBadge}>
+                      <Ionicons name="heart" size={14} color="#C54A54" />
+                      <Text style={styles.statBadgeText}>{post.likesCount || 0}</Text>
+                    </View>
+                    <View style={styles.statBadge}>
+                      <Ionicons name="chatbubble" size={14} color="#6B7280" />
+                      <Text style={styles.statBadgeText}>{post.commentsCount || 0}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={styles.emptyContentText}>Você ainda não fez nenhum registro.</Text>
             )}
           </View>
         </ScrollView>
 
-        {/* BOTTOM SHEET COM GESTO DE ARRASTAR (IGUAL AO MAPA) */}
-        <BottomSheet
-          visible={sheetVisible}
-          onClose={closeSheet}
-        >
+        <BottomSheet visible={sheetVisible} onClose={closeSheet}>
           <View style={styles.sheetContent}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>
@@ -240,7 +269,6 @@ export default function ProfileScreen() {
                     style={styles.userRow}
                     onPress={() => {
                         closeSheet();
-                        // Opcional: Navegar para o perfil do usuário clicado
                     }}
                   >
                     <Image
@@ -266,94 +294,163 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F6F4EB' },
   container: { paddingBottom: 40 },
   loadingContainer: { flex: 1, justifyContent: 'center', backgroundColor: '#F6F4EB' },
-  coverImage: { width: '100%', height: 180, position: 'absolute' },
 
-  // Atualizações na Header e Badge do Botão
+  coverImage: { width: '100%', height: 160, position: 'absolute' },
+
   headerActions: {
-    alignItems: 'flex-end',
-    paddingTop: 15,
-    paddingRight: 20,
-    height: 120,
-    zIndex: 10, // Garante que o botão fique acima da imagem
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 10,
   },
   iconBadge: {
     backgroundColor: 'rgba(255,255,255,0.9)',
-    width: 44, // Largura fixa
-    height: 44, // Altura fixa
-    borderRadius: 22, // Círculo perfeito
-    alignItems: 'center', // Centraliza ícone (horizontal)
-    justifyContent: 'center', // Centraliza ícone (vertical)
-    elevation: 4, // Sombra para Android
-    shadowColor: '#000', // Sombra para iOS
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 3,
   },
 
-  userInfoSection: { alignItems: 'center', marginTop: 10 },
-  avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: '#F6F4EB' },
-  userName: { fontSize: 22, fontWeight: 'bold', color: '#1F4A63', marginTop: 10 },
-  bioText: { fontSize: 14, color: '#666', textAlign: 'center', marginVertical: 10, paddingHorizontal: 40 },
-  editButton: { paddingHorizontal: 25, paddingVertical: 10, backgroundColor: '#5C9DB8', borderRadius: 20 },
-  editButtonText: { color: '#FFF', fontWeight: 'bold' },
-  statsContainer: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 25, paddingHorizontal: 20 },
-  statCard: { alignItems: 'center', minWidth: 80 },
-  statNumber: { fontSize: 18, fontWeight: 'bold', color: '#1F4A63' },
-  statLabel: { fontSize: 12, color: '#5C9DB8' },
-  postsSection: { paddingHorizontal: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F4A63', marginBottom: 15, textAlign: 'center' },
-  postCard: { flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 12, padding: 10, marginBottom: 10, elevation: 2 },
-  postImage: { width: 60, height: 60, borderRadius: 8 },
-  postInfo: { marginLeft: 15, justifyContent: 'center', flex: 1 },
-  postDesc: { fontSize: 15, fontWeight: '600', color: '#1F4A63' },
-  postBeach: { fontSize: 13, color: '#5C9DB8' },
-  emptyPostsText: { textAlign: 'center', color: '#999', marginTop: 20 },
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  emptyText: { color: '#5C9DB8' },
-
-  // Estilos do BottomSheet Content
-  sheetContent: {
+  mainProfileSection: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
-    height: 450,
+    paddingTop: 160,
   },
-  sheetHeader: {
+  topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingTop: 10,
+    alignItems: 'flex-end',
+    marginTop: -30,
+    marginBottom: 16,
   },
-  sheetTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F4A63',
-  },
-  sheetCloseButton: {
-    padding: 4,
-  },
-  userRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2DEC3',
-  },
-  userAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  avatarLeft: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: '#F6F4EB',
     backgroundColor: '#E2DEC3',
   },
-  userRowName: {
-    fontSize: 16,
+  topRowRight: {
+    flex: 1,
+    marginLeft: 16,
+    paddingBottom: 4,
+  },
+
+  // Novo estilo em linha para o Nome e o Ícone
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  userNameLeft: {
+    fontSize: 22,
+    fontWeight: '800',
     color: '#1F4A63',
-    fontWeight: '600',
-    marginLeft: 15,
+    marginRight: 8,
+    flexShrink: 1, // Evita quebra de tela se o nome for gigante
   },
-  emptyModalText: {
-    textAlign: 'center',
-    color: '#999',
-    marginTop: 30,
+  editIconButton: {
+    backgroundColor: '#FFFFFF',
+    padding: 6,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+
+  statsInlineRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  miniStatBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2DEC3',
+    gap: 4,
+  },
+  miniStatNumber: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1F4A63',
+  },
+  miniStatLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#5C9DB8',
+    textTransform: 'uppercase',
+  },
+  bioTextLeft: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+
+  // CONTEÚDO (POSTS)
+  contentSection: { paddingHorizontal: 20 },
+  registrosHeader: {
+    marginBottom: 12,
+  },
+  registrosCountText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1F4A63',
+  },
+  emptyContentText: { color: '#999', marginTop: 10 },
+
+  postCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 10,
+    elevation: 2,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2DEC3',
+  },
+  postImage: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#E2DEC3' },
+  postInfo: { marginLeft: 12, justifyContent: 'center', flex: 1 },
+  postDesc: { fontSize: 14, fontWeight: '600', color: '#1F4A63', marginBottom: 4 },
+  postBeach: { fontSize: 12, color: '#5C9DB8' },
+  postStatsRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingLeft: 10,
+    borderLeftWidth: 1,
+    borderLeftColor: '#E2DEC3',
+    gap: 8,
+    minWidth: 50
+  },
+  statBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statBadgeText: { fontSize: 12, color: '#6B7280', fontWeight: '600', minWidth: 16, textAlign: 'right' },
+
+  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  emptyText: { color: '#5C9DB8' },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: '#5C9DB8',
+    borderRadius: 20,
+  },
+  retryButtonText: { color: '#FFF', fontWeight: 'bold' },
+
+  sheetContent: { paddingHorizontal: 20, paddingBottom: 40, height: 450 },
+  sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingTop: 10 },
+  sheetTitle: { fontSize: 20, fontWeight: 'bold', color: '#1F4A63' },
+  sheetCloseButton: { padding: 4 },
+  userRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E2DEC3' },
+  userAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#E2DEC3' },
+  userRowName: { fontSize: 16, color: '#1F4A63', fontWeight: '600', marginLeft: 15 },
+  emptyModalText: { textAlign: 'center', color: '#999', marginTop: 30 },
 });
