@@ -66,17 +66,27 @@ export function NotificationProvider({ children }: PropsWithChildren) {
   const [error, setError] = useState<string | null>(null);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
   const seenRealtimeIdsRef = useRef<Set<number>>(new Set());
+  const unreadCountRef = useRef(0);
 
   const refreshUnreadCount = useCallback(async () => {
     const token = await SecureStore.getItemAsync('userToken');
     if (!token) {
       setUnreadCount(0);
+      unreadCountRef.current = 0;
       return;
     }
 
     try {
       const count = await notificationService.getUnreadCount();
+      const hadNewNotifications = count > unreadCountRef.current;
+      unreadCountRef.current = count;
       setUnreadCount(count);
+
+      if (hadNewNotifications) {
+        const data = sortNotifications(await notificationService.getUserNotifications());
+        setNotifications(data);
+        seenRealtimeIdsRef.current = new Set(data.map((notification) => notification.id));
+      }
     } catch (err) {
       if (IS_DEV) {
         console.error('Erro ao carregar badge de notificacoes:', err);
@@ -89,6 +99,7 @@ export function NotificationProvider({ children }: PropsWithChildren) {
     if (!token) {
       setNotifications([]);
       setUnreadCount(0);
+      unreadCountRef.current = 0;
       setError(null);
       return;
     }
@@ -103,7 +114,9 @@ export function NotificationProvider({ children }: PropsWithChildren) {
       setError(null);
       const data = sortNotifications(await notificationService.getUserNotifications());
       setNotifications(data);
-      setUnreadCount(data.filter((notification) => !notification.read).length);
+      const nextUnreadCount = data.filter((notification) => !notification.read).length;
+      unreadCountRef.current = nextUnreadCount;
+      setUnreadCount(nextUnreadCount);
       seenRealtimeIdsRef.current = new Set(data.map((notification) => notification.id));
     } catch (err) {
       console.error('Erro ao carregar notificacoes:', err);
@@ -122,7 +135,11 @@ export function NotificationProvider({ children }: PropsWithChildren) {
 
     if (!notification.read && !seenRealtimeIdsRef.current.has(notification.id)) {
       seenRealtimeIdsRef.current.add(notification.id);
-      setUnreadCount((current) => current + 1);
+      setUnreadCount((current) => {
+        const nextCount = current + 1;
+        unreadCountRef.current = nextCount;
+        return nextCount;
+      });
     }
   }, []);
 
@@ -137,7 +154,11 @@ export function NotificationProvider({ children }: PropsWithChildren) {
       )
     );
 
-    setUnreadCount((current) => Math.max(0, current - 1));
+    setUnreadCount((current) => {
+      const nextCount = Math.max(0, current - 1);
+      unreadCountRef.current = nextCount;
+      return nextCount;
+    });
   }, []);
 
   useEffect(() => {
