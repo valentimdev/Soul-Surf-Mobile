@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "845347602497",
+    "project_id": "soul-surf",
+    "storage_bucket": "soul-surf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:845347602497:android:0ec82164a305e74c4a06c0",
+        "android_client_info": {
+          "package_name": "com.soul.surf"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9oRH0IQByO-gbHClHUFqIOEP0ulI8y7E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

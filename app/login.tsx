@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { authService } from '../services/auth/authService';
+import { pushNotificationService } from '../services/notifications/pushNotificationService';
 
 export default function LoginScreen() {
   const { showAlert } = useAppAlert();
@@ -29,6 +30,7 @@ export default function LoginScreen() {
       try {
         const token = await SecureStore.getItemAsync('userToken');
         if (token) {
+          await pushNotificationService.syncPushTokenWithBackend();
           router.replace('/map');
         } else {
           setIsCheckingToken(false);
@@ -57,6 +59,7 @@ export default function LoginScreen() {
 
       if (token) {
         await SecureStore.setItemAsync('userToken', token);
+        await pushNotificationService.syncPushTokenWithBackend();
         console.log('Login efetuado com sucesso! Token salvo.');
         router.replace('/map');
       } else {
