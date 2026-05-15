@@ -19,6 +19,33 @@ jest.mock('expo-image-picker', () => ({
   launchImageLibraryAsync: jest.fn().mockResolvedValue({ canceled: true, assets: [] }),
 }));
 
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: {
+    expoConfig: {
+      extra: {
+        eas: {
+          projectId: 'test-project-id',
+        },
+      },
+    },
+    easConfig: {
+      projectId: 'test-project-id',
+    },
+  },
+}));
+
+jest.mock('expo-notifications', () => ({
+  AndroidImportance: {
+    MAX: 'max',
+  },
+  setNotificationHandler: jest.fn(),
+  setNotificationChannelAsync: jest.fn().mockResolvedValue(undefined),
+  getPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
+  requestPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
+  getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'ExpoPushToken[test]' }),
+}));
+
 jest.mock('react-native-safe-area-context', () => {
   const React = require('react');
   const make = (type: string) => ({ children, ...props }: any) =>
