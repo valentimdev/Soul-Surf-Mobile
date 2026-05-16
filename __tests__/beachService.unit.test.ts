@@ -43,4 +43,32 @@ describe('beachService Unit Tests', () => {
     });
     expect(result).toEqual(mockMessage);
   });
+
+  it('deve criar praia com coordenadas', async () => {
+    const mockBeach = {
+      id: 7,
+      nome: 'Praia Nova',
+      latitude: -3.7,
+      longitude: -38.5,
+    };
+    (api.post as jest.Mock).mockResolvedValue({ data: mockBeach });
+
+    const result = await beachService.createBeach({
+      nome: 'Praia Nova',
+      descricao: 'Boa para surf',
+      localizacao: 'Fortaleza',
+      nivelExperiencia: 'Intermediario',
+      latitude: -3.7,
+      longitude: -38.5,
+    });
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/beaches/',
+      expect.any(FormData),
+      expect.objectContaining({
+        transformRequest: expect.any(Function),
+      })
+    );
+    expect(result).toEqual(mockBeach);
+  });
 });

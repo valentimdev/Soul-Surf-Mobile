@@ -67,4 +67,26 @@ describe('poiService Unit Tests', () => {
     }));
     expect(result).toEqual(mockResponse);
   });
+
+  it('deve criar um POI sem praia vinculada', async () => {
+    const payload = {
+      nome: 'Novo Ponto',
+      descricao: 'Desc',
+      categoria: 'BOARD_REPAIR' as const,
+      latitude: -3.7,
+      longitude: -38.5,
+    };
+    const mockResponse = { id: 6, ...payload };
+    (api.post as jest.Mock).mockResolvedValue({ data: mockResponse });
+
+    const result = await poiService.createPoi(payload);
+
+    const requestBody = (api.post as jest.Mock).mock.calls[0][1];
+    expect(api.post).toHaveBeenCalledWith('/api/pois', expect.objectContaining({
+      nome: 'Novo Ponto',
+      categoria: 'BOARD_REPAIR',
+    }));
+    expect(requestBody).not.toHaveProperty('beach');
+    expect(result).toEqual(mockResponse);
+  });
 });

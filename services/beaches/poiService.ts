@@ -21,7 +21,7 @@ export interface CreatePoiRequest {
   longitude: number;
   telefone?: string;
   caminhoFoto?: string;
-  beachId: number;
+  beachId?: number;
 }
 
 function normalizePoiList(raw: unknown): PointOfInterestDTO[] {
@@ -71,7 +71,7 @@ export const poiService = {
   },
 
   createPoi: async (payload: CreatePoiRequest): Promise<PointOfInterestDTO> => {
-    const response = await api.post('/api/pois', {
+    const requestBody: Record<string, unknown> = {
       nome: payload.nome,
       descricao: payload.descricao,
       categoria: payload.categoria,
@@ -79,8 +79,13 @@ export const poiService = {
       longitude: payload.longitude,
       telefone: payload.telefone,
       caminhoFoto: payload.caminhoFoto,
-      beach: { id: payload.beachId },
-    });
+    };
+
+    if (payload.beachId) {
+      requestBody.beach = { id: payload.beachId };
+    }
+
+    const response = await api.post('/api/pois', requestBody);
     return response.data;
   },
 };

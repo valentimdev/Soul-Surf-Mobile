@@ -3,7 +3,7 @@ import { postService } from '@/services/posts/postService';
 import { userService } from '@/services/users/userService';
 import { PostDTO, UserDTO } from '@/types/api';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -165,6 +165,17 @@ export default function ProfileScreen() {
                   >
                     <Ionicons name="pencil" size={16} color="#1F4A63" />
                   </TouchableOpacity>
+
+                  {user.admin ? (
+                    <TouchableOpacity
+                      style={styles.adminButton}
+                      onPress={() => router.push('/admin' as Href)}
+                      activeOpacity={0.82}
+                    >
+                      <Ionicons name="shield-checkmark-outline" size={18} color="#FFF" />
+                      <Text style={styles.adminButtonText}>Gestao admin</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
 
                 {/* Bolhas menores lado a lado abaixo do nome */}
@@ -268,7 +279,7 @@ export default function ProfileScreen() {
                   <TouchableOpacity
                     style={styles.userRow}
                     onPress={() => {
-                        closeSheet();
+                      closeSheet();
                     }}
                   >
                     <Image
@@ -360,6 +371,22 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  adminButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#1F4A63',
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginLeft: 6,
+  },
+  adminButtonText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
 
   statsInlineRow: {
