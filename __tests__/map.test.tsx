@@ -167,11 +167,12 @@ describe('MapScreen', () => {
     (poiService.getAllPois as jest.Mock).mockResolvedValue([]);
   });
 
-  it('exibe carregamento enquanto aguarda permissao/localizacao', () => {
+it('exibe carregamento enquanto aguarda permissao/localizacao', async () => {
     (Location.requestForegroundPermissionsAsync as jest.Mock).mockReturnValue(new Promise(() => {}));
 
     let tree: ReactTestRenderer;
-    act(() => {
+
+    await act(async () => {
       tree = create(React.createElement(MapScreen));
     });
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,12 +16,31 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, Stack } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import { authService } from '../services/auth/authService';
+import { pushNotificationService } from '../services/notifications/pushNotificationService';
 
 export default function LoginScreen() {
   const { showAlert } = useAppAlert();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingToken, setIsCheckingToken] = useState(true);
+
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const token = await SecureStore.getItemAsync('userToken');
+        if (token) {
+          await pushNotificationService.syncPushTokenWithBackend();
+          router.replace('/map');
+        } else {
+          setIsCheckingToken(false);
+        }
+      } catch (error) {
+        setIsCheckingToken(false);
+      }
+    };
+    checkToken();
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -40,6 +59,7 @@ export default function LoginScreen() {
 
       if (token) {
         await SecureStore.setItemAsync('userToken', token);
+        await pushNotificationService.syncPushTokenWithBackend();
         console.log('Login efetuado com sucesso! Token salvo.');
         router.replace('/map');
       } else {
@@ -63,6 +83,14 @@ export default function LoginScreen() {
       setIsLoading(false);
     }
   };
+
+  if (isCheckingToken) {
+    return (
+      <SafeAreaView style={[styles.container, styles.centerContent]}>
+        <ActivityIndicator size="large" color="#5C9DB8" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -127,6 +155,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FBF5E9' },
   flex: { flex: 1 },
   scrollContent: { flexGrow: 1 },
+  centerContent: { justifyContent: 'center', alignItems: 'center' },
   content: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 30 },
   logo: { width: 320, height: 160, resizeMode: 'contain', marginBottom: 50 },
   input: { width: '100%', height: 60, backgroundColor: '#E8E5D4', borderRadius: 16, paddingHorizontal: 20, marginBottom: 16, fontSize: 16, color: '#333333' },
