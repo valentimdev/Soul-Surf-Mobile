@@ -35,6 +35,7 @@ const TYPE_LABELS: Record<MapPin['type'], string> = {
 export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
   const isSpot = pin.type === 'pico';
   const isEstablishment = !isSpot;
+  const [longitude, latitude] = pin.coordinate;
 
   const [weather, setWeather] = useState<WeatherDTO | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
@@ -46,7 +47,7 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
     setWeatherLoading(true);
 
     weatherService
-      .getCurrentWeather(pin.coordinate[1], pin.coordinate[0])
+      .getCurrentWeather(latitude, longitude)
       .then((data) => {
         if (active) setWeather(data);
       })
@@ -61,7 +62,7 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
     return () => {
       active = false;
     };
-  }, [isSpot]);
+  }, [isSpot, latitude, longitude]);
 
   const openInstagram = () => {
     if (pin.instagram) {
