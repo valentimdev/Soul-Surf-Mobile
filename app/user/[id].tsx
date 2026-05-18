@@ -3,6 +3,7 @@ import { useAppAlert } from '@/components/AppAlert';
 import { chatService } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
 import { UserDTO, PostDTO } from '@/types/api';
+import { formatDateTimeWithYear } from '@/utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
 import { router, useLocalSearchParams, Stack, useFocusEffect} from 'expo-router';
@@ -293,6 +294,7 @@ const fetchProfileData = useCallback(async () => {
                         </Text>
                     )}
                     <Text style={styles.postBeach}>{post.beach?.nome || 'Local desconhecido'}</Text>
+                    <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
                   </View>
                 </TouchableOpacity>
               ))
@@ -385,6 +387,7 @@ const styles = StyleSheet.create({
   postInfo: { marginLeft: 15, justifyContent: 'center', flex: 1 },
   postDesc: { fontSize: 15, fontWeight: '600', color: '#1F4A63' },
   postBeach: { fontSize: 13, color: '#5C9DB8', marginTop: 4 },
+  postDate: { fontSize: 11, color: '#777', marginTop: 3 },
   emptyPostsText: { textAlign: 'center', color: '#999', marginTop: 20 },
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   emptyText: { color: '#5C9DB8' },

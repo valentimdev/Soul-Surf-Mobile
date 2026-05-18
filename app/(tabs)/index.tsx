@@ -1,5 +1,6 @@
 import { postService } from '@/services/posts/postService';
 import { PostDTO } from '@/types/api';
+import { formatDateTimeWithYear } from '@/utils/formatters';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
@@ -14,24 +15,12 @@ import {
   View,
 } from 'react-native';
 
-function formatPostDate(value?: string) {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
-
 function FeedCard({ post }: { post: PostDTO }) {
   return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <Text style={styles.userName}>{post.usuario?.username || 'Surfista'}</Text>
-        <Text style={styles.postDate}>{formatPostDate(post.data)}</Text>
+        <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
       </View>
 
       {post.caminhoFoto ? <Image source={{ uri: post.caminhoFoto }} style={styles.postImage} /> : null}

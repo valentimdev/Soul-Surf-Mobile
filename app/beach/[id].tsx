@@ -1,6 +1,6 @@
 import { beachService, BeachMessageDTO } from '@/services/beaches/beachService';
 import { useAppAlert } from '@/components/AppAlert';
-import { formatDate, formatDateTime } from '@/utils/formatters';
+import { formatDate, formatDateTime, formatDateTimeWithYear } from '@/utils/formatters';
 import { BeachDTO, PostDTO, CommentDTO, UserDTO } from '@/types/api';
 import { surfConditionsService } from '@/services/weather/surfConditionsService';
 import { SurfConditionsResponse } from '@/types/surfConditions';
@@ -150,12 +150,13 @@ export function PostCard({
   const router = useRouter();
   const { showAlert } = useAppAlert();
   const initialLikes = normalizeCounter(post.likesCount);
-  const commentsCount = normalizeCounter(post.commentsCount);
+  const initialComments = normalizeCounter(post.commentsCount);
   const authorName = post.usuario?.username || 'Surfista';
   const authorAvatar = post.usuario?.fotoPerfil;
 
   const [liked, setLiked] = useState<boolean>(false);
   const [likesCount, setLikesCount] = useState<number>(initialLikes);
+  const [commentsCount, setCommentsCount] = useState<number>(initialComments);
   const [isLiking, setIsLiking] = useState(false);
 
   const [isFollowingAuthor, setIsFollowingAuthor] = useState(post.usuario?.following || false);
@@ -166,6 +167,10 @@ export function PostCard({
   const [loadingComments, setLoadingComments] = useState(false);
   const [newCommentText, setNewCommentText] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
+
+  useEffect(() => {
+    setCommentsCount(initialComments);
+  }, [initialComments]);
 
   useEffect(() => {
     let mounted = true;
@@ -235,6 +240,7 @@ export function PostCard({
     try {
       const data = await commentService.getPostComments(post.id);
       setPostComments(data);
+      setCommentsCount(data.length);
     } catch (error) {
       console.error('Erro ao carregar comentários:', error);
       showAlert('Erro', 'Não foi possível carregar os comentários.');
@@ -249,6 +255,7 @@ export function PostCard({
     try {
       const created = await commentService.addComment(post.id, newCommentText.trim());
       setPostComments(prev => [created, ...prev]);
+      setCommentsCount(prev => prev + 1);
       setNewCommentText('');
     } catch (error) {
       console.error('Erro ao comentar:', error);
@@ -304,14 +311,10 @@ export function PostCard({
                 )}
               </View>
               <Text testID={`post-date-${post.id}`} style={styles.postDate}>
-                {formatDate(post.data)}
+                {formatDateTimeWithYear(post.data)}
               </Text>
             </View>
           </TouchableOpacity>
-
-          <View style={styles.recordTypeBadge}>
-            <Text style={styles.recordTypeBadgeText}>Registro</Text>
-          </View>
         </View>
       </View>
 
@@ -1973,17 +1976,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
     marginTop: 2,
-  },
-  recordTypeBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#E7F1F4',
-  },
-  recordTypeBadgeText: {
-    color: '#2F6F86',
-    fontSize: 11,
-    fontWeight: '800',
   },
   postImage: {
     width: '100%',
