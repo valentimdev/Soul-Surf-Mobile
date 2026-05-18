@@ -16,7 +16,7 @@ import {
 import * as SecureStore from 'expo-secure-store';
 import * as Linking from 'expo-linking';
 import type { Href } from 'expo-router';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter, useFocusEffect} from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import api from '@/services/api';
@@ -162,35 +162,29 @@ export function PostCard({
   const [isFollowingAuthor, setIsFollowingAuthor] = useState(post.usuario?.following || false);
   const [isTogglingFollow, setIsTogglingFollow] = useState(false);
 
-  const [isCommentsVisible, setIsCommentsVisible] = useState(false);
-  const [postComments, setPostComments] = useState<CommentDTO[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [newCommentText, setNewCommentText] = useState('');
-  const [sendingComment, setSendingComment] = useState(false);
+useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
 
-  useEffect(() => {
-    setCommentsCount(initialComments);
-  }, [initialComments]);
+      Promise.all([
+        postService.getLikeStatus(post.id),
+        postService.getLikesCount(post.id),
+        commentService.getPostComments(post.id)
+      ])
+        .then(([statusRes, countRes, commentsRes]) => {
+          if (mounted) {
+            setLiked(statusRes.liked);
+            setLikesCount(normalizeCounter(countRes.count));
+            setCommentsCount(commentsRes.length);
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao buscar dados de engajamento do post:', error);
+        });
 
-  useEffect(() => {
-    let mounted = true;
-
-    Promise.all([
-      postService.getLikeStatus(post.id),
-      postService.getLikesCount(post.id)
-    ])
-      .then(([statusRes, countRes]) => {
-        if (mounted) {
-          setLiked(statusRes.liked);
-          setLikesCount(countRes.count);
-        }
-      })
-      .catch(error => {
-        console.error('Erro ao buscar dados do like:', error);
-      });
-
-    return () => { mounted = false; };
-  }, [post.id]);
+      return () => { mounted = false; };
+    }, [post.id])
+  );
 
   const handleToggleLike = async () => {
     if (isLiking) return;
@@ -218,7 +212,7 @@ export function PostCard({
 
   const handleToggleFollow = async (userId: number, currentStatus: boolean, setStatus: (s: boolean) => void) => {
     if (isTogglingFollow) return;
-    
+
     setIsTogglingFollow(true);
     const originalStatus = currentStatus;
     setStatus(!originalStatus);
@@ -234,35 +228,8 @@ export function PostCard({
     }
   };
 
-  const handleOpenComments = async () => {
-    setIsCommentsVisible(true);
-    setLoadingComments(true);
-    try {
-      const data = await commentService.getPostComments(post.id);
-      setPostComments(data);
-      setCommentsCount(data.length);
-    } catch (error) {
-      console.error('Erro ao carregar comentários:', error);
-      showAlert('Erro', 'Não foi possível carregar os comentários.');
-    } finally {
-      setLoadingComments(false);
-    }
-  };
-
-  const handleAddComment = async () => {
-    if (!newCommentText.trim()) return;
-    setSendingComment(true);
-    try {
-      const created = await commentService.addComment(post.id, newCommentText.trim());
-      setPostComments(prev => [created, ...prev]);
-      setCommentsCount(prev => prev + 1);
-      setNewCommentText('');
-    } catch (error) {
-      console.error('Erro ao comentar:', error);
-      showAlert('Erro', 'Não foi possível enviar seu comentário.');
-    } finally {
-      setSendingComment(false);
-    }
+  const handleOpenComments = () => {
+    router.push(`/post/${post.id}` as Href);
   };
 
   const shouldShowFollowButton = (user: UserDTO | undefined, isFollowing: boolean) => {
@@ -281,12 +248,16 @@ export function PostCard({
 
       <View style={styles.postHeader}>
         <View style={styles.postHeaderMain}>
-          <TouchableOpacity
+<TouchableOpacity
             activeOpacity={0.7}
-            onPress={() =>
-              post.usuario?.id &&
-              router.push(`/user/${post.usuario.id}` as Href)
-            }
+            onPress={() => {
+              if (!post.usuario?.id) return;
+              if (currentUser?.id === post.usuario.id) {
+                router.push('/profile' as Href);
+              } else {
+                router.push(`/user/${post.usuario.id}` as Href);
+              }
+            }}
             style={styles.authorRow}
           >
             {authorAvatar ? (
@@ -318,17 +289,19 @@ export function PostCard({
         </View>
       </View>
 
-      {post.descricao ? (
-        <Text testID={`post-description-${post.id}`} style={styles.postDescription}>
-          {post.descricao}
-        </Text>
-      ) : null}
+      <TouchableOpacity activeOpacity={0.8} onPress={handleOpenComments}>
+        {post.descricao ? (
+          <Text testID={`post-description-${post.id}`} style={styles.postDescription}>
+            {post.descricao}
+          </Text>
+        ) : null}
 
-      {post.caminhoFoto ? (
-        <View style={styles.postImageFrame}>
-          <Image testID={`post-image-${post.id}`} source={{ uri: post.caminhoFoto }} style={styles.postImage} />
-        </View>
-      ) : null}
+        {post.caminhoFoto ? (
+          <View style={styles.postImageFrame}>
+            <Image testID={`post-image-${post.id}`} source={{ uri: post.caminhoFoto }} style={styles.postImage} />
+          </View>
+        ) : null}
+      </TouchableOpacity>
 
       <View style={styles.postFooter}>
         <TouchableOpacity
@@ -353,95 +326,6 @@ export function PostCard({
           </Text>
         </TouchableOpacity>
       </View>
-
-      <Modal
-        visible={isCommentsVisible}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setIsCommentsVisible(false)}
-      >
-        <View style={styles.commentModalOverlay}>
-          <View style={styles.commentModalContainer}>
-            <View style={styles.commentModalHeader}>
-              <Text style={styles.commentModalTitle}>Comentários</Text>
-              <TouchableOpacity onPress={() => setIsCommentsVisible(false)} style={styles.commentModalClose}>
-                <Ionicons name="close" size={24} color="#1F4A63" />
-              </TouchableOpacity>
-            </View>
-
-            {loadingComments ? (
-              <ActivityIndicator style={{ marginVertical: 40 }} color="#2F6F86" />
-            ) : (
-              <ScrollView style={styles.commentModalList}>
-                {postComments.length === 0 ? (
-                  <Text style={styles.emptyCommentsText}>Seja o primeiro a comentar!</Text>
-                ) : (
-                  postComments.map((comment) => (
-                    <View key={comment.id} style={styles.commentItem}>
-                      <View style={styles.commentAuthorRow}>
-                        <TouchableOpacity
-                          onPress={() =>
-                            comment.usuario?.id &&
-                            router.push(`/user/${comment.usuario.id}` as Href)
-                          }
-                        >
-                          {comment.usuario?.fotoPerfil ? (
-                            <Image source={{ uri: comment.usuario.fotoPerfil }} style={styles.commentAvatar} />
-                          ) : (
-                            <View style={styles.commentAvatarFallback}>
-                              <Text style={styles.commentAvatarText}>{comment.usuario?.username?.[0] || 'S'}</Text>
-                            </View>
-                          )}
-                        </TouchableOpacity>
-                        <View style={{ flex: 1 }}>
-                          <View style={styles.nameFollowRow}>
-                            <Text style={styles.commentAuthorName}>{comment.usuario?.username || 'Surfista'}</Text>
-                            {shouldShowFollowButton(comment.usuario, !!comment.usuario?.following) && (
-                              <>
-                                <Text style={styles.followDot}> • </Text>
-                                <TouchableOpacity onPress={() => handleToggleFollow(comment.usuario!.id, false, (s) => {
-                                  setPostComments(prev => prev.map(c => 
-                                    c.usuario?.id === comment.usuario?.id ? { ...c, usuario: { ...c.usuario!, following: s } } : c
-                                  ));
-                                })}>
-                                  <Text style={styles.followLinkTextSmall}>Seguir</Text>
-                                </TouchableOpacity>
-                              </>
-                            )}
-                          </View>
-                          <Text style={styles.commentDate}>{formatDate(comment.data)}</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.commentText}>{comment.texto}</Text>
-                    </View>
-                  ))
-                )}
-              </ScrollView>
-            )}
-
-            <View style={styles.commentInputRow}>
-              <TextInput
-                style={styles.commentInputBox}
-                placeholder="Escreva um comentário..."
-                value={newCommentText}
-                onChangeText={setNewCommentText}
-                multiline
-              />
-              <TouchableOpacity 
-                onPress={handleAddComment} 
-                disabled={sendingComment || !newCommentText.trim()}
-                style={[styles.commentSendBtn, (!newCommentText.trim() || sendingComment) && { opacity: 0.5 }]}
-              >
-                {sendingComment ? (
-                  <ActivityIndicator size="small" color="#FFF" />
-                ) : (
-                  <Ionicons name="send" size={20} color="#FFF" />
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -474,14 +358,14 @@ function MessageCard({
   const authorAvatar = message.autor?.fotoPerfil;
 
   const isReply = message.texto.trim().startsWith('@');
-  
+
   const renderMessageText = (text: string) => {
     if (!text.trim().startsWith('@')) return <Text style={styles.messageText}>{text}</Text>;
-    
+
     const parts = text.split(' ');
     const mention = parts[0];
     const rest = parts.slice(1).join(' ');
-    
+
     return (
       <Text style={styles.messageText}>
         <Text style={styles.mentionText}>{mention}</Text> {rest}
@@ -495,13 +379,17 @@ function MessageCard({
     <View style={[styles.messageCard, isReply && styles.messageReplyCard]}>
       <View style={styles.messageHeader}>
         <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() =>
-            message.autor?.id &&
-            router.push(`/user/${message.autor.id}` as Href)
-          }
-          style={styles.authorRow}
-        >
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    if (!message.autor?.id) return;
+                    if (currentUser?.id === message.autor.id) {
+                      router.push('/profile' as Href);
+                    } else {
+                      router.push(`/user/${message.autor.id}` as Href);
+                    }
+                  }}
+                  style={styles.authorRow}
+                >
           {authorAvatar ? (
             <Image source={{ uri: authorAvatar }} style={styles.messageAvatar} />
           ) : (
@@ -526,9 +414,9 @@ function MessageCard({
             <Text testID={`message-date-${message.id}`} style={styles.messageDate}>{formatDateTime(message.data)}</Text>
           </View>
         </TouchableOpacity>
-        
+
         {onReply && (
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => onReply(message)}
             style={styles.replyButtonSmall}
           >
@@ -896,9 +784,11 @@ export default function BeachDetailsScreen() {
     void loadMessagesCache();
   }, [loadMessagesCache]);
 
-  useEffect(() => {
-    loadBeachDetails();
-  }, [loadBeachDetails]);
+    useFocusEffect(
+        useCallback(() => {
+          loadBeachDetails();
+        }, [loadBeachDetails])
+      );
 
   useEffect(() => {
     if (beach?.nome) {
@@ -1031,9 +921,9 @@ export default function BeachDetailsScreen() {
     setNewPostBase64(null);
   };
 
-  const handleCreatePost = async () => {
-    if (!newPostDesc.trim() && !newPostPhotoUri) {
-      showAlert('Aviso', 'Seu post precisa ter ao menos uma foto ou uma descrição.');
+const handleCreatePost = async () => {
+    if (!newPostDesc.trim()) {
+      showAlert('Aviso', 'A descrição é obrigatória para publicar o registro.');
       return;
     }
 
@@ -1043,7 +933,7 @@ export default function BeachDetailsScreen() {
       const formData = new FormData();
 
       formData.append('publico', 'true');
-      formData.append('descricao', newPostDesc.trim() || '');
+      formData.append('descricao', newPostDesc.trim());
       formData.append('beachId', String(beachId));
 
       if (newPostPhotoUri) {
@@ -1242,9 +1132,9 @@ export default function BeachDetailsScreen() {
                             postLayoutPositions.current[post.id] = e.nativeEvent.layout.y;
                           }}
                         >
-                          <PostCard 
-                            post={post} 
-                            featured={post.id === posts[0]?.id} 
+                          <PostCard
+                            post={post}
+                            featured={post.id === posts[0]?.id}
                             currentUser={currentUser}
                           />
                         </View>
@@ -1297,9 +1187,9 @@ export default function BeachDetailsScreen() {
                       showsVerticalScrollIndicator={false}
                     >
                       {displayedTodayMessages.map((message, index) => (
-                        <MessageCard 
-                          key={message.id ?? `message-${index}`} 
-                          message={message} 
+                        <MessageCard
+                          key={message.id ?? `message-${index}`}
+                          message={message}
                           onReply={handleStartReply}
                           isReplyInputVisible={activeReplyTarget?.id === message.id}
                           replyText={replyDraft}
@@ -1311,10 +1201,10 @@ export default function BeachDetailsScreen() {
                           onToggleFollow={async (userId, status) => {
                             try {
                               await userService.toggleFollow(userId, status);
-                              setMessages((prev) => 
-                                prev.map((m) => 
-                                  m.autor.id === userId 
-                                    ? { ...m, autor: { ...m.autor, following: !status } } 
+                              setMessages((prev) =>
+                                prev.map((m) =>
+                                  m.autor.id === userId
+                                    ? { ...m, autor: { ...m.autor, following: !status } }
                                     : m
                                 )
                               );
@@ -1381,10 +1271,10 @@ export default function BeachDetailsScreen() {
               multiline
             />
 
-            <TouchableOpacity
-              style={[styles.modalButton, (creatingPost || (!newPostDesc.trim() && !newPostBase64)) && { opacity: 0.6 }]}
+              <TouchableOpacity
+              style={[styles.modalButton, (creatingPost || !newPostDesc.trim()) && { opacity: 0.6 }]}
               onPress={handleCreatePost}
-              disabled={creatingPost || (!newPostDesc.trim() && !newPostBase64)}
+              disabled={creatingPost || !newPostDesc.trim()}
             >
               {creatingPost ? (
                 <ActivityIndicator size="small" color="#FFF" />
@@ -2186,110 +2076,5 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  commentModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  commentModalContainer: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '80%',
-    padding: 20,
-  },
-  commentModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  commentModalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#1F4A63',
-  },
-  commentModalClose: {
-    padding: 4,
-  },
-  commentModalList: {
-    flex: 1,
-  },
-  emptyCommentsText: {
-    textAlign: 'center',
-    color: '#6B7280',
-    marginTop: 40,
-    fontSize: 14,
-  },
-  commentItem: {
-    marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F1EA',
-    paddingBottom: 12,
-  },
-  commentAuthorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
-  },
-  commentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  commentAvatarFallback: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#E7F1F4',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  commentAvatarText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#2F6F86',
-  },
-  commentAuthorName: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1F4A63',
-  },
-  commentDate: {
-    fontSize: 10,
-    color: '#9CA3AF',
-  },
-  commentText: {
-    fontSize: 14,
-    color: '#4B5563',
-    lineHeight: 20,
-    paddingLeft: 42,
-  },
-  commentInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F1EA',
-  },
-  commentInputBox: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    fontSize: 14,
-    maxHeight: 100,
-  },
-  commentSendBtn: {
-    backgroundColor: '#2F6F86',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

@@ -1,5 +1,6 @@
 import BottomSheet from '@/components/BottomSheet';
 import { postService } from '@/services/posts/postService';
+import { commentService } from '@/services/posts/commentService'; // Importação adicionada
 import { userService } from '@/services/users/userService';
 import { PostDTO, UserDTO } from '@/types/api';
 import { formatDateTimeWithYear } from '@/utils/formatters';
@@ -22,6 +23,67 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 const COVER_FALLBACK = 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=800';
 const AVATAR_FALLBACK = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 const imagemFallback = require('../../assets/images/registrosemimagem.png');
+
+// Novo componente isolado para gerenciar o estado e a navegação de cada post
+function ProfilePostItem({ post }: { post: PostDTO }) {
+  const [likesCount, setLikesCount] = useState<number>(post.likesCount || 0);
+  const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount || 0);
+
+  // Busca os dados atualizados sempre que a tela ganha foco
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+      Promise.all([
+        postService.getLikesCount(post.id),
+        commentService.getPostComments(post.id)
+      ])
+        .then(([countRes, commentsRes]) => {
+          if (mounted) {
+            setLikesCount(typeof countRes.count === 'number' ? countRes.count : 0);
+            setCommentsCount(commentsRes.length);
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao buscar stats do post no perfil:', error);
+        });
+
+      return () => { mounted = false; };
+    }, [post.id])
+  );
+
+  return (
+    <TouchableOpacity
+      style={styles.postCard}
+      onPress={() => {
+        // Navega direto para a página de detalhes do post
+        router.push(`/post/${post.id}` as Href);
+      }}
+    >
+      <Image
+        source={post.caminhoFoto ? { uri: post.caminhoFoto } : imagemFallback}
+        style={styles.postImage}
+      />
+      <View style={styles.postInfo}>
+        <Text style={styles.postDesc} numberOfLines={2}>
+          {post.descricao}
+        </Text>
+        <Text style={styles.postBeach}>{post.beach?.nome || 'Local desconhecido'}</Text>
+        <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
+      </View>
+
+      <View style={styles.postStatsRight}>
+        <View style={styles.statBadge}>
+          <Ionicons name="heart" size={14} color="#C54A54" />
+          <Text style={styles.statBadgeText}>{likesCount}</Text>
+        </View>
+        <View style={styles.statBadge}>
+          <Ionicons name="chatbubble" size={14} color="#6B7280" />
+          <Text style={styles.statBadgeText}>{commentsCount}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserDTO | null>(null);
@@ -214,44 +276,7 @@ export default function ProfileScreen() {
 
             {posts.length > 0 ? (
               posts.map((post) => (
-                <TouchableOpacity
-                  key={post.id}
-                  style={styles.postCard}
-                  onPress={() => {
-                    if (post.beach?.id) {
-                      router.push({
-                        pathname: '/beach/[id]',
-                        params: {
-                          id: post.beach.id,
-                          targetPostId: post.id
-                        }
-                      });
-                    }
-                  }}
-                >
-                  <Image
-                    source={post.caminhoFoto ? { uri: post.caminhoFoto } : imagemFallback}
-                    style={styles.postImage}
-                  />
-                  <View style={styles.postInfo}>
-                    <Text style={styles.postDesc} numberOfLines={2}>
-                      {post.descricao}
-                    </Text>
-                    <Text style={styles.postBeach}>{post.beach?.nome || 'Local desconhecido'}</Text>
-                    <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
-                  </View>
-
-                  <View style={styles.postStatsRight}>
-                    <View style={styles.statBadge}>
-                      <Ionicons name="heart" size={14} color="#C54A54" />
-                      <Text style={styles.statBadgeText}>{post.likesCount || 0}</Text>
-                    </View>
-                    <View style={styles.statBadge}>
-                      <Ionicons name="chatbubble" size={14} color="#6B7280" />
-                      <Text style={styles.statBadgeText}>{post.commentsCount || 0}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
+                <ProfilePostItem key={post.id} post={post} />
               ))
             ) : (
               <Text style={styles.emptyContentText}>Você ainda não fez nenhum registro.</Text>
