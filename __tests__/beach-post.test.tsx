@@ -9,6 +9,15 @@ import { surfConditionsService } from '../services/weather/surfConditionsService
 const TestRenderer = require('react-test-renderer');
 const { act, create } = TestRenderer;
 
+jest.mock('expo-router', () => {
+  const originalModule = jest.requireActual('expo-router');
+  return {
+    ...originalModule,
+    // Ensina ao Jest como simular o useFocusEffect executando o callback na hora
+    useFocusEffect: jest.fn((callback) => callback()),
+  };
+});
+
 // Mock do react-native
 jest.mock('react-native', () => {
   const React = require('react');
