@@ -1,4 +1,4 @@
-import { formatDate, formatDateTime } from '../formatters';
+import { formatDate, formatDateTime, formatDateTimeWithYear } from '../formatters';
 
 describe('formatDate', () => {
   it('converte corretamente uma string ISO para o formato brasileiro (DD/MM/AAAA)', () => {
@@ -40,5 +40,24 @@ describe('formatDateTime', () => {
 
   it('retorna string vazia para data inválida', () => {
     expect(formatDateTime('nao-e-uma-data')).toBe('');
+  });
+});
+
+describe('formatDateTimeWithYear', () => {
+  it('formata corretamente uma string ISO com data completa e hora', () => {
+    const result = formatDateTimeWithYear('2026-04-15T12:30:00Z');
+    expect(result).toMatch(/^\d{2}\/\d{2}\/\d{4},\s\d{2}:\d{2}$/);
+  });
+
+  it('retorna string vazia para valor undefined', () => {
+    expect(formatDateTimeWithYear(undefined)).toBe('');
+  });
+
+  it('retorna string vazia para string vazia', () => {
+    expect(formatDateTimeWithYear('')).toBe('');
+  });
+
+  it('retorna string vazia para data inválida', () => {
+    expect(formatDateTimeWithYear('nao-e-uma-data')).toBe('');
   });
 });

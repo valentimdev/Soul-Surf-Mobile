@@ -28,3 +28,20 @@ export function formatDateTime(value?: string): string {
     minute: '2-digit',
   });
 }
+
+/**
+ * Formata uma string de data ISO para o padrão brasileiro com ano e hora.
+ * Retorna string vazia para valores inválidos ou nulos.
+ */
+export function formatDateTimeWithYear(value?: string): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}

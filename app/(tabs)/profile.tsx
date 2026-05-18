@@ -2,6 +2,7 @@ import BottomSheet from '@/components/BottomSheet';
 import { postService } from '@/services/posts/postService';
 import { userService } from '@/services/users/userService';
 import { PostDTO, UserDTO } from '@/types/api';
+import { formatDateTimeWithYear } from '@/utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect, type Href } from 'expo-router';
 import React, { useCallback, useState } from 'react';
@@ -237,6 +238,7 @@ export default function ProfileScreen() {
                       {post.descricao}
                     </Text>
                     <Text style={styles.postBeach}>{post.beach?.nome || 'Local desconhecido'}</Text>
+                    <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
                   </View>
 
                   <View style={styles.postStatsRight}>
@@ -450,6 +452,7 @@ const styles = StyleSheet.create({
   postInfo: { marginLeft: 12, justifyContent: 'center', flex: 1 },
   postDesc: { fontSize: 14, fontWeight: '600', color: '#1F4A63', marginBottom: 4 },
   postBeach: { fontSize: 12, color: '#5C9DB8' },
+  postDate: { fontSize: 11, color: '#777', marginTop: 3 },
   postStatsRight: {
     alignItems: 'flex-end',
     justifyContent: 'center',

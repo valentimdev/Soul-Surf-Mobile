@@ -146,7 +146,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F6F4EB',
+    backgroundColor: '#FBF5E9',
   },
   flex: {
     flex: 1,
