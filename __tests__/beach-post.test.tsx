@@ -9,14 +9,6 @@ import { surfConditionsService } from '../services/weather/surfConditionsService
 const TestRenderer = require('react-test-renderer');
 const { act, create } = TestRenderer;
 
-jest.mock('expo-router', () => {
-  const originalModule = jest.requireActual('expo-router');
-  return {
-    ...originalModule,
-    // Ensina ao Jest como simular o useFocusEffect executando o callback na hora
-    useFocusEffect: jest.fn((callback) => callback()),
-  };
-});
 
 // Mock do react-native
 jest.mock('react-native', () => {
@@ -94,9 +86,23 @@ jest.mock('expo-secure-store', () => ({
 
 // Mock do expo-router
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({ id: '1' }),
-  useNavigation: () => ({ setOptions: jest.fn() }),
-  useRouter: () => ({ push: jest.fn() }),
+  useFocusEffect: jest.fn(),
+
+  useLocalSearchParams: () => ({
+    id: '1',
+  }),
+
+  useNavigation: () => ({
+    setOptions: jest.fn(),
+  }),
+
+  useRouter: () => ({
+    push: jest.fn(),
+  }),
+
+  router: {
+    push: jest.fn(),
+  },
 }));
 
 // Mock do AppAlert
