@@ -19,13 +19,14 @@ interface SpotSheetProps {
 export default function SpotSheet({ spot }: SpotSheetProps) {
   const [weather, setWeather] = useState<WeatherDTO | null>(null);
   const [loading, setLoading] = useState(false);
+  const [longitude, latitude] = spot.coordinate;
 
   useEffect(() => {
     let active = true;
     setLoading(true);
 
     weatherService
-      .getCurrentWeather(spot.coordinate[1], spot.coordinate[0])
+      .getCurrentWeather(latitude, longitude)
       .then((data) => {
         if (active) setWeather(data);
       })
@@ -39,7 +40,7 @@ export default function SpotSheet({ spot }: SpotSheetProps) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [latitude, longitude]);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>

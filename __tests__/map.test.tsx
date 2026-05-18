@@ -38,6 +38,12 @@ jest.mock('../services/beaches/poiService', () => ({
   },
 }));
 
+jest.mock('../services/users/userService', () => ({
+  userService: {
+    getMyProfile: jest.fn().mockResolvedValue({ admin: false }),
+  },
+}));
+
 jest.mock('react-native', () => {
   const React = require('react');
 
@@ -145,12 +151,16 @@ function findTextContaining(root: ReactTestInstance, text: string): ReactTestIns
 
 async function flushAsync(): Promise<void> {
   await act(async () => {
+    await new Promise((r) => setTimeout(r, 0));
+    await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
   });
 }
 
 describe('MapScreen', () => {
+  let tree: ReactTestRenderer | null = null;
+
   beforeEach(() => {
     jest.clearAllMocks();
 
@@ -167,10 +177,19 @@ describe('MapScreen', () => {
     (poiService.getAllPois as jest.Mock).mockResolvedValue([]);
   });
 
-it('exibe carregamento enquanto aguarda permissao/localizacao', async () => {
-    (Location.requestForegroundPermissionsAsync as jest.Mock).mockReturnValue(new Promise(() => {}));
+  afterEach(async () => {
+    await act(async () => {
+      if (tree) {
+        tree.unmount();
+        tree = null;
+      }
+    });
+    // Drain any remaining microtasks after unmount
+    await new Promise((r) => setTimeout(r, 0));
+  });
 
-    let tree: ReactTestRenderer;
+  it('exibe carregamento enquanto aguarda permissao/localizacao', async () => {
+    (Location.requestForegroundPermissionsAsync as jest.Mock).mockReturnValue(new Promise(() => {}));
 
     await act(async () => {
       tree = create(React.createElement(MapScreen));
@@ -183,7 +202,6 @@ it('exibe carregamento enquanto aguarda permissao/localizacao', async () => {
   it('renderiza o campo de busca quando permissao de localizacao e negada', async () => {
     (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
 
-    let tree: ReactTestRenderer;
     await act(async () => {
       tree = create(React.createElement(MapScreen));
     });
@@ -210,7 +228,6 @@ it('exibe carregamento enquanto aguarda permissao/localizacao', async () => {
       },
     ]);
 
-    let tree: ReactTestRenderer;
     await act(async () => {
       tree = create(React.createElement(MapScreen));
     });

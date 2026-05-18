@@ -35,7 +35,7 @@ export default function LoginScreen() {
         } else {
           setIsCheckingToken(false);
         }
-      } catch (error) {
+      } catch {
         setIsCheckingToken(false);
       }
     };

@@ -41,7 +41,8 @@ export interface CommentDTO {
   texto: string;
   data: string;
   usuario: UserDTO;
-  parentId: number;
+  parentId?: number;
+  replies?: CommentDTO[];
 }
 
 export interface MessageResponse {

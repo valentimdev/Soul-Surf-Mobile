@@ -4,6 +4,7 @@ import { useAppAlert } from '@/components/AppAlert';
 import { Colors } from '@/constants/theme';
 import { beachService } from '@/services/beaches/beachService';
 import { PointOfInterestDTO, poiService } from '@/services/beaches/poiService';
+import { userService } from '@/services/users/userService';
 import { MapPin, SpotType } from '@/types';
 import { BeachDTO } from '@/types/api';
 import {
@@ -70,6 +71,17 @@ function poiToPin(poi: PointOfInterestDTO): MapPin | null {
 }
 
 const ALL_TYPES: SpotType[] = ['pico', 'escolinha', 'reparo', 'loja'];
+type PickingMode = 'suggest' | 'createBeach' | 'createPoi';
+
+const POI_CATEGORY_OPTIONS: {
+    label: string;
+    value: PointOfInterestDTO['categoria'];
+    icon: React.ComponentType<any>;
+}[] = [
+    { label: 'Escola', value: 'SURF_SCHOOL', icon: GraduationCap },
+    { label: 'Loja', value: 'SURF_SHOP', icon: Store },
+    { label: 'Reparo', value: 'BOARD_REPAIR', icon: Wrench },
+];
 
 type MapCanvasProps = {
     cameraRef: React.RefObject<CameraRef | null>;
@@ -153,15 +165,71 @@ export default function MapScreen() {
     const [isLocationReady, setIsLocationReady] = useState(false);
     const [selectedPinData, setSelectedPinData] = useState<MapPin | null>(null);
     const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-    const [pickingLocation, setPickingLocation] = useState(false);
+    const [pickingMode, setPickingMode] = useState<PickingMode | null>(null);
     const [pendingCoord, setPendingCoord] = useState<[number, number] | null>(null);
     const [showPoiModal, setShowPoiModal] = useState(false);
+    const [currentUserIsAdmin, setCurrentUserIsAdmin] = useState(false);
+    const [savingLocation, setSavingLocation] = useState(false);
+    const [beachForm, setBeachForm] = useState({
+        nome: '',
+        descricao: '',
+        localizacao: '',
+        nivelExperiencia: 'Intermediario',
+    });
+    const [poiForm, setPoiForm] = useState<{
+        nome: string;
+        descricao: string;
+        telefone: string;
+        categoria: PointOfInterestDTO['categoria'];
+    }>({
+        nome: '',
+        descricao: '',
+        telefone: '',
+        categoria: 'SURF_SCHOOL',
+    });
+    const pickingLocation = pickingMode !== null;
     const cameraRef = useRef<CameraRef>(null);
     const initialCameraCenterRef = useRef<[number, number]>([-38.5016, -3.7172]);
     const hasInitializedCameraRef = useRef(false);
     const GOOGLE_FORMS_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSeV87FW1Ut1h5b91oGwOcvndbESRr-I4JTfFirj-MU03ivCRg/viewform';
     const LAT_ENTRY = 'entry.1566997971';
     const LNG_ENTRY = 'entry.1252285469';
+
+    const reloadPins = useCallback(async () => {
+        const [beachesData, poisData] = await Promise.all([
+            beachService.getAllBeaches().catch((error) => {
+                console.error('Erro ao recarregar praias do mapa:', error);
+                return [];
+            }),
+            poiService.getAllPois().catch((error) => {
+                console.error('Erro ao recarregar POIs do mapa:', error);
+                return [];
+            }),
+        ]);
+
+        const beachPins = beachesData.map(beachToPin);
+        const poiPins = poisData
+            .map(poiToPin)
+            .filter((pin): pin is MapPin => pin !== null);
+
+        setAllPins([...beachPins, ...poiPins]);
+    }, []);
+
+    useEffect(() => {
+        let mounted = true;
+
+        userService.getMyProfile()
+            .then((profile) => {
+                if (mounted) setCurrentUserIsAdmin(Boolean(profile.admin));
+            })
+            .catch(() => {
+                if (mounted) setCurrentUserIsAdmin(false);
+            });
+
+        return () => {
+            mounted = false;
+        };
+    }, []);
 
     useEffect(() => {
         let mounted = true;
@@ -277,36 +345,110 @@ export default function MapScreen() {
         });
     }, [userLocation]);
 
-    const handleTogglePickingMode = useCallback(() => {
-        setPickingLocation((prev) => {
-            if (prev) setPendingCoord(null);
-            return !prev;
-        });
+    const handleStartPickingMode = useCallback((mode: PickingMode) => {
+        setShowPoiModal(false);
+        setPendingCoord(null);
+        setPickingMode((current) => current === mode ? null : mode);
     }, []);
 
     const handleMapPress = useCallback((e: any) => {
-        if (!pickingLocation) return;
+        if (!pickingMode) return;
         const coords: [number, number] = e.geometry.coordinates;
         setPendingCoord(coords);
         setShowPoiModal(true);
-    }, [pickingLocation]);
+    }, [pickingMode]);
 
     const handleConfirmPoi = useCallback(() => {
-        if (!pendingCoord) return;
-        setShowPoiModal(false);
-        setPickingLocation(false);
+        if (!pendingCoord || !pickingMode) return;
         const [lng, lat] = pendingCoord;
-        const url = `${GOOGLE_FORMS_URL}?usp=pp_url&${LAT_ENTRY}=${lat.toFixed(6)}&${LNG_ENTRY}=${lng.toFixed(6)}`;
-        Linking.openURL(url).catch(() =>
-            showAlert('Erro', 'Não foi possível abrir o formulário.')
-        );
-        setPendingCoord(null);
-    }, [pendingCoord, showAlert]);
+        if (pickingMode === 'suggest') {
+            setShowPoiModal(false);
+            setPickingMode(null);
+            const url = `${GOOGLE_FORMS_URL}?usp=pp_url&${LAT_ENTRY}=${lat.toFixed(6)}&${LNG_ENTRY}=${lng.toFixed(6)}`;
+            Linking.openURL(url).catch(() =>
+                showAlert('Erro', 'Nao foi possivel abrir o formulario.')
+            );
+            setPendingCoord(null);
+            return;
+        }
+
+        if (pickingMode === 'createBeach') {
+            const nome = beachForm.nome.trim();
+            const localizacao = beachForm.localizacao.trim();
+            if (!nome || !localizacao) {
+                showAlert('Aviso', 'Informe nome e localizacao da praia.');
+                return;
+            }
+
+            setSavingLocation(true);
+            beachService.createBeach({
+                nome,
+                localizacao,
+                latitude: lat,
+                longitude: lng,
+                descricao: beachForm.descricao.trim() || 'Praia cadastrada pela gestao.',
+                nivelExperiencia: beachForm.nivelExperiencia.trim() || 'Intermediario',
+            })
+                .then(async () => {
+                    await reloadPins();
+                    setShowPoiModal(false);
+                    setPickingMode(null);
+                    setPendingCoord(null);
+                    setBeachForm({
+                        nome: '',
+                        descricao: '',
+                        localizacao: '',
+                        nivelExperiencia: 'Intermediario',
+                    });
+                    showAlert('Pronto', 'Praia criada no mapa.');
+                })
+                .catch((error) => {
+                    console.error('Erro ao criar praia:', error);
+                    showAlert('Erro', 'Nao foi possivel criar a praia.');
+                })
+                .finally(() => setSavingLocation(false));
+            return;
+        }
+
+        const nome = poiForm.nome.trim();
+        if (!nome) {
+            showAlert('Aviso', 'Informe o nome do ponto.');
+            return;
+        }
+
+        setSavingLocation(true);
+        poiService.createPoi({
+            nome,
+            latitude: lat,
+            longitude: lng,
+            categoria: poiForm.categoria,
+            descricao: poiForm.descricao.trim() || 'Ponto cadastrado pela gestao.',
+            telefone: poiForm.telefone.trim() || undefined,
+        })
+            .then(async () => {
+                await reloadPins();
+                setShowPoiModal(false);
+                setPickingMode(null);
+                setPendingCoord(null);
+                setPoiForm({
+                    nome: '',
+                    descricao: '',
+                    telefone: '',
+                    categoria: 'SURF_SCHOOL',
+                });
+                showAlert('Pronto', 'Ponto criado no mapa.');
+            })
+            .catch((error) => {
+                console.error('Erro ao criar ponto:', error);
+                showAlert('Erro', 'Nao foi possivel criar o ponto.');
+            })
+            .finally(() => setSavingLocation(false));
+    }, [GOOGLE_FORMS_URL, LAT_ENTRY, LNG_ENTRY, beachForm, pendingCoord, pickingMode, poiForm, reloadPins, showAlert]);
 
     const handleCancelPoi = useCallback(() => {
         setShowPoiModal(false);
         setPendingCoord(null);
-        setPickingLocation(false);
+        setPickingMode(null);
     }, []);
 
     const handlePinPress = useCallback((pin: MapPin) => {
@@ -374,7 +516,13 @@ export default function MapScreen() {
                 {pickingLocation && (
                     <View style={styles.pickingBanner}>
                         <MapPinIcon size={16} color='#fff' />
-                        <Text style={styles.pickingBannerText}>Toque no mapa para marcar o local</Text>
+                        <Text style={styles.pickingBannerText}>
+                            {pickingMode === 'createBeach'
+                                ? 'Toque para posicionar a praia'
+                                : pickingMode === 'createPoi'
+                                    ? 'Toque para posicionar o ponto'
+                                    : 'Toque para sugerir um local'}
+                        </Text>
                     </View>
                 )}
 
@@ -423,29 +571,59 @@ export default function MapScreen() {
                 </View>
 
                 <View pointerEvents="box-none" style={styles.floatingControls}>
-                    <Pressable
-                        style={({ pressed }) => [
-                            styles.myLocationButton,
-                            pressed && styles.floatingButtonPressed,
-                        ]}
-                        onPress={handleGoToMyLocation}
-                        disabled={!userLocation}
-                        hitSlop={8}
-                    >
-                        <Locate size={22} color={userLocation ? Colors.light.text : '#aaa'} />
-                    </Pressable>
+                    <View style={styles.controlStack}>
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.myLocationButton,
+                                pressed && styles.floatingButtonPressed,
+                            ]}
+                            onPress={handleGoToMyLocation}
+                            disabled={!userLocation}
+                            hitSlop={8}
+                        >
+                            <Locate size={22} color={userLocation ? Colors.light.text : '#aaa'} />
+                        </Pressable>
 
-                    <Pressable
-                        style={({ pressed }) => [
-                            styles.markPoiButton,
-                            pickingLocation && styles.markPoiButtonActive,
-                            pressed && styles.floatingButtonPressed,
-                        ]}
-                        onPress={handleTogglePickingMode}
-                        hitSlop={8}
-                    >
-                        <MapPinIcon size={22} color={pickingLocation ? '#fff' : Colors.light.text} />
-                    </Pressable>
+                        {currentUserIsAdmin ? (
+                            <>
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.adminCreateButton,
+                                        pickingMode === 'createBeach' && styles.markPoiButtonActive,
+                                        pressed && styles.floatingButtonPressed,
+                                    ]}
+                                    onPress={() => handleStartPickingMode('createBeach')}
+                                    hitSlop={8}
+                                >
+                                    <Waves size={21} color={pickingMode === 'createBeach' ? '#fff' : Colors.light.text} />
+                                </Pressable>
+
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.adminCreateButton,
+                                        pickingMode === 'createPoi' && styles.markPoiButtonActive,
+                                        pressed && styles.floatingButtonPressed,
+                                    ]}
+                                    onPress={() => handleStartPickingMode('createPoi')}
+                                    hitSlop={8}
+                                >
+                                    <Store size={21} color={pickingMode === 'createPoi' ? '#fff' : Colors.light.text} />
+                                </Pressable>
+                            </>
+                        ) : null}
+
+                        <Pressable
+                            style={({ pressed }) => [
+                                styles.markPoiButton,
+                                pickingMode === 'suggest' && styles.markPoiButtonActive,
+                                pressed && styles.floatingButtonPressed,
+                            ]}
+                            onPress={() => handleStartPickingMode('suggest')}
+                            hitSlop={8}
+                        >
+                            <MapPinIcon size={22} color={pickingMode === 'suggest' ? '#fff' : Colors.light.text} />
+                        </Pressable>
+                    </View>
                 </View>
 
                 <BottomSheet
@@ -469,16 +647,115 @@ export default function MapScreen() {
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalCard}>
                             <MapPinIcon size={32} color={Colors.light.text} style={{ marginBottom: 12 }} />
-                            <Text style={styles.modalTitle}>Novo ponto de interesse</Text>
-                            <Text style={styles.modalBody}>
-                                Você quer adicionar um novo ponto de interesse nessa localização? Você sera redirecionado para um formulario.
+                            <Text style={styles.modalTitle}>
+                                {pickingMode === 'createBeach'
+                                    ? 'Criar praia'
+                                    : pickingMode === 'createPoi'
+                                        ? 'Criar ponto'
+                                        : 'Sugerir local'}
                             </Text>
+                            {pendingCoord ? (
+                                <Text style={styles.modalCoordText}>
+                                    Lat {pendingCoord[1].toFixed(6)} - Lng {pendingCoord[0].toFixed(6)}
+                                </Text>
+                            ) : null}
+
+                            {pickingMode === 'createBeach' ? (
+                                <>
+                                    <TextInput
+                                        placeholder="Nome da praia"
+                                        placeholderTextColor="#8BA1AA"
+                                        value={beachForm.nome}
+                                        onChangeText={(nome) => setBeachForm((current) => ({ ...current, nome }))}
+                                        style={styles.modalInput}
+                                    />
+                                    <TextInput
+                                        placeholder="Localizacao"
+                                        placeholderTextColor="#8BA1AA"
+                                        value={beachForm.localizacao}
+                                        onChangeText={(localizacao) => setBeachForm((current) => ({ ...current, localizacao }))}
+                                        style={styles.modalInput}
+                                    />
+                                    <TextInput
+                                        placeholder="Nivel de experiencia"
+                                        placeholderTextColor="#8BA1AA"
+                                        value={beachForm.nivelExperiencia}
+                                        onChangeText={(nivelExperiencia) => setBeachForm((current) => ({ ...current, nivelExperiencia }))}
+                                        style={styles.modalInput}
+                                    />
+                                    <TextInput
+                                        placeholder="Descricao"
+                                        placeholderTextColor="#8BA1AA"
+                                        value={beachForm.descricao}
+                                        onChangeText={(descricao) => setBeachForm((current) => ({ ...current, descricao }))}
+                                        style={[styles.modalInput, styles.modalInputMultiline]}
+                                        multiline
+                                    />
+                                </>
+                            ) : pickingMode === 'createPoi' ? (
+                                <>
+                                    <TextInput
+                                        placeholder="Nome do ponto"
+                                        placeholderTextColor="#8BA1AA"
+                                        value={poiForm.nome}
+                                        onChangeText={(nome) => setPoiForm((current) => ({ ...current, nome }))}
+                                        style={styles.modalInput}
+                                    />
+                                    <TextInput
+                                        placeholder="Telefone/WhatsApp"
+                                        placeholderTextColor="#8BA1AA"
+                                        value={poiForm.telefone}
+                                        onChangeText={(telefone) => setPoiForm((current) => ({ ...current, telefone }))}
+                                        style={styles.modalInput}
+                                        keyboardType="phone-pad"
+                                    />
+                                    <View style={styles.modalTypeRow}>
+                                        {POI_CATEGORY_OPTIONS.map(({ label, value, icon: Icon }) => {
+                                            const active = poiForm.categoria === value;
+                                            return (
+                                                <Pressable
+                                                    key={value}
+                                                    style={[styles.modalTypeButton, active && styles.modalTypeButtonActive]}
+                                                    onPress={() => setPoiForm((current) => ({ ...current, categoria: value }))}
+                                                >
+                                                    <Icon size={16} color={active ? '#fff' : Colors.light.text} />
+                                                    <Text style={[styles.modalTypeText, active && styles.modalTypeTextActive]}>
+                                                        {label}
+                                                    </Text>
+                                                </Pressable>
+                                            );
+                                        })}
+                                    </View>
+                                    <TextInput
+                                        placeholder="Descricao"
+                                        placeholderTextColor="#8BA1AA"
+                                        value={poiForm.descricao}
+                                        onChangeText={(descricao) => setPoiForm((current) => ({ ...current, descricao }))}
+                                        style={[styles.modalInput, styles.modalInputMultiline]}
+                                        multiline
+                                    />
+                                </>
+                            ) : (
+                                <Text style={styles.modalBody}>
+                                    Esse local sera enviado pelo formulario para avaliacao.
+                                </Text>
+                            )}
                             <View style={styles.modalActions}>
                                 <Pressable style={styles.modalBtnOutline} onPress={handleCancelPoi}>
-                                    <Text style={styles.modalBtnOutlineText}>Não</Text>
+                                    <Text style={styles.modalBtnOutlineText}>Cancelar</Text>
                                 </Pressable>
-                                <Pressable style={styles.modalBtnFill} onPress={handleConfirmPoi}>
-                                    <Text style={styles.modalBtnFillText}>Sim, abrir formulário</Text>
+                                <Pressable
+                                    style={[styles.modalBtnFill, savingLocation && styles.modalBtnDisabled]}
+                                    onPress={handleConfirmPoi}
+                                    disabled={savingLocation}
+                                >
+                                    <Text style={styles.modalBtnFillText}>
+                                        {savingLocation
+                                            ? 'Salvando...'
+                                            : pickingMode === 'suggest'
+                                                ? 'Abrir formulario'
+                                                : 'Criar'}
+                                    </Text>
                                 </Pressable>
                             </View>
                         </View>
@@ -516,10 +793,14 @@ const styles = StyleSheet.create({
         pointerEvents: 'box-none',
         zIndex: 30,
     },
-    myLocationButton: {
+    controlStack: {
         position: 'absolute',
-        bottom: 90,
+        bottom: 32,
         right: 16,
+        gap: 10,
+        alignItems: 'center',
+    },
+    myLocationButton: {
         backgroundColor: Colors.light.background,
         width: 48,
         height: 48,
@@ -532,10 +813,22 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 8,
     },
+    adminCreateButton: {
+        backgroundColor: Colors.light.background,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 8,
+        borderWidth: 1,
+        borderColor: '#E2DEC3',
+    },
     markPoiButton: {
-        position: 'absolute',
-        bottom: 32,
-        right: 16,
         backgroundColor: Colors.light.background,
         width: 48,
         height: 48,
@@ -619,6 +912,13 @@ const styles = StyleSheet.create({
         lineHeight: 21,
         marginBottom: 12,
     },
+    modalCoordText: {
+        fontSize: 12,
+        color: '#6B7280',
+        textAlign: 'center',
+        marginBottom: 12,
+        fontWeight: '600',
+    },
     modalInput: {
         width: '100%',
         borderWidth: 1,
@@ -646,6 +946,8 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         paddingVertical: 8,
         alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
         backgroundColor: '#F8F6EE',
     },
     modalTypeButtonActive: {
@@ -718,6 +1020,9 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         paddingVertical: 12,
         alignItems: 'center',
+    },
+    modalBtnDisabled: {
+        opacity: 0.65,
     },
     modalBtnFillText: {
         color: '#fff',
