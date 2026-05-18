@@ -1,11 +1,10 @@
 import { ChatMessageResponse, chatService } from '@/services/chat/chatService';
-import { connectChatSocket } from '@/services/chat/chatSocket';
 import { userService } from '@/services/users/userService';
-import type { Client } from '@stomp/stompjs';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AppState,
   ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
@@ -17,6 +16,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const CHAT_POLL_INTERVAL_MS = 1000;
 
 function parseStringParam(value?: string | string[]): string {
   if (!value) return '';
@@ -170,7 +171,8 @@ export default function ChatConversationScreen() {
 
   const chatItems = useMemo(() => buildChatListItems(messages), [messages]);
   const listRef = useRef<FlatList<ChatListItem>>(null);
-  const socketRef = useRef<Client | null>(null);
+  const pollingInFlightRef = useRef(false);
+  const pollingErrorLoggedRef = useRef(false);
   const insets = useSafeAreaInsets();
 
   // Pegamos a altura exata do Header (Cabeçalho do Expo Router)
@@ -220,6 +222,28 @@ export default function ChatConversationScreen() {
     [conversationId]
   );
 
+  const pollMessages = useCallback(async () => {
+    if (!conversationId || pollingInFlightRef.current || AppState.currentState !== 'active') {
+      return;
+    }
+
+    pollingInFlightRef.current = true;
+    try {
+      const response = await chatService.getMessages(conversationId, 0, 50);
+      pollingErrorLoggedRef.current = false;
+      setError(null);
+      setMessages(sortMessages(response));
+    } catch (e) {
+      if (!pollingErrorLoggedRef.current) {
+        console.error('Erro no polling do chat:', e);
+        pollingErrorLoggedRef.current = true;
+      }
+      setError((currentError) => currentError ?? 'Nao foi possivel atualizar as mensagens em tempo real.');
+    } finally {
+      pollingInFlightRef.current = false;
+    }
+  }, [conversationId]);
+
   useEffect(() => {
     loadCurrentUser();
   }, [loadCurrentUser]);
@@ -229,37 +253,19 @@ export default function ChatConversationScreen() {
   }, [loadMessages]);
 
   useEffect(() => {
-    let cancelled = false;
-
-    socketRef.current?.deactivate();
-    socketRef.current = null;
-
     if (!conversationId) {
       return;
     }
 
-    connectChatSocket(conversationId, {
-      onMessage: (message) => {
-        setMessages((prev) => mergeMessage(prev, message));
-      },
-      onError: (socketError) => {
-        console.error('Erro no WebSocket do chat:', socketError);
-      },
-    }).then((client) => {
-      if (cancelled) {
-        client?.deactivate();
-        return;
-      }
-
-      socketRef.current = client;
-    });
+    const intervalId = setInterval(() => {
+      void pollMessages();
+    }, CHAT_POLL_INTERVAL_MS);
 
     return () => {
-      cancelled = true;
-      socketRef.current?.deactivate();
-      socketRef.current = null;
+      clearInterval(intervalId);
+      pollingInFlightRef.current = false;
     };
-  }, [conversationId]);
+  }, [conversationId, pollMessages]);
 
   useEffect(() => {
     if (messages.length === 0) return;
