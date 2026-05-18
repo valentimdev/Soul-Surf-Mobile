@@ -1,19 +1,19 @@
 import { ChatMessageResponse, chatService } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
-import { useHeaderHeight } from '@react-navigation/elements';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AppState,
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -168,15 +168,14 @@ export default function ChatConversationScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   const chatItems = useMemo(() => buildChatListItems(messages), [messages]);
   const listRef = useRef<FlatList<ChatListItem>>(null);
   const pollingInFlightRef = useRef(false);
   const pollingErrorLoggedRef = useRef(false);
   const insets = useSafeAreaInsets();
-
-  // Pegamos a altura exata do Header (Cabeçalho do Expo Router)
-  const headerHeight = useHeaderHeight();
+  const { height: windowHeight } = useWindowDimensions();
 
   useEffect(() => {
     if (!navigation || !(navigation as any).setOptions) return;
@@ -253,6 +252,34 @@ export default function ChatConversationScreen() {
   }, [loadMessages]);
 
   useEffect(() => {
+    const updateKeyboardOffset = (event: { endCoordinates?: { screenY?: number } }) => {
+      const keyboardTop = event.endCoordinates?.screenY;
+      if (!keyboardTop) return;
+
+      const overlap = Math.max(0, windowHeight - keyboardTop - insets.bottom);
+      setKeyboardOffset(overlap);
+    };
+
+    const resetKeyboardOffset = () => {
+      setKeyboardOffset(0);
+    };
+
+    const showSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow',
+      updateKeyboardOffset
+    );
+    const hideSubscription = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      resetKeyboardOffset
+    );
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [insets.bottom, windowHeight]);
+
+  useEffect(() => {
     if (!conversationId) {
       return;
     }
@@ -273,6 +300,14 @@ export default function ChatConversationScreen() {
         listRef.current?.scrollToEnd({ animated: true });
     }, 100);
   }, [messages.length]);
+
+  useEffect(() => {
+    if (keyboardOffset <= 0 || messages.length === 0) return;
+
+    setTimeout(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    }, 120);
+  }, [keyboardOffset, messages.length]);
 
   const handleSend = useCallback(async () => {
     if (!conversationId) return;
@@ -296,12 +331,7 @@ export default function ChatConversationScreen() {
   const isInitialError = !!error && !loading && messages.length === 0;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.safeArea}
-
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
-    >
+    <View style={styles.safeArea}>
       <View style={styles.contentContainer}>
         {loading && messages.length === 0 ? (
           <View style={styles.centerState}>
@@ -352,7 +382,10 @@ export default function ChatConversationScreen() {
         <View
           style={[
             styles.composerContainer,
-            { paddingBottom: Platform.OS === 'android' ? Math.max(insets.bottom, 12) : Math.max(insets.bottom, 8) },
+            {
+              marginBottom: keyboardOffset,
+              paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 8),
+            },
           ]}
         >
           <TextInput
@@ -373,7 +406,7 @@ export default function ChatConversationScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
