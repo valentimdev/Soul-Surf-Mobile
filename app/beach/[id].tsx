@@ -1,5 +1,6 @@
 import { beachService, BeachMessageDTO } from '@/services/beaches/beachService';
 import { useAppAlert } from '@/components/AppAlert';
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { formatDate, formatDateTime, formatDateTimeWithYear } from '@/utils/formatters';
 import { BeachDTO, PostDTO, CommentDTO, UserDTO } from '@/types/api';
 import { surfConditionsService } from '@/services/weather/surfConditionsService';
@@ -152,7 +153,6 @@ export function PostCard({
   const initialLikes = normalizeCounter(post.likesCount);
   const initialComments = normalizeCounter(post.commentsCount);
   const authorName = post.usuario?.username || 'Surfista';
-  const authorAvatar = post.usuario?.fotoPerfil;
 
   const [liked, setLiked] = useState<boolean>(false);
   const [likesCount, setLikesCount] = useState<number>(initialLikes);
@@ -260,13 +260,11 @@ useFocusEffect(
             }}
             style={styles.authorRow}
           >
-            {authorAvatar ? (
-              <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
-            ) : (
-              <View style={styles.postAvatarFallback}>
-                <Text style={styles.avatarFallbackText}>{authorName[0]}</Text>
-              </View>
-            )}
+            <Image
+              source={getUserAvatarSource(post.usuario?.fotoPerfil)}
+              style={[styles.postAvatar, getUserAvatarZoomStyle(post.usuario?.fotoPerfil)]}
+              resizeMode={getUserAvatarResizeMode(post.usuario?.fotoPerfil)}
+            />
             <View style={styles.authorTextBlock}>
               <View style={styles.nameFollowRow}>
                 <Text testID={`post-author-${post.id}`} style={styles.postAuthor}>
@@ -355,7 +353,6 @@ function MessageCard({
 }) {
   const router = useRouter();
   const authorName = message.autor?.username || 'Surfista';
-  const authorAvatar = message.autor?.fotoPerfil;
 
   const isReply = message.texto.trim().startsWith('@');
 
@@ -390,13 +387,11 @@ function MessageCard({
                   }}
                   style={styles.authorRow}
                 >
-          {authorAvatar ? (
-            <Image source={{ uri: authorAvatar }} style={styles.messageAvatar} />
-          ) : (
-            <View style={styles.messageAvatarFallback}>
-              <Text style={styles.messageAvatarFallbackText}>{authorName[0]}</Text>
-            </View>
-          )}
+          <Image
+            source={getUserAvatarSource(message.autor?.fotoPerfil)}
+            style={[styles.messageAvatar, getUserAvatarZoomStyle(message.autor?.fotoPerfil)]}
+            resizeMode={getUserAvatarResizeMode(message.autor?.fotoPerfil)}
+          />
           <View style={styles.authorTextBlock}>
             <View style={styles.nameFollowRow}>
               <Text testID={`message-author-${message.id}`} style={styles.messageAuthor}>

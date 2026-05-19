@@ -10,13 +10,13 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useAppAlert } from '@/components/AppAlert';
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { Stack, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { userService } from '@/services/users/userService';
 import { UserDTO } from '@/types/api';
 
 const LIMIT = 30;
-const FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300';
 
 // ==========================================
 // NOVO: Componente isolado para gerenciar o próprio botão
@@ -49,11 +49,13 @@ const UserCardItem = memo(({
   };
 
   const displayName = user.username || 'Usuário';
-  const avatarUrl = user.fotoPerfil ? user.fotoPerfil : FALLBACK_AVATAR;
-
   return (
     <View style={styles.userCard}>
-      <Image source={{ uri: avatarUrl }} style={styles.avatar} />
+      <Image
+        source={getUserAvatarSource(user.fotoPerfil)}
+        style={[styles.avatar, getUserAvatarZoomStyle(user.fotoPerfil)]}
+        resizeMode={getUserAvatarResizeMode(user.fotoPerfil)}
+      />
       <View style={styles.userInfo}>
         <Text style={styles.userName} numberOfLines={1}>
           {displayName}

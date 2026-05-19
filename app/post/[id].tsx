@@ -22,9 +22,8 @@ import { commentService } from '@/services/posts/commentService';
 import { postService } from '@/services/posts/postService';
 import api from '@/services/api';
 import { useAppAlert } from '@/components/AppAlert';
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { formatDate, formatDateTimeWithYear } from '@/utils/formatters';
-
-const FALLBACK_AVATAR = 'S';
 
 function normalizeCounter(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -135,18 +134,15 @@ export default function PostDetailScreen() {
     if (!post) return null;
 
     const authorName = post.usuario?.username || 'Surfista';
-    const authorAvatar = post.usuario?.fotoPerfil;
 
     return (
       <View style={styles.postHeaderContainer}>
         <View style={styles.postHeaderInfo}>
-          {authorAvatar ? (
-            <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
-          ) : (
-            <View style={styles.postAvatarFallback}>
-              <Text style={styles.avatarFallbackText}>{authorName[0]}</Text>
-            </View>
-          )}
+          <Image
+            source={getUserAvatarSource(post.usuario?.fotoPerfil)}
+            style={[styles.postAvatar, getUserAvatarZoomStyle(post.usuario?.fotoPerfil)]}
+            resizeMode={getUserAvatarResizeMode(post.usuario?.fotoPerfil)}
+          />
           <View>
             <Text style={styles.postAuthor}>{authorName}</Text>
             <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
@@ -216,13 +212,11 @@ export default function PostDetailScreen() {
         }
         renderItem={({ item }) => (
           <View style={styles.commentItem}>
-            {item.usuario?.fotoPerfil ? (
-              <Image source={{ uri: item.usuario.fotoPerfil }} style={styles.commentAvatar} />
-            ) : (
-              <View style={styles.commentAvatarFallback}>
-                <Text style={styles.commentAvatarText}>{item.usuario?.username?.[0] || FALLBACK_AVATAR}</Text>
-              </View>
-            )}
+            <Image
+              source={getUserAvatarSource(item.usuario?.fotoPerfil)}
+              style={[styles.commentAvatar, getUserAvatarZoomStyle(item.usuario?.fotoPerfil)]}
+              resizeMode={getUserAvatarResizeMode(item.usuario?.fotoPerfil)}
+            />
             <View style={styles.commentBody}>
               <View style={styles.commentHeaderRow}>
                 <Text style={styles.commentAuthorName}>{item.usuario?.username || 'Surfista'}</Text>

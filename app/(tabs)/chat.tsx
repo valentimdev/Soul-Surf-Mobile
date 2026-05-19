@@ -1,3 +1,4 @@
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { chatService, ConversationResponse } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
 import { UserDTO } from '@/types/api';
@@ -25,8 +26,6 @@ type ConversationItemView = {
   time: string;
   unread: boolean;
 };
-
-const FALLBACK_AVATAR = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
 function isSameDay(a: Date, b: Date) {
   return (
@@ -78,7 +77,7 @@ function toConversationView(item: ConversationResponse, currentUserId: string): 
     id: item.id,
     otherUserId: item.otherUserId,
     name: item.otherUserName || fallbackName,
-    avatar: item.otherUserAvatarUrl || FALLBACK_AVATAR,
+    avatar: item.otherUserAvatarUrl || '',
     lastMessage: item.lastMessage?.content || 'Sem mensagens ainda',
     time: formatConversationTime(item.lastMessage?.createdAt),
     // SÓ mostra a bolinha azul se a última mensagem NÃO for nossa E o contador for maior que 0
@@ -89,7 +88,11 @@ function toConversationView(item: ConversationResponse, currentUserId: string): 
 function ConversationCard({ item, onPress }: { item: ConversationItemView; onPress: () => void }) {
   return (
     <TouchableOpacity style={styles.conversationCard} activeOpacity={0.7} onPress={onPress}>
-      <Image source={{ uri: item.avatar }} style={styles.avatar} />
+      <Image
+        source={getUserAvatarSource(item.avatar)}
+        style={[styles.avatar, getUserAvatarZoomStyle(item.avatar)]}
+        resizeMode={getUserAvatarResizeMode(item.avatar)}
+      />
       <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
           <Text style={styles.contactName} numberOfLines={1}>
@@ -199,7 +202,7 @@ export default function ChatScreen() {
         params: {
           id: conversationId,
           name: user.username,
-          avatar: user.fotoPerfil || FALLBACK_AVATAR,
+          avatar: user.fotoPerfil || '',
           otherUserId: String(user.id),
         },
       });
@@ -238,8 +241,9 @@ export default function ChatScreen() {
               disabled={startingChat}
             >
               <Image
-                source={{ uri: item.fotoPerfil || FALLBACK_AVATAR }}
-                style={styles.followingAvatar}
+                source={getUserAvatarSource(item.fotoPerfil)}
+                style={[styles.followingAvatar, getUserAvatarZoomStyle(item.fotoPerfil)]}
+                resizeMode={getUserAvatarResizeMode(item.fotoPerfil)}
               />
               <Text style={styles.followingName} numberOfLines={1}>
                 {item.username}

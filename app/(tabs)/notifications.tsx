@@ -1,4 +1,5 @@
 import { NotificationDTO, notificationService } from '@/services/notifications/notificationService';
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { postService } from '@/services/posts/postService';
 import { useFocusEffect } from 'expo-router';
 import { Clock, MessageSquare, Star, Waves } from 'lucide-react-native';
@@ -16,8 +17,6 @@ import {
 } from 'react-native';
 
 type NotificationVisualType = 'review' | 'message' | 'alert';
-
-const FALLBACK_AVATAR = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
 const ICON_MAP: Record<NotificationVisualType, { icon: React.ElementType; bg: string }> = {
   review: { icon: Star, bg: '#EDE8D6' },
@@ -109,7 +108,11 @@ function NotificationCard({
         activeOpacity={0.8}
         onPress={() => onPress(item)}
       >
-        <Image source={{ uri: item.sender.fotoPerfil || FALLBACK_AVATAR }} style={styles.senderAvatar} />
+        <Image
+          source={getUserAvatarSource(item.sender.fotoPerfil)}
+          style={[styles.senderAvatar, getUserAvatarZoomStyle(item.sender.fotoPerfil)]}
+          resizeMode={getUserAvatarResizeMode(item.sender.fotoPerfil)}
+        />
 
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
