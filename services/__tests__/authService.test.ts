@@ -53,28 +53,29 @@ describe('authService unit', () => {
     });
   });
 
-  test('resetPassword envia token e nova senha para o endpoint correto', async () => {
+  test('resetPassword envia email, codigo e nova senha para o endpoint correto', async () => {
     (api.post as jest.Mock).mockResolvedValue({ data: { message: 'Senha alterada' } });
 
-    await expect(authService.resetPassword('reset-token', 'nova-senha')).resolves.toEqual({
+    await expect(authService.resetPassword('samuca@soulsurf.com', '123456', 'nova-senha')).resolves.toEqual({
       message: 'Senha alterada',
     });
 
     expect(api.post).toHaveBeenCalledWith('/api/auth/reset-password', {
-      token: 'reset-token',
+      email: 'samuca@soulsurf.com',
+      code: '123456',
       newPassword: 'nova-senha',
     });
   });
 
   test('propaga erros do login sem mascarar a resposta da API', async () => {
-    const error = { response: { status: 401, data: { message: 'Credenciais inválidas' } } };
+    const error = { response: { status: 401, data: { message: 'Credenciais invalidas' } } };
     (api.post as jest.Mock).mockRejectedValue(error);
 
     await expect(authService.login('teste@soulsurf.com', 'errada')).rejects.toBe(error);
   });
 
   test('propaga erros do cadastro sem mascarar a resposta da API', async () => {
-    const error = { response: { status: 400, data: { message: 'Usuário já existe' } } };
+    const error = { response: { status: 400, data: { message: 'Usuario ja existe' } } };
     (api.post as jest.Mock).mockRejectedValue(error);
 
     await expect(
@@ -83,16 +84,16 @@ describe('authService unit', () => {
   });
 
   test('propaga erros do forgotPassword sem mascarar a resposta da API', async () => {
-    const error = { response: { status: 404, data: { message: 'Email não encontrado' } } };
+    const error = { response: { status: 404, data: { message: 'Email nao encontrado' } } };
     (api.post as jest.Mock).mockRejectedValue(error);
 
     await expect(authService.forgotPassword('naoexiste@soulsurf.com')).rejects.toBe(error);
   });
 
   test('propaga erros do resetPassword sem mascarar a resposta da API', async () => {
-    const error = { response: { status: 400, data: { message: 'Token inválido' } } };
+    const error = { response: { status: 400, data: { message: 'Codigo invalido' } } };
     (api.post as jest.Mock).mockRejectedValue(error);
 
-    await expect(authService.resetPassword('token-errado', 'nova-senha')).rejects.toBe(error);
+    await expect(authService.resetPassword('samuca@soulsurf.com', '000000', 'nova-senha')).rejects.toBe(error);
   });
 });

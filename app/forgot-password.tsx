@@ -22,7 +22,8 @@ export default function ForgotPasswordScreen() {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRecover = async () => {
-    if (!email) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
       showAlert('Aviso', 'Por favor, digite seu e-mail cadastrado.');
       return;
     }
@@ -30,21 +31,31 @@ export default function ForgotPasswordScreen() {
     setIsLoading(true);
 
     try {
-      const response = await authService.forgotPassword(email);
+      const response = await authService.forgotPassword(normalizedEmail);
       showAlert(
-        'E-mail Enviado',
-        response.message || 'Se o e-mail estiver cadastrado, você receberá um link de recuperação.',
-        [{ text: 'Voltar ao Login', onPress: () => router.replace('/login') }]
+        'Codigo enviado',
+        response.message || 'Se o e-mail existir, voce recebera um codigo de 6 digitos.',
+        [
+          {
+            text: 'Inserir codigo',
+            onPress: () => router.push({ pathname: '/reset-password' as any, params: { email: normalizedEmail } }),
+          },
+          {
+            text: 'Voltar ao login',
+            onPress: () => router.replace('/login'),
+            style: 'cancel',
+          },
+        ]
       );
     } catch (error: any) {
-      console.error('Erro ao solicitar recuperação:', error.response?.data || error.message);
+      console.error('Erro ao solicitar recuperacao:', error.response?.data || error.message);
 
       if (error.response?.status === 400) {
-        showAlert('Erro', 'Formato de e-mail inválido.');
-      } else if (error.response?.status === 404) {
-        showAlert('Erro', 'Rota de recuperação não encontrada no app. Verifique a URL base e o prefixo /api do backend.');
+        showAlert('Erro', 'Formato de e-mail invalido.');
+      } else if (error.response?.status === 429) {
+        showAlert('Aviso', 'Muitas tentativas. Tente novamente em alguns minutos.');
       } else {
-        showAlert('Erro', 'Não foi possível solicitar a recuperação. Verifique sua conexão.');
+        showAlert('Erro', 'Nao foi possivel solicitar o codigo. Verifique sua conexao.');
       }
     } finally {
       setIsLoading(false);
@@ -69,9 +80,9 @@ export default function ForgotPasswordScreen() {
               style={styles.logo}
             />
 
-            <Text style={styles.title}>Recuperar Senha</Text>
+            <Text style={styles.title}>Recuperar senha</Text>
             <Text style={styles.subtitle}>
-              Digite seu e-mail abaixo e enviaremos as instruções para redefinir sua senha.
+              Digite seu e-mail abaixo. Vamos enviar um codigo para voce redefinir a senha.
             </Text>
 
             <TextInput
@@ -88,12 +99,12 @@ export default function ForgotPasswordScreen() {
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" />
               ) : (
-                <Text style={styles.buttonText}>Enviar Link</Text>
+                <Text style={styles.buttonText}>Enviar codigo</Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => router.replace('/login')} style={styles.backLink}>
-              <Text style={styles.linkText}>Lembrou a senha? <Text style={styles.linkTextBold}>Voltar ao Login</Text></Text>
+              <Text style={styles.linkText}>Lembrou a senha? <Text style={styles.linkTextBold}>Voltar ao login</Text></Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

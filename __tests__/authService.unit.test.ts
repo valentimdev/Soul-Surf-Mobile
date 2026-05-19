@@ -1,12 +1,11 @@
 import { authService } from '@/services/auth/authService';
 import api from '@/services/api';
 
-// Mock do módulo api
 jest.mock('@/services/api', () => ({
   post: jest.fn(),
 }));
 
-describe('authService Unit Tests', () => {
+describe('authService unit tests', () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -38,7 +37,7 @@ describe('authService Unit Tests', () => {
     expect(result).toEqual(mockResponse);
   });
 
-  it('deve solicitar recuperação de senha', async () => {
+  it('deve solicitar recuperacao de senha', async () => {
     const mockResponse = { message: 'E-mail enviado' };
     (api.post as jest.Mock).mockResolvedValue({ data: mockResponse });
 
@@ -46,6 +45,20 @@ describe('authService Unit Tests', () => {
 
     expect(api.post).toHaveBeenCalledWith('/api/auth/forgot-password', {
       email: 'test@example.com',
+    });
+    expect(result).toEqual(mockResponse);
+  });
+
+  it('deve redefinir senha com email e codigo', async () => {
+    const mockResponse = { message: 'Senha alterada' };
+    (api.post as jest.Mock).mockResolvedValue({ data: mockResponse });
+
+    const result = await authService.resetPassword('test@example.com', '123456', 'novaSenha123');
+
+    expect(api.post).toHaveBeenCalledWith('/api/auth/reset-password', {
+      email: 'test@example.com',
+      code: '123456',
+      newPassword: 'novaSenha123',
     });
     expect(result).toEqual(mockResponse);
   });
