@@ -266,15 +266,7 @@ const fetchProfileData = useCallback(async () => {
                   key={post.id}
                   style={styles.postCard}
                   onPress={() => {
-                    if (post.beach?.id) {
-                      router.push({
-                        pathname: '/beach/[id]',
-                        params: {
-                          id: post.beach.id,
-                          targetPostId: post.id
-                        }
-                      });
-                    }
+                    router.push(`/post/${post.id}` as Href);
                   }}
                 >
                   {post.caminhoFoto ? (
