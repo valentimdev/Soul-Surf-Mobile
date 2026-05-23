@@ -1,7 +1,7 @@
 # Soul Surf Mobile
 
 <p align="center">
-  <strong>Aplicativo mobile premium para surfistas conectando mapeamento de picos de surf, relatórios climáticos em tempo real e uma comunidade ativa.</strong>
+  <strong>Aplicativo mobile para surfistas conectando mapeamento de picos de surf, relatórios climáticos em tempo real e uma comunidade ativa.</strong>
 </p>
 
 <p align="center">
