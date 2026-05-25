@@ -1,4 +1,4 @@
-import { NotificationDTO, notificationService } from '@/services/notifications/notificationService';
+import { NotificationDTO } from '@/services/notifications/notificationService';
 import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { postService } from '@/services/posts/postService';
 import { useFocusEffect } from 'expo-router';
@@ -15,6 +15,7 @@ import {
   View,
   Image,
 } from 'react-native';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 type NotificationVisualType = 'review' | 'message' | 'alert';
 
@@ -138,10 +139,14 @@ function NotificationCard({
           <View style={styles.rightActions}>
             <View style={styles.postPreviewContainer}>
               {postImage ? (
-                <Image source={{ uri: postImage }} style={styles.postPreviewImage} />
+                <Image
+                  source={{ uri: postImage }}
+                  style={styles.postPreviewImage}
+                  resizeMode="cover"
+                />
               ) : (
                 <View style={styles.postPreviewFallback}>
-                  <Star size={14} color="#999" />
+                  <Star size={14} />
                 </View>
               )}
             </View>
@@ -174,8 +179,8 @@ function NotificationCard({
         <Text style={styles.cardDescription}>{item.message}</Text>
 
         <View style={styles.timeRow}>
-          <Clock size={12} color="#999" style={{marginRight: 4}} />
-          <Text style={styles.timeText}>{formatTimeAgo(item.createdAt)}</Text>
+          <Clock size={12} />
+          <Text style={[styles.timeText, { marginLeft: 4 }]}>{formatTimeAgo(item.createdAt)}</Text>
 
           {!item.read && (
             <>
@@ -192,31 +197,18 @@ function NotificationCard({
 }
 
 export default function NotificationsScreen() {
-  const [notifications, setNotifications] = useState<NotificationDTO[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadNotifications = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-
-    try {
-      setError(null);
-      const data = await notificationService.getUserNotifications();
-      setNotifications(data);
-    } catch (e) {
-      console.error('Erro ao carregar notificacoes:', e);
-      setError('Não foi possível carregar as notificações.');
-    } finally {
-      if (isRefresh) setRefreshing(false);
-      else setLoading(false);
-    }
-  }, []);
+  const {
+    notifications,
+    loading,
+    refreshing,
+    error,
+    loadNotifications,
+    markAsRead,
+  } = useNotifications();
 
   useFocusEffect(
     useCallback(() => {
-      loadNotifications();
+      void loadNotifications();
     }, [loadNotifications])
   );
 
@@ -224,18 +216,11 @@ export default function NotificationsScreen() {
     if (item.read) return;
 
     try {
-      await notificationService.markAsRead(item.id);
-      setNotifications((prev) =>
-        prev.map((notification) =>
-          notification.id === item.id
-            ? { ...notification, read: true }
-            : notification
-        )
-      );
+      await markAsRead(item.id);
     } catch (e) {
       console.error('Erro ao marcar notificacao como lida:', e);
     }
-  }, []);
+  }, [markAsRead]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
