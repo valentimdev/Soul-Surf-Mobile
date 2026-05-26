@@ -1,5 +1,6 @@
 import BottomSheet from '@/components/BottomSheet';
 import { useAppAlert } from '@/components/AppAlert';
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { chatService } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
 import { UserDTO, PostDTO } from '@/types/api';
@@ -22,7 +23,6 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const COVER_FALLBACK = 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=800';
-const AVATAR_FALLBACK = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
 export default function OtherUserProfileScreen() {
   const { showAlert } = useAppAlert();
@@ -112,7 +112,7 @@ const fetchProfileData = useCallback(async () => {
         params: {
           id: conversationId,
           name: user.username,
-          avatar: user.fotoPerfil || AVATAR_FALLBACK,
+          avatar: user.fotoPerfil || '',
           otherUserId: String(user.id),
         },
       });
@@ -201,8 +201,9 @@ const fetchProfileData = useCallback(async () => {
 
           <View style={styles.userInfoSection}>
             <Image
-              source={{ uri: user.fotoPerfil || AVATAR_FALLBACK }}
-              style={styles.avatar}
+              source={getUserAvatarSource(user.fotoPerfil)}
+              style={[styles.avatar, getUserAvatarZoomStyle(user.fotoPerfil)]}
+              resizeMode={getUserAvatarResizeMode(user.fotoPerfil)}
             />
             <Text style={styles.userName}>{user.username || 'Surfista'}</Text>
             <Text style={styles.bioText}>{user.bio || 'Nenhuma bio definida.'}</Text>
@@ -265,15 +266,7 @@ const fetchProfileData = useCallback(async () => {
                   key={post.id}
                   style={styles.postCard}
                   onPress={() => {
-                    if (post.beach?.id) {
-                      router.push({
-                        pathname: '/beach/[id]',
-                        params: {
-                          id: post.beach.id,
-                          targetPostId: post.id
-                        }
-                      });
-                    }
+                    router.push(`/post/${post.id}` as Href);
                   }}
                 >
                   {post.caminhoFoto ? (
@@ -337,8 +330,9 @@ const fetchProfileData = useCallback(async () => {
                     }}
                   >
                     <Image
-                      source={{ uri: item.fotoPerfil || AVATAR_FALLBACK }}
-                      style={styles.userAvatar}
+                      source={getUserAvatarSource(item.fotoPerfil)}
+                      style={[styles.userAvatar, getUserAvatarZoomStyle(item.fotoPerfil)]}
+                      resizeMode={getUserAvatarResizeMode(item.fotoPerfil)}
                     />
                     <Text style={styles.userRowName}>@{item.username}</Text>
                   </TouchableOpacity>

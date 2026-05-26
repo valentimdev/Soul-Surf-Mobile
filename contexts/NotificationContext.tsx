@@ -17,6 +17,7 @@ import {
 } from '@/services/notifications/notificationService';
 import { notificationRealtimeService } from '@/services/notifications/notificationRealtimeService';
 import { userService } from '@/services/users/userService';
+import { useAppAlert } from '@/components/AppAlert';
 
 type NotificationContextValue = {
   notifications: NotificationDTO[];
@@ -59,6 +60,7 @@ function mergeNotification(
 }
 
 export function NotificationProvider({ children }: PropsWithChildren) {
+  const { showAlert } = useAppAlert();
   const [notifications, setNotifications] = useState<NotificationDTO[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -140,8 +142,15 @@ export function NotificationProvider({ children }: PropsWithChildren) {
         unreadCountRef.current = nextCount;
         return nextCount;
       });
+
+      // Feedback visual in-app
+      const title = notification.sender?.username 
+        ? `Nova notificação de ${notification.sender.username}`
+        : 'Nova notificação';
+      
+      showAlert(title, notification.message);
     }
-  }, []);
+  }, [showAlert]);
 
   const markAsRead = useCallback(async (notificationId: number) => {
     await notificationService.markAsRead(notificationId);

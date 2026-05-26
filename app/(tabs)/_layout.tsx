@@ -93,8 +93,6 @@ function TabNavigator() {
 
 export default function TabLayout() {
   return (
-    <NotificationProvider>
-      <TabNavigator />
-    </NotificationProvider>
+    <TabNavigator />
   );
 }

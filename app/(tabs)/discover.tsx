@@ -15,14 +15,13 @@ import type { Href } from 'expo-router';
 import { useRouter, useFocusEffect } from 'expo-router';
 
 import { useAppAlert } from '@/components/AppAlert';
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { postService } from '@/services/posts/postService';
 import { userService } from '@/services/users/userService';
 import { beachService } from '@/services/beaches/beachService';
 import { PostDTO, UserDTO, BeachDTO } from '@/types/api';
 
 type TabType = 'posts' | 'pessoas' | 'praias';
-
-const FALLBACK_AVATAR = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 
 const DiscoverPostCard = ({
   post,
@@ -42,7 +41,6 @@ const DiscoverPostCard = ({
   const postImage = post.caminhoFoto;
   const author = post.usuario;
   const authorName = author?.username || 'Surfista';
-  const authorAvatar = author?.fotoPerfil || FALLBACK_AVATAR;
   const beachName = post.beach?.nome || null;
 
   const handleToggleFollow = async () => {
@@ -74,7 +72,11 @@ const DiscoverPostCard = ({
     <View style={styles.postCard}>
       <View style={styles.postHeader}>
         <TouchableOpacity onPress={() => author?.id && router.push(`/user/${author.id}` as Href)}>
-          <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
+          <Image
+            source={getUserAvatarSource(author?.fotoPerfil)}
+            style={[styles.postAvatar, getUserAvatarZoomStyle(author?.fotoPerfil)]}
+            resizeMode={getUserAvatarResizeMode(author?.fotoPerfil)}
+          />
         </TouchableOpacity>
 
         <View style={styles.postHeaderInfo}>
@@ -237,7 +239,11 @@ export default function DiscoverScreen() {
       activeOpacity={0.7}
       onPress={() => router.push(`/user/${item.id}` as Href)}
     >
-      <Image source={{ uri: item.fotoPerfil || FALLBACK_AVATAR }} style={styles.avatar} />
+      <Image
+        source={getUserAvatarSource(item.fotoPerfil)}
+        style={[styles.avatar, getUserAvatarZoomStyle(item.fotoPerfil)]}
+        resizeMode={getUserAvatarResizeMode(item.fotoPerfil)}
+      />
       <View style={{ flex: 1 }}>
         <Text style={styles.userName}>{item.username}</Text>
         {item.bio && <Text style={styles.userBio} numberOfLines={1}>{item.bio}</Text>}

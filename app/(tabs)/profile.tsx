@@ -1,4 +1,5 @@
 import BottomSheet from '@/components/BottomSheet';
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { postService } from '@/services/posts/postService';
 import { commentService } from '@/services/posts/commentService'; // Importação adicionada
 import { userService } from '@/services/users/userService';
@@ -21,7 +22,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const COVER_FALLBACK = 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=800';
-const AVATAR_FALLBACK = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 const imagemFallback = require('../../assets/images/registrosemimagem.png');
 
 // Novo componente isolado para gerenciar o estado e a navegação de cada post
@@ -200,8 +200,9 @@ export default function ProfileScreen() {
             {/* Linha do Avatar + Nome e Status */}
             <View style={styles.topRow}>
               <Image
-                source={{ uri: bustCache(user.fotoPerfil) || AVATAR_FALLBACK }}
-                style={styles.avatarLeft}
+                source={getUserAvatarSource(bustCache(user.fotoPerfil))}
+                style={[styles.avatarLeft, getUserAvatarZoomStyle(user.fotoPerfil)]}
+                resizeMode={getUserAvatarResizeMode(user.fotoPerfil)}
               />
 
               <View style={styles.topRowRight}>
@@ -310,8 +311,9 @@ export default function ProfileScreen() {
                     }}
                   >
                     <Image
-                      source={{ uri: item.fotoPerfil || AVATAR_FALLBACK }}
-                      style={styles.userAvatar}
+                      source={getUserAvatarSource(item.fotoPerfil)}
+                      style={[styles.userAvatar, getUserAvatarZoomStyle(item.fotoPerfil)]}
+                      resizeMode={getUserAvatarResizeMode(item.fotoPerfil)}
                     />
                     <Text style={styles.userRowName}>@{item.username}</Text>
                   </TouchableOpacity>

@@ -76,8 +76,28 @@ jest.mock('lucide-react-native', () => {
   };
 });
 
+// Mock do NotificationContext
+jest.mock('@/contexts/NotificationContext', () => ({
+  useNotifications: () => ({
+    notifications: [],
+    unreadCount: 0,
+    loading: false,
+    refreshing: false,
+    error: null,
+    isRealtimeConnected: true,
+    loadNotifications: jest.fn(),
+    markAsRead: jest.fn(),
+  }),
+}));
+
 describe('NotificationsScreen', () => {
-  it('deve renderizar a tela de notificações sem erros assíncronos', async () => {
+  const mockShowAlert = jest.fn();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('deve renderizar a tela de notificações sem erros', async () => {
     let tree: any;
     await act(async () => {
       tree = create(React.createElement(NotificationsScreen));

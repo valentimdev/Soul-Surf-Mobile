@@ -5,14 +5,13 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -22,9 +21,8 @@ import { commentService } from '@/services/posts/commentService';
 import { postService } from '@/services/posts/postService';
 import api from '@/services/api';
 import { useAppAlert } from '@/components/AppAlert';
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { formatDate, formatDateTimeWithYear } from '@/utils/formatters';
-
-const FALLBACK_AVATAR = 'S';
 
 function normalizeCounter(value: unknown): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -33,6 +31,18 @@ function normalizeCounter(value: unknown): number {
     return Number.isFinite(parsed) ? parsed : 0;
   }
   return 0;
+}
+
+interface FlatComment {
+  comment: CommentDTO;
+  depth: number;
+}
+
+function flattenComments(commentsList: CommentDTO[], depth = 0): FlatComment[] {
+  return commentsList.flatMap((comment) => [
+    { comment, depth },
+    ...flattenComments(comment.replies ?? [], depth + 1),
+  ]);
 }
 
 export default function PostDetailScreen() {
@@ -48,6 +58,7 @@ export default function PostDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [newCommentText, setNewCommentText] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<CommentDTO | null>(null);
 
   // Estados dos Likes
   const [liked, setLiked] = useState<boolean>(false);
@@ -85,7 +96,7 @@ export default function PostDetailScreen() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, showAlert, router]);
 
   useEffect(() => {
     loadPostAndComments();
@@ -120,9 +131,11 @@ export default function PostDetailScreen() {
 
     setSendingComment(true);
     try {
-      const created = await commentService.addComment(post.id, newCommentText.trim());
-      setComments(prev => [created, ...prev]);
+      await commentService.addComment(post.id, newCommentText.trim(), replyingTo?.id);
+      const commentsData = await commentService.getPostComments(post.id);
+      setComments(commentsData);
       setNewCommentText('');
+      setReplyingTo(null);
     } catch (error) {
       console.error('Erro ao comentar:', error);
       showAlert('Erro', 'Não foi possível enviar seu comentário.');
@@ -135,23 +148,35 @@ export default function PostDetailScreen() {
     if (!post) return null;
 
     const authorName = post.usuario?.username || 'Surfista';
-    const authorAvatar = post.usuario?.fotoPerfil;
 
     return (
       <View style={styles.postHeaderContainer}>
-        <View style={styles.postHeaderInfo}>
-          {authorAvatar ? (
-            <Image source={{ uri: authorAvatar }} style={styles.postAvatar} />
-          ) : (
-            <View style={styles.postAvatarFallback}>
-              <Text style={styles.avatarFallbackText}>{authorName[0]}</Text>
-            </View>
-          )}
+        <TouchableOpacity
+          style={styles.postHeaderInfo}
+          onPress={() => post.usuario?.id && router.push(`/user/${post.usuario.id}` as Href)}
+          activeOpacity={0.7}
+        >
+          <Image
+            source={getUserAvatarSource(post.usuario?.fotoPerfil)}
+            style={[styles.postAvatar, getUserAvatarZoomStyle(post.usuario?.fotoPerfil)]}
+            resizeMode={getUserAvatarResizeMode(post.usuario?.fotoPerfil)}
+          />
           <View>
             <Text style={styles.postAuthor}>{authorName}</Text>
             <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
+
+        {post.beach && (
+          <TouchableOpacity
+            style={styles.beachBadge}
+            onPress={() => router.push(`/beach/${post.beach.id}` as Href)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="location" size={14} color="#2F6F86" />
+            <Text style={styles.beachBadgeText}>{post.beach.nome}</Text>
+          </TouchableOpacity>
+        )}
 
         {post.caminhoFoto && (
           <Image source={{ uri: post.caminhoFoto }} style={styles.postImage} />
@@ -203,8 +228,8 @@ export default function PostDetailScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <FlatList
-        data={comments}
-        keyExtractor={(item) => String(item.id)}
+        data={flattenComments(comments)}
+        keyExtractor={(item) => String(item.comment.id)}
         ListHeaderComponent={renderHeader}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
@@ -214,30 +239,77 @@ export default function PostDetailScreen() {
             <Text style={styles.emptyStateText}>Seja o primeiro a comentar!</Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <View style={styles.commentItem}>
-            {item.usuario?.fotoPerfil ? (
-              <Image source={{ uri: item.usuario.fotoPerfil }} style={styles.commentAvatar} />
-            ) : (
-              <View style={styles.commentAvatarFallback}>
-                <Text style={styles.commentAvatarText}>{item.usuario?.username?.[0] || FALLBACK_AVATAR}</Text>
+        renderItem={({ item }) => {
+          const { comment, depth } = item;
+          const isReply = depth > 0;
+
+          return (
+            <View style={[
+              styles.commentItemContainer,
+              isReply && {
+                paddingLeft: Math.min(depth, 2) * 24 + 16,
+                borderLeftWidth: 2,
+                borderLeftColor: '#E7E2D3',
+                marginLeft: 16,
+                paddingVertical: 4,
+              }
+            ]}>
+              <View style={styles.commentItem}>
+                <TouchableOpacity
+                  onPress={() => comment.usuario?.id && router.push(`/user/${comment.usuario.id}` as Href)}
+                  activeOpacity={0.7}
+                >
+                  <Image
+                    source={getUserAvatarSource(comment.usuario?.fotoPerfil)}
+                    style={[styles.commentAvatar, getUserAvatarZoomStyle(comment.usuario?.fotoPerfil)]}
+                    resizeMode={getUserAvatarResizeMode(comment.usuario?.fotoPerfil)}
+                  />
+                </TouchableOpacity>
+                <View style={styles.commentBody}>
+                  <View style={styles.commentHeaderRow}>
+                    <TouchableOpacity
+                      onPress={() => comment.usuario?.id && router.push(`/user/${comment.usuario.id}` as Href)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.commentAuthorName}>{comment.usuario?.username || 'Surfista'}</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.commentDate}>{formatDate(comment.data)}</Text>
+                  </View>
+                  <Text style={styles.commentText}>{comment.texto}</Text>
+
+                  <TouchableOpacity
+                    style={styles.commentReplyButton}
+                    onPress={() => setReplyingTo(comment)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="arrow-undo-outline" size={12} color="#2F6F86" />
+                    <Text style={styles.commentReplyButtonText}>Responder</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            )}
-            <View style={styles.commentBody}>
-              <View style={styles.commentHeaderRow}>
-                <Text style={styles.commentAuthorName}>{item.usuario?.username || 'Surfista'}</Text>
-                <Text style={styles.commentDate}>{formatDate(item.data)}</Text>
-              </View>
-              <Text style={styles.commentText}>{item.texto}</Text>
             </View>
-          </View>
-        )}
+          );
+        }}
       />
+
+      {replyingTo && (
+        <View style={styles.replyingBanner}>
+          <Text style={styles.replyingText} numberOfLines={1}>
+            Respondendo a <Text style={styles.replyingUser}>@{replyingTo.usuario?.username}</Text>
+          </Text>
+          <TouchableOpacity
+            onPress={() => setReplyingTo(null)}
+            style={styles.cancelReplyButton}
+          >
+            <Ionicons name="close-circle" size={18} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <TextInput
           style={styles.textInput}
-          placeholder="Escreva um comentário..."
+          placeholder={replyingTo ? `Responder @${replyingTo.usuario?.username}...` : "Escreva um comentário..."}
           placeholderTextColor="#8B8B8B"
           value={newCommentText}
           onChangeText={setNewCommentText}
@@ -457,5 +529,58 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: '#A0B9C6',
+  },
+  beachBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E7F1F4',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+    gap: 4,
+    marginBottom: 12,
+  },
+  beachBadgeText: {
+    fontSize: 12,
+    color: '#2F6F86',
+    fontWeight: '600',
+  },
+  commentItemContainer: {
+    backgroundColor: '#F6F4EB',
+  },
+  commentReplyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    marginTop: 8,
+    paddingVertical: 2,
+  },
+  commentReplyButtonText: {
+    fontSize: 12,
+    color: '#2F6F86',
+    fontWeight: '700',
+  },
+  replyingBanner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#E7F1F4',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#C4DEE5',
+  },
+  replyingText: {
+    fontSize: 13,
+    color: '#1F4A63',
+  },
+  replyingUser: {
+    fontWeight: '700',
+    color: '#2F6F86',
+  },
+  cancelReplyButton: {
+    padding: 2,
   },
 });

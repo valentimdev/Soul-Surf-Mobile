@@ -5,10 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { userService } from '@/services/users/userService';
 
 const COVER_FALLBACK = 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=800';
-const AVATAR_FALLBACK = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=300';
 
 export default function EditProfileScreen() {
   const { showAlert } = useAppAlert();
@@ -86,8 +86,12 @@ export default function EditProfileScreen() {
           <View style={styles.avatarContainer}>
             <TouchableOpacity onPress={() => pickImage('profile')}>
               <Image
-                source={{ uri: profileImg?.uri || (params.currentAvatar as string) || AVATAR_FALLBACK }}
-                style={styles.avatarPreview}
+                source={getUserAvatarSource(profileImg?.uri || (params.currentAvatar as string))}
+                style={[
+                  styles.avatarPreview,
+                  getUserAvatarZoomStyle(profileImg?.uri || (params.currentAvatar as string)),
+                ]}
+                resizeMode={getUserAvatarResizeMode(profileImg?.uri || (params.currentAvatar as string))}
               />
               <View style={styles.avatarOverlay}><Ionicons name="camera" size={20} color="#FFF" /></View>
             </TouchableOpacity>

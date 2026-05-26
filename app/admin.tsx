@@ -1,4 +1,5 @@
 import { useAppAlert } from '@/components/AppAlert';
+import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { adminService, AdminAuditLogDTO, AdminMetricsDTO } from '@/services/admin/adminService';
 import { userService } from '@/services/users/userService';
 import { CommentDTO, PostDTO, UserDTO } from '@/types/api';
@@ -17,7 +18,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const AVATAR_FALLBACK = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
 const POST_FALLBACK = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800';
 
 type AdminTab = 'users' | 'posts' | 'comments' | 'audits';
@@ -441,7 +441,11 @@ export default function AdminScreen() {
           const isSelf = user.id === currentUserId;
           return (
             <View key={user.id} style={styles.userCard}>
-              <Image source={{ uri: user.fotoPerfil || AVATAR_FALLBACK }} style={styles.avatar} />
+              <Image
+                source={getUserAvatarSource(user.fotoPerfil)}
+                style={[styles.avatar, getUserAvatarZoomStyle(user.fotoPerfil)]}
+                resizeMode={getUserAvatarResizeMode(user.fotoPerfil)}
+              />
               <View style={styles.userBody}>
                 <View style={styles.rowBetween}>
                   <View style={styles.flexOne}>
