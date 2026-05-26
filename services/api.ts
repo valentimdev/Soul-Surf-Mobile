@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { router } from 'expo-router'; // <-- Adicionado para roteamento global
 
 const rawTimeoutMs = process.env.EXPO_PUBLIC_API_TIMEOUT_MS?.trim();
 const parsedTimeoutMs = Number(rawTimeoutMs);
@@ -22,13 +23,10 @@ function resolveApiBaseUrl(): string {
     ? sanitizeBaseUrl(rawBaseURL)
     : null;
 
-  // Se a variável foi injetada pelo EAS, usa ela.
   if (normalized) {
     return normalized;
   }
 
-  // Se não foi injetada, não vamos dar "throw new Error" e crashar o app.
-  // Vamos usar o IP de nuvem direto como segurança para funcionar o APK.
   return DEV_FALLBACK_API_URL;
 }
 
@@ -55,7 +53,6 @@ const api = axios.create({
   },
 });
 
-// Interceptor para injetar o token automaticamente
 api.interceptors.request.use(
   async (config) => {
     (config as any).metadata = {
@@ -64,10 +61,10 @@ api.interceptors.request.use(
 
     const token = await SecureStore.getItemAsync('userToken');
     if (config.headers.Authorization === '') {
-          delete config.headers.Authorization;
-        } else if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
+      delete config.headers.Authorization;
+    } else if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
     if (IS_DEV) {
       console.log('[API]', {
@@ -98,11 +95,12 @@ api.interceptors.response.use(
 
     return response;
   },
-  (error) => {
+  async (error) => {
+    const status = error.response?.status;
+
     if (IS_DEV) {
       const method = error.config?.method?.toUpperCase();
       const url = `${error.config?.baseURL ?? ''}${error.config?.url ?? ''}`;
-      const status = error.response?.status;
       const data = error.response?.data;
       const startedAt = error.config?.metadata?.startedAt;
       const durationMs = typeof startedAt === 'number' ? Date.now() - startedAt : undefined;
@@ -110,7 +108,7 @@ api.interceptors.response.use(
       const isTimeout = error.code === 'ECONNABORTED';
       const isNetworkError = !error.response && Boolean(error.request);
 
-      console.error('[API ERROR]', {
+      const logPayload = {
         method,
         url,
         status,
@@ -121,7 +119,24 @@ api.interceptors.response.use(
         durationMs,
         isTimeout,
         isNetworkError,
-      });
+      };
+
+      // Se for erro de autenticação, logamos como aviso (amarelo) pra não forçar a tela vermelha
+      if (status === 401 || status === 403) {
+        console.warn('[API UNAUTHORIZED/FORBIDDEN]', logPayload);
+      } else {
+        console.error('[API ERROR]', logPayload);
+      }
+    }
+
+    // <-- LOGICA GLOBAL DE LOGOUT AQUI -->
+    if (error.response && (status === 401 || status === 403)) {
+      try {
+        await SecureStore.deleteItemAsync('userToken');
+        router.replace('/api/auth/login');
+      } catch (logoutError) {
+        console.error('Erro ao forçar logout:', logoutError);
+      }
     }
 
     return Promise.reject(error);

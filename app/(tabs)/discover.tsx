@@ -15,7 +15,8 @@ import type { Href } from 'expo-router';
 import { useRouter, useFocusEffect } from 'expo-router';
 
 import { useAppAlert } from '@/components/AppAlert';
-import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
+// Mantivemos apenas o getUserAvatarSource, removendo os estilos de zoom para forçar o fallback ao tamanho correto
+import { getUserAvatarSource } from '@/constants/defaultImages';
 import { postService } from '@/services/posts/postService';
 import { userService } from '@/services/users/userService';
 import { beachService } from '@/services/beaches/beachService';
@@ -73,8 +74,8 @@ const DiscoverPostCard = ({
         <TouchableOpacity onPress={() => author?.id && router.push(`/user/${author.id}` as Href)}>
           <Image
             source={getUserAvatarSource(author?.fotoPerfil)}
-            style={[styles.postAvatar, getUserAvatarZoomStyle(author?.fotoPerfil)]}
-            resizeMode={getUserAvatarResizeMode(author?.fotoPerfil)}
+            style={styles.postAvatar} // Sem o zoom extra
+            resizeMode="cover" // Força a ocupar todo o espaço do container de 40x40
           />
         </TouchableOpacity>
 
@@ -243,8 +244,8 @@ export default function DiscoverScreen() {
     >
       <Image
         source={getUserAvatarSource(item.fotoPerfil)}
-        style={[styles.avatar, getUserAvatarZoomStyle(item.fotoPerfil)]}
-        resizeMode={getUserAvatarResizeMode(item.fotoPerfil)}
+        style={styles.avatar} // Sem o zoom extra
+        resizeMode="cover" // Força o preenchimento de 48x48
       />
       <View style={{ flex: 1 }}>
         <Text style={styles.userName}>{item.username}</Text>

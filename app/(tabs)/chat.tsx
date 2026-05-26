@@ -1,4 +1,4 @@
-import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
+import { getUserAvatarSource } from '@/constants/defaultImages';
 import { chatService, ConversationResponse } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
 import { UserDTO } from '@/types/api';
@@ -66,11 +66,8 @@ function formatConversationTime(createdAt?: string) {
   });
 }
 
-// NOVO: Recebe o currentUserId para verificar a autoria da última mensagem
 function toConversationView(item: ConversationResponse, currentUserId: string): ConversationItemView {
   const fallbackName = item.group ? 'Grupo' : 'Conversa';
-
-  // Verifica se fomos nós que mandamos a última mensagem
   const isMyLastMessage = String(item.lastMessage?.senderId) === currentUserId;
 
   return {
@@ -80,7 +77,6 @@ function toConversationView(item: ConversationResponse, currentUserId: string): 
     avatar: item.otherUserAvatarUrl || '',
     lastMessage: item.lastMessage?.content || 'Sem mensagens ainda',
     time: formatConversationTime(item.lastMessage?.createdAt),
-    // SÓ mostra a bolinha azul se a última mensagem NÃO for nossa E o contador for maior que 0
     unread: !isMyLastMessage && (item.unreadCount ?? 0) > 0,
   };
 }
@@ -90,8 +86,8 @@ function ConversationCard({ item, onPress }: { item: ConversationItemView; onPre
     <TouchableOpacity style={styles.conversationCard} activeOpacity={0.7} onPress={onPress}>
       <Image
         source={getUserAvatarSource(item.avatar)}
-        style={[styles.avatar, getUserAvatarZoomStyle(item.avatar)]}
-        resizeMode={getUserAvatarResizeMode(item.avatar)}
+        style={styles.avatar} // Tamanho fixo para foto normal ou fallback
+        resizeMode="cover" // Força o preenchimento correto
       />
       <View style={styles.conversationContent}>
         <View style={styles.conversationHeader}>
@@ -129,7 +125,6 @@ export default function ChatScreen() {
   const [error, setError] = useState<string | null>(null);
   const [startingChat, setStartingChat] = useState(false);
 
-  // NOVO: Uma única função que carrega tudo em paralelo de forma eficiente
   const loadAllData = useCallback(async (isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
@@ -141,20 +136,15 @@ export default function ChatScreen() {
     try {
       setError(null);
 
-      // 1. Descobrimos quem somos nós
       const myProfile = await userService.getMyProfile();
       const currentId = String(myProfile.id);
 
-      // 2. Buscamos Seguindo e Conversas ao MESMO TEMPO (mais rápido)
       const [followingData, conversationsData] = await Promise.all([
-        userService.getFollowing(myProfile.id).catch(() => []), // Falha silenciosa pro topo
+        userService.getFollowing(myProfile.id).catch(() => []),
         chatService.getMyConversations()
       ]);
-    console.log("DADOS COMPLETOS DOS SEGUIDOS:", JSON.stringify(followingData, null, 2));
 
       setFollowing(followingData);
-
-      // 3. Montamos a lista passando o nosso ID para evitar o bug do "Não Lido"
       setConversations(conversationsData.map(c => toConversationView(c, currentId)));
 
     } catch (e) {
@@ -179,12 +169,13 @@ export default function ChatScreen() {
   const handleOpenConversation = useCallback(
     (item: ConversationItemView) => {
       router.push({
-        pathname: '../chat/[id]',
+        pathname: '/chat/[id]',
         params: {
           id: item.id,
           name: item.name,
-          avatar: item.avatar,
-          otherUserId: item.otherUserId,
+          // Corrigido para bater com o que a tela de conversa espera:
+          targetUserId: item.otherUserId,
+          targetUserFoto: item.avatar,
         },
       });
     },
@@ -202,8 +193,9 @@ export default function ChatScreen() {
         params: {
           id: conversationId,
           name: user.username,
-          avatar: user.fotoPerfil || '',
-          otherUserId: String(user.id),
+          // Corrigido para bater com o que a tela de conversa espera:
+          targetUserId: String(user.id),
+          targetUserFoto: user.fotoPerfil || '',
         },
       });
     } catch (err) {
@@ -242,8 +234,8 @@ export default function ChatScreen() {
             >
               <Image
                 source={getUserAvatarSource(item.fotoPerfil)}
-                style={[styles.followingAvatar, getUserAvatarZoomStyle(item.fotoPerfil)]}
-                resizeMode={getUserAvatarResizeMode(item.fotoPerfil)}
+                style={styles.followingAvatar} // Tamanho fixo para foto normal ou fallback
+                resizeMode="cover" // Força o preenchimento correto
               />
               <Text style={styles.followingName} numberOfLines={1}>
                 {item.username}
