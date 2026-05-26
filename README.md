@@ -214,3 +214,4 @@ Soul-Surf-Mobile/
 - **83 cenários marítimos** cobertos pelo interpretador de clima de ondas
 - **16+ UFs do Brasil** contendo picos cadastrados e mapeados no aplicativo
 - **100% de consistência** na tipagem estática e zero avisos de linters nos fluxos principais
+
