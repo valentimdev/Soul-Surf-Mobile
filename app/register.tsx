@@ -99,6 +99,7 @@ export default function RegisterScreen() {
             placeholder="Senha"
             placeholderTextColor="#8C8A80"
             secureTextEntry
+            autoCapitalize="none"
             value={password}
             onChangeText={setPassword}
           />
