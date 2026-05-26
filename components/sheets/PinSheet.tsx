@@ -1,6 +1,7 @@
 import { Colors } from '@/constants/theme';
 import { WeatherDTO, weatherService } from '@/services/weather/weatherService';
 import { MapPin } from '@/types';
+import { toCompass } from '@/utils/surfConditionsInterpreter';
 import {
   Instagram,
   MapPin as MapPinIcon,
@@ -76,8 +77,8 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
     if (pin.whatsapp) {
       // Garante que só existam números e tenta montar a URL
       const cleanNumber = pin.whatsapp.replace(/\D/g, '');
-      if(cleanNumber) {
-         Linking.openURL(`https://wa.me/${cleanNumber}`);
+      if (cleanNumber) {
+        Linking.openURL(`https://wa.me/${cleanNumber}`);
       }
     }
   };
@@ -93,23 +94,23 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
         ) : null}
 
         {(pin.whatsapp || pin.instagram) ? (
-            <View style={styles.poiContactSection}>
-                <Text style={styles.poiContactTitle}>Contatos e Redes</Text>
-                <View style={styles.poiContactRow}>
-                {pin.whatsapp && (
-                    <TouchableOpacity style={[styles.poiButton, styles.poiButtonWhatsApp]} onPress={openWhatsApp}>
-                        <Phone size={16} color="#FFF" />
-                        <Text style={styles.poiButtonText}>WhatsApp</Text>
-                    </TouchableOpacity>
-                )}
-                {pin.instagram && (
-                    <TouchableOpacity style={[styles.poiButton, styles.poiButtonInstagram]} onPress={openInstagram}>
-                        <Instagram size={16} color="#FFF" />
-                        <Text style={styles.poiButtonText}>Instagram</Text>
-                    </TouchableOpacity>
-                )}
-                </View>
+          <View style={styles.poiContactSection}>
+            <Text style={styles.poiContactTitle}>Contatos e Redes</Text>
+            <View style={styles.poiContactRow}>
+              {pin.whatsapp && (
+                <TouchableOpacity style={[styles.poiButton, styles.poiButtonWhatsApp]} onPress={openWhatsApp}>
+                  <Phone size={16} color="#FFF" />
+                  <Text style={styles.poiButtonText}>WhatsApp</Text>
+                </TouchableOpacity>
+              )}
+              {pin.instagram && (
+                <TouchableOpacity style={[styles.poiButton, styles.poiButtonInstagram]} onPress={openInstagram}>
+                  <Instagram size={16} color="#FFF" />
+                  <Text style={styles.poiButtonText}>Instagram</Text>
+                </TouchableOpacity>
+              )}
             </View>
+          </View>
         ) : null}
       </View>
     );
@@ -119,17 +120,17 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 40 }}
+      contentContainerStyle={{ paddingBottom: 80 }}
     >
       <View style={styles.headerBlock}>
-          <Text style={styles.label}>{TYPE_LABELS[pin.type]}</Text>
-          <Text style={styles.name}>{pin.name}</Text>
-          {pin.beachName && pin.sourceType === 'poi' ? (
-            <View style={styles.relatedBeachBadge}>
-                <MapPinIcon size={12} color="#5C9DB8" />
-                <Text style={styles.relatedBeachText}>Perto da {pin.beachName}</Text>
-            </View>
-          ) : null}
+        <Text style={styles.label}>{TYPE_LABELS[pin.type]}</Text>
+        <Text style={styles.name}>{pin.name}</Text>
+        {pin.beachName && pin.sourceType === 'poi' ? (
+          <View style={styles.relatedBeachBadge}>
+            <MapPinIcon size={12} color="#5C9DB8" />
+            <Text style={styles.relatedBeachText}>Perto da {pin.beachName}</Text>
+          </View>
+        ) : null}
       </View>
 
       {pin.imageUrl && (
@@ -169,7 +170,9 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
                   <Waves size={14} color="#6B7280" />
                   <Text style={styles.conditionLabel}>Vento</Text>
                 </View>
-                <Text style={styles.conditionValue}>{weather.windSpeed} km/h | {weather.windDirection}°</Text>
+                <Text style={styles.conditionValue}>
+                  {weather.windSpeed} km/h {toCompass(weather.windDirection)}
+                </Text>
               </View>
             </View>
           ) : (
@@ -181,12 +184,12 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
       )}
 
       {isEstablishment ? renderEstablishmentLayout() : (
-         pin.description ? (
-            <View style={styles.descriptionCard}>
-              <Text style={styles.descriptionTitle}>Sobre a Praia</Text>
-              <Text style={styles.descriptionText}>{pin.description}</Text>
-            </View>
-          ) : null
+        pin.description ? (
+          <View style={styles.descriptionCard}>
+            <Text style={styles.descriptionTitle}>Sobre a Praia</Text>
+            <Text style={styles.descriptionText}>{pin.description}</Text>
+          </View>
+        ) : null
       )}
 
       {pin.address && (
@@ -211,7 +214,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   headerBlock: {
-      marginBottom: 16,
+    marginBottom: 16,
   },
   label: {
     fontSize: 12,
@@ -330,7 +333,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   poiIcon: {
-      marginTop: 2,
+    marginTop: 2,
   },
   poiDescriptionText: {
     flex: 1,
@@ -339,37 +342,37 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   poiContactSection: {
-      gap: 10,
+    gap: 10,
   },
   poiContactTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: '#8BA1AA',
-      textTransform: 'uppercase',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#8BA1AA',
+    textTransform: 'uppercase',
   },
   poiContactRow: {
-      flexDirection: 'row',
-      gap: 12,
+    flexDirection: 'row',
+    gap: 12,
   },
   poiButton: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 12,
-      borderRadius: 12,
-      gap: 8,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
   },
   poiButtonWhatsApp: {
-      backgroundColor: '#25D366', // Verde oficial do WhatsApp
+    backgroundColor: '#25D366', // Verde oficial do WhatsApp
   },
   poiButtonInstagram: {
-      backgroundColor: '#E1306C', // Rosa base do Instagram
+    backgroundColor: '#E1306C', // Rosa base do Instagram
   },
   poiButtonText: {
-      color: '#FFFFFF',
-      fontSize: 14,
-      fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 
   addressRow: {
@@ -406,6 +409,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A4B7C',
     paddingVertical: 14,
     alignItems: 'center',
+    marginBottom: 8,
     shadowColor: '#1F4A63',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
