@@ -1,6 +1,6 @@
 import { ChatMessageResponse, chatService } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
-import { useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AppState,
@@ -14,8 +14,10 @@ import {
   TouchableOpacity,
   View,
   useWindowDimensions,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getUserAvatarSource } from '@/constants/defaultImages';
 
 const CHAT_POLL_INTERVAL_MS = 1000;
 
@@ -152,14 +154,19 @@ function MessageBubble({
 }
 
 export default function ChatConversationScreen() {
+  const router = useRouter();
   const params = useLocalSearchParams<{
     id?: string | string[];
     name?: string | string[];
+    targetUserId?: string | string[];
+    targetUserFoto?: string | string[];
   }>();
   const navigation = useNavigation();
 
   const conversationId = useMemo(() => parseStringParam(params.id), [params.id]);
   const conversationName = useMemo(() => parseStringParam(params.name), [params.name]);
+  const targetUserId = useMemo(() => parseStringParam(params.targetUserId), [params.targetUserId]);
+  const targetUserFoto = useMemo(() => parseStringParam(params.targetUserFoto), [params.targetUserFoto]);
 
   const [messages, setMessages] = useState<ChatMessageResponse[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string>('');
@@ -177,12 +184,34 @@ export default function ChatConversationScreen() {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
 
+  // Header Customizado
   useEffect(() => {
     if (!navigation || !(navigation as any).setOptions) return;
     (navigation as any).setOptions({
-      title: conversationName || 'Conversa',
+      headerTitle: () => (
+        <TouchableOpacity
+          style={styles.headerProfileContainer}
+          activeOpacity={0.8}
+          onPress={() => {
+            if (targetUserId) {
+              router.push(`/user/${targetUserId}`);
+            }
+          }}
+        >
+          <Image
+            source={getUserAvatarSource(targetUserFoto)}
+            style={styles.headerAvatar}
+            resizeMode="cover"
+          />
+          <Text style={styles.headerNameText} numberOfLines={1}>
+            {conversationName || 'Conversa'}
+          </Text>
+        </TouchableOpacity>
+      ),
+      title: '', // Remove o title nativo para dar espaço ao HeaderTitle
+      headerTitleAlign: 'left',
     });
-  }, [conversationName, navigation]);
+  }, [conversationName, navigation, targetUserId, targetUserFoto, router]);
 
   const loadCurrentUser = useCallback(async () => {
     try {
@@ -384,7 +413,7 @@ export default function ChatConversationScreen() {
             styles.composerContainer,
             {
               marginBottom: keyboardOffset,
-              paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 12 : 8),
+              paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 12),
             },
           ]}
         >
@@ -414,6 +443,24 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F6F4EB',
+  },
+  headerProfileContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginLeft: Platform.OS === 'android' ? -10 : 0,
+  },
+  headerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E2DEC3',
+  },
+  headerNameText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F4A63',
+    maxWidth: 200,
   },
   contentContainer: {
     flex: 1,

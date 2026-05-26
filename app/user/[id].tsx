@@ -1,13 +1,15 @@
 import BottomSheet from '@/components/BottomSheet';
 import { useAppAlert } from '@/components/AppAlert';
-import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
+import { getUserAvatarSource } from '@/constants/defaultImages';
 import { chatService } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
+import { postService } from '@/services/posts/postService';
+import { commentService } from '@/services/posts/commentService';
 import { UserDTO, PostDTO } from '@/types/api';
 import { formatDateTimeWithYear } from '@/utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import type { Href } from 'expo-router';
-import { router, useLocalSearchParams, Stack, useFocusEffect} from 'expo-router';
+import { router, useLocalSearchParams, Stack, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -23,6 +25,70 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const COVER_FALLBACK = 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?q=80&w=800';
+const imagemFallback = require('../../assets/images/registrosemimagem.png');
+
+// Componente isolado para os posts, igual ao do seu perfil
+function ProfilePostItem({ post }: { post: PostDTO }) {
+  const [likesCount, setLikesCount] = useState<number>(post.likesCount || 0);
+  const [commentsCount, setCommentsCount] = useState<number>(post.commentsCount || 0);
+
+  useFocusEffect(
+    useCallback(() => {
+      let mounted = true;
+      Promise.all([
+        postService.getLikesCount(post.id),
+        commentService.getPostComments(post.id)
+      ])
+        .then(([countRes, commentsRes]) => {
+          if (mounted) {
+            setLikesCount(typeof countRes.count === 'number' ? countRes.count : 0);
+            setCommentsCount(commentsRes.length);
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao buscar stats do post no perfil:', error);
+        });
+
+      return () => { mounted = false; };
+    }, [post.id])
+  );
+
+  return (
+    <TouchableOpacity
+      style={styles.postCard}
+      onPress={() => router.push(`/post/${post.id}` as Href)}
+    >
+      <Image
+        source={post.caminhoFoto ? { uri: post.caminhoFoto } : imagemFallback}
+        style={styles.postImage}
+      />
+      <View style={styles.postInfo}>
+        {post.descricao ? (
+          <Text style={styles.postDesc} numberOfLines={2}>
+            {post.descricao}
+          </Text>
+        ) : (
+          <Text style={[styles.postDesc, { color: '#999', fontStyle: 'italic' }]} numberOfLines={1}>
+            Sem descrição
+          </Text>
+        )}
+        <Text style={styles.postBeach}>{post.beach?.nome || 'Local desconhecido'}</Text>
+        <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
+      </View>
+
+      <View style={styles.postStatsRight}>
+        <View style={styles.statBadge}>
+          <Ionicons name="heart" size={14} color="#C54A54" />
+          <Text style={styles.statBadgeText}>{likesCount}</Text>
+        </View>
+        <View style={styles.statBadge}>
+          <Ionicons name="chatbubble" size={14} color="#6B7280" />
+          <Text style={styles.statBadgeText}>{commentsCount}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
 
 export default function OtherUserProfileScreen() {
   const { showAlert } = useAppAlert();
@@ -32,24 +98,21 @@ export default function OtherUserProfileScreen() {
   const [user, setUser] = useState<UserDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [isMe, setIsMe] = useState(false); // Para esconder botoes caso abra o proprio perfil
+  const [isMe, setIsMe] = useState(false);
   const [startingChat, setStartingChat] = useState(false);
 
-  // Estados do BottomSheet
   const [sheetVisible, setSheetVisible] = useState(false);
   const [modalType, setModalType] = useState<'followers' | 'following' | null>(null);
   const [modalUsers, setModalUsers] = useState<UserDTO[]>([]);
   const [loadingModal, setLoadingModal] = useState(false);
 
-const fetchProfileData = useCallback(async () => {
+  const fetchProfileData = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     try {
-      // 1. Busca o perfil alvo
       const profile = await userService.getUserProfile(userId);
       setUser(profile);
 
-      // 2. Descobre quem sou eu
       const myProfile = await userService.getMyProfile().catch(() => null);
 
       if (myProfile && myProfile.id === userId) {
@@ -70,7 +133,6 @@ const fetchProfileData = useCallback(async () => {
     }
   }, [userId]);
 
-
   useFocusEffect(
     useCallback(() => {
       fetchProfileData();
@@ -81,7 +143,6 @@ const fetchProfileData = useCallback(async () => {
     if (!user) return;
     const previousState = isFollowing;
 
-    // Atualização otimista (UI rápida)
     setIsFollowing(!previousState);
     setUser(prev => prev ? {
       ...prev,
@@ -92,7 +153,6 @@ const fetchProfileData = useCallback(async () => {
       await userService.toggleFollow(user.id, previousState);
     } catch (error) {
       console.error('Erro ao alternar follow:', error);
-      // Reverte em caso de erro
       setIsFollowing(previousState);
       setUser(prev => prev ? {
         ...prev,
@@ -172,22 +232,22 @@ const fetchProfileData = useCallback(async () => {
         </View>
         <View style={styles.emptyState}>
           <Text style={styles.emptyText}>Não foi possível carregar este perfil.</Text>
-          <TouchableOpacity style={styles.actionButtonMain} onPress={fetchProfileData}>
-            <Text style={styles.actionButtonTextMain}>Tentar novamente</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchProfileData}>
+            <Text style={styles.retryButtonText}>Tentar novamente</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Pegamos os posts direto do DTO retornado pela API e tipamos explicitamente
   const userPosts: PostDTO[] = (user as any).posts || [];
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-    <Stack.Screen options={{ headerShown: false }} />
+      <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+
           <Image
             source={{ uri: user.fotoCapa || COVER_FALLBACK }}
             style={styles.coverImage}
@@ -199,108 +259,91 @@ const fetchProfileData = useCallback(async () => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.userInfoSection}>
-            <Image
-              source={getUserAvatarSource(user.fotoPerfil)}
-              style={[styles.avatar, getUserAvatarZoomStyle(user.fotoPerfil)]}
-              resizeMode={getUserAvatarResizeMode(user.fotoPerfil)}
-            />
-            <Text style={styles.userName}>{user.username || 'Surfista'}</Text>
-            <Text style={styles.bioText}>{user.bio || 'Nenhuma bio definida.'}</Text>
+          {/* NOVA ESTRUTURA DO CABEÇALHO */}
+          <View style={styles.mainProfileSection}>
 
-            {/* BOTOES DE AÇÃO (Ocultos se for o meu próprio perfil) */}
-            {!isMe && (
-              <View style={styles.actionButtonsContainer}>
-                <TouchableOpacity
-                  style={[styles.actionButtonMain, isFollowing && styles.followingButton]}
-                  onPress={handleToggleFollow}
-                >
-                  <Text style={[styles.actionButtonTextMain, isFollowing && styles.followingButtonText]}>
-                    {isFollowing ? 'Seguindo' : 'Seguir'}
+            <View style={styles.topRow}>
+              <Image
+                source={getUserAvatarSource(user.fotoPerfil)}
+                style={styles.avatarLeft}
+                resizeMode="cover" // Forçado para o fallback
+              />
+
+              <View style={styles.topRowRight}>
+
+                {/* Linha do Nome + Botões de Ação */}
+                <View style={styles.nameRow}>
+                  <Text style={styles.userNameLeft} numberOfLines={1}>
+                    {user.username || 'Surfista'}
                   </Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.messageButton, startingChat && { opacity: 0.5 }]}
-                  onPress={handleStartChat}
-                  disabled={startingChat}
-                >
-                  {startingChat ? (
-                    <ActivityIndicator size="small" color="#5C9DB8" />
-                  ) : (
-                    <Ionicons name="chatbubble-ellipses-outline" size={22} color="#5C9DB8" />
+                  {!isMe && (
+                    <>
+                      <TouchableOpacity
+                        style={[styles.followButtonSmall, isFollowing && styles.followingButtonSmall]}
+                        onPress={handleToggleFollow}
+                      >
+                        <Text style={[styles.followButtonTextSmall, isFollowing && styles.followingButtonTextSmall]}>
+                          {isFollowing ? 'Seguindo' : 'Seguir'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.messageButtonSmall}
+                        onPress={handleStartChat}
+                        disabled={startingChat}
+                      >
+                        {startingChat ? (
+                          <ActivityIndicator size="small" color="#5C9DB8" />
+                        ) : (
+                          <Ionicons name="chatbubble-ellipses-outline" size={16} color="#5C9DB8" />
+                        )}
+                      </TouchableOpacity>
+                    </>
                   )}
-                </TouchableOpacity>
+                </View>
+
+                {/* Bolhas menores de status */}
+                <View style={styles.statsInlineRow}>
+                  <TouchableOpacity
+                    style={styles.miniStatBubble}
+                    onPress={() => openFollowSheet('followers', user.seguidoresCount)}
+                  >
+                    <Text style={styles.miniStatNumber}>{user.seguidoresCount || 0}</Text>
+                    <Text style={styles.miniStatLabel}>Seguidores</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.miniStatBubble}
+                    onPress={() => openFollowSheet('following', user.seguindoCount)}
+                  >
+                    <Text style={styles.miniStatNumber}>{user.seguindoCount || 0}</Text>
+                    <Text style={styles.miniStatLabel}>Seguindo</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            )}
-          </View>
-
-          <View style={styles.statsContainer}>
-            <TouchableOpacity
-              style={styles.statCard}
-              onPress={() => openFollowSheet('followers', user.seguidoresCount)}
-            >
-              <Text style={styles.statNumber}>{user.seguidoresCount || 0}</Text>
-              <Text style={styles.statLabel}>Seguidores</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.statCard}
-              onPress={() => openFollowSheet('following', user.seguindoCount)}
-            >
-              <Text style={styles.statNumber}>{user.seguindoCount || 0}</Text>
-              <Text style={styles.statLabel}>Seguindo</Text>
-            </TouchableOpacity>
-
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{userPosts.length}</Text>
-              <Text style={styles.statLabel}>Posts</Text>
             </View>
+
+            <Text style={styles.bioTextLeft}>{user.bio || 'Nenhuma bio definida.'}</Text>
           </View>
 
-          <View style={styles.postsSection}>
-            <Text style={styles.sectionTitle}>Contribuições</Text>
+          {/* SEÇÃO DOS POSTS */}
+          <View style={styles.contentSection}>
+            <View style={styles.registrosHeader}>
+              <Text style={styles.registrosCountText}>{userPosts.length} Registros</Text>
+            </View>
+
             {userPosts.length > 0 ? (
-              userPosts.map((post: PostDTO) => (
-                <TouchableOpacity
-                  key={post.id}
-                  style={styles.postCard}
-                  onPress={() => {
-                    router.push(`/post/${post.id}` as Href);
-                  }}
-                >
-                  {post.caminhoFoto ? (
-                    <Image source={{ uri: post.caminhoFoto }} style={styles.postImage} />
-                  ) : (
-                    <View style={[styles.postImage, { backgroundColor: '#E2DEC3', alignItems: 'center', justifyContent: 'center' }]}>
-                        <Ionicons name="image-outline" size={24} color="#999" />
-                    </View>
-                  )}
-                  <View style={styles.postInfo}>
-                    {post.descricao ? (
-                        <Text style={styles.postDesc} numberOfLines={2}>
-                          {post.descricao}
-                        </Text>
-                    ) : (
-                        <Text style={[styles.postDesc, { color: '#999', fontStyle: 'italic' }]} numberOfLines={1}>
-                          Sem descrição
-                        </Text>
-                    )}
-                    <Text style={styles.postBeach}>{post.beach?.nome || 'Local desconhecido'}</Text>
-                    <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
-                  </View>
-                </TouchableOpacity>
+              userPosts.map((post) => (
+                <ProfilePostItem key={post.id} post={post} />
               ))
             ) : (
-              <Text style={styles.emptyPostsText}>Este surfista ainda não fez posts.</Text>
+              <Text style={styles.emptyContentText}>Este surfista ainda não fez registros.</Text>
             )}
           </View>
         </ScrollView>
 
-        <BottomSheet
-          visible={sheetVisible}
-          onClose={closeSheet}
-        >
+        <BottomSheet visible={sheetVisible} onClose={closeSheet}>
           <View style={styles.sheetContent}>
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>
@@ -322,17 +365,16 @@ const fetchProfileData = useCallback(async () => {
                   <TouchableOpacity
                     style={styles.userRow}
                     onPress={() => {
-                        closeSheet();
-                        // Impede que a pessoa fique abrindo um loop infinito do próprio perfil que já está
-                        if (item.id !== userId) {
-                            router.push(`/user/${item.id}` as Href);
-                        }
+                      closeSheet();
+                      if (item.id !== userId) {
+                        router.push(`/user/${item.id}` as Href);
+                      }
                     }}
                   >
                     <Image
                       source={getUserAvatarSource(item.fotoPerfil)}
-                      style={[styles.userAvatar, getUserAvatarZoomStyle(item.fotoPerfil)]}
-                      resizeMode={getUserAvatarResizeMode(item.fotoPerfil)}
+                      style={styles.userAvatar}
+                      resizeMode="cover"
                     />
                     <Text style={styles.userRowName}>@{item.username}</Text>
                   </TouchableOpacity>
@@ -355,36 +397,180 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', backgroundColor: '#F6F4EB' },
   headerBack: { padding: 20 },
   backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#E2DEC3', alignItems: 'center', justifyContent: 'center' },
-  coverImage: { width: '100%', height: 180, position: 'absolute' },
-  headerActions: { alignItems: 'flex-start', padding: 20, height: 120 },
-  iconBadge: { backgroundColor: 'rgba(255,255,255,0.8)', padding: 8, borderRadius: 20 },
-  userInfoSection: { alignItems: 'center', marginTop: 10 },
-  avatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 4, borderColor: '#F6F4EB' },
-  userName: { fontSize: 22, fontWeight: 'bold', color: '#1F4A63', marginTop: 10 },
-  bioText: { fontSize: 14, color: '#666', textAlign: 'center', marginVertical: 10, paddingHorizontal: 40 },
 
-  actionButtonsContainer: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 5 },
-  actionButtonMain: { paddingHorizontal: 30, paddingVertical: 10, backgroundColor: '#1F4A63', borderRadius: 20 },
-  actionButtonTextMain: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
-  followingButton: { backgroundColor: '#E2DEC3', borderWidth: 1, borderColor: '#1F4A63' },
-  followingButtonText: { color: '#1F4A63' },
-  messageButton: { padding: 8, backgroundColor: '#E2DEC3', borderRadius: 20, borderWidth: 1, borderColor: '#5C9DB8' },
+  coverImage: { width: '100%', height: 160, position: 'absolute' },
 
-  statsContainer: { flexDirection: 'row', justifyContent: 'space-around', marginVertical: 25, paddingHorizontal: 20 },
-  statCard: { alignItems: 'center', minWidth: 80 },
-  statNumber: { fontSize: 18, fontWeight: 'bold', color: '#1F4A63' },
-  statLabel: { fontSize: 12, color: '#5C9DB8' },
-  postsSection: { paddingHorizontal: 20 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1F4A63', marginBottom: 15 },
-  postCard: { flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 12, padding: 10, marginBottom: 10, elevation: 2 },
-  postImage: { width: 60, height: 60, borderRadius: 8 },
-  postInfo: { marginLeft: 15, justifyContent: 'center', flex: 1 },
-  postDesc: { fontSize: 15, fontWeight: '600', color: '#1F4A63' },
-  postBeach: { fontSize: 13, color: '#5C9DB8', marginTop: 4 },
+  headerActions: {
+    position: 'absolute',
+    top: 20,
+    left: 20, // Mudou de right para left para o botão de voltar
+    zIndex: 10,
+  },
+  iconBadge: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+
+  mainProfileSection: {
+    paddingHorizontal: 20,
+    paddingTop: 160,
+  },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginTop: -30,
+    marginBottom: 16,
+  },
+  avatarLeft: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: '#F6F4EB',
+    backgroundColor: '#E2DEC3',
+  },
+  topRowRight: {
+    flex: 1,
+    marginLeft: 16,
+    paddingBottom: 4,
+  },
+
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 6
+  },
+  userNameLeft: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1F4A63',
+    flexShrink: 1,
+  },
+
+  // Novos botões compactos para combinar com o layout novo
+  followButtonSmall: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  followingButtonSmall: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#1F4A63',
+  },
+  followButtonTextSmall: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  followingButtonTextSmall: {
+    color: '#1F4A63',
+  },
+  messageButtonSmall: {
+    backgroundColor: '#FFFFFF',
+    padding: 6,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#5C9DB8',
+  },
+
+  statsInlineRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  miniStatBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2DEC3',
+    gap: 4,
+  },
+  miniStatNumber: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1F4A63',
+  },
+  miniStatLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#5C9DB8',
+    textTransform: 'uppercase',
+  },
+  bioTextLeft: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+
+  // CONTEÚDO (POSTS)
+  contentSection: { paddingHorizontal: 20 },
+  registrosHeader: {
+    marginBottom: 12,
+  },
+  registrosCountText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1F4A63',
+  },
+  emptyContentText: { color: '#999', marginTop: 10 },
+
+  postCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 10,
+    elevation: 2,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2DEC3',
+  },
+  postImage: { width: 60, height: 60, borderRadius: 8, backgroundColor: '#E2DEC3' },
+  postInfo: { marginLeft: 12, justifyContent: 'center', flex: 1 },
+  postDesc: { fontSize: 14, fontWeight: '600', color: '#1F4A63', marginBottom: 4 },
+  postBeach: { fontSize: 12, color: '#5C9DB8' },
   postDate: { fontSize: 11, color: '#777', marginTop: 3 },
-  emptyPostsText: { textAlign: 'center', color: '#999', marginTop: 20 },
+  postStatsRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingLeft: 10,
+    borderLeftWidth: 1,
+    borderLeftColor: '#E2DEC3',
+    gap: 8,
+    minWidth: 50
+  },
+  statBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statBadgeText: { fontSize: 12, color: '#6B7280', fontWeight: '600', minWidth: 16, textAlign: 'right' },
+
   emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   emptyText: { color: '#5C9DB8' },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: '#5C9DB8',
+    borderRadius: 20,
+  },
+  retryButtonText: { color: '#FFF', fontWeight: 'bold' },
 
   sheetContent: { paddingHorizontal: 20, paddingBottom: 40, height: 450 },
   sheetHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingTop: 10 },
