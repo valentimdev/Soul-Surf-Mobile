@@ -1,7 +1,7 @@
 import { postService } from '@/services/posts/postService';
 import { PostDTO } from '@/types/api';
 import { formatDateTimeWithYear } from '@/utils/formatters';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -16,8 +16,14 @@ import {
 } from 'react-native';
 
 function FeedCard({ post }: { post: PostDTO }) {
+  const router = useRouter();
+
   return (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.85}
+      onPress={() => router.push(`/post/${post.id}` as Href)}
+    >
       <View style={styles.cardHeader}>
         <Text style={styles.userName}>{post.usuario?.username || 'Surfista'}</Text>
         <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
@@ -32,7 +38,7 @@ function FeedCard({ post }: { post: PostDTO }) {
         <Text style={styles.statsText}>{post.likesCount ?? 0} curtidas</Text>
         <Text style={styles.statsText}>{post.commentsCount ?? 0} comentarios</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

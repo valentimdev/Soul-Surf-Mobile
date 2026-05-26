@@ -20,6 +20,7 @@ import { postService } from '@/services/posts/postService';
 import { userService } from '@/services/users/userService';
 import { beachService } from '@/services/beaches/beachService';
 import { PostDTO, UserDTO, BeachDTO } from '@/types/api';
+import { formatDateTimeWithYear } from '@/utils/formatters';
 
 type TabType = 'posts' | 'pessoas' | 'praias';
 
@@ -63,9 +64,7 @@ const DiscoverPostCard = ({
   };
 
   const handlePostClick = () => {
-    if (post.beach?.id) {
-      router.push(`/beach/${post.beach.id}?scrollToPost=${post.id}`);
-    }
+    router.push(`/post/${post.id}` as Href);
   };
 
   return (
@@ -88,6 +87,9 @@ const DiscoverPostCard = ({
               <Text style={styles.postBeachName}>{beachName}</Text>
             </TouchableOpacity>
           )}
+          {post.data ? (
+            <Text style={styles.postDate}>{formatDateTimeWithYear(post.data)}</Text>
+          ) : null}
         </View>
 
         {!isMe && (
@@ -403,6 +405,7 @@ const styles = StyleSheet.create({
   postHeaderInfo: { flex: 1, justifyContent: 'center' },
   postAuthorName: { fontSize: 15, fontWeight: 'bold', color: '#1F4A63' },
   postBeachName: { fontSize: 12, color: '#5C9DB8', marginTop: 2 },
+  postDate: { fontSize: 11, color: '#777', marginTop: 2 },
 
   followButton: {
     paddingHorizontal: 16,
