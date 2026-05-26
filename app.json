@@ -58,9 +58,8 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "41a265de-a7f9-4522-ba57-2858ec798518"
+        "projectId": "b5b27660-91bf-4e54-83e5-beed2846b6e4"
       }
-    },
-    "owner": "babytimdev"
+    }
   }
 }

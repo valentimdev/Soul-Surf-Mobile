@@ -78,7 +78,7 @@ describe('authService integration (mock data + real HTTP call)', () => {
     });
   });
 
-  test('resetPassword deve consumir POST /api/auth/reset-password', async () => {
+  test('resetPassword deve consumir POST /api/auth/reset-password com email e codigo', async () => {
     server.setRoutes([
       {
         method: 'POST',
@@ -87,13 +87,14 @@ describe('authService integration (mock data + real HTTP call)', () => {
       },
     ]);
 
-    await expect(authService.resetPassword('reset-token', 'nova-senha')).resolves.toEqual({
+    await expect(authService.resetPassword('samuca@soulsurf.com', '123456', 'nova-senha')).resolves.toEqual({
       message: 'Senha alterada',
     });
 
     const request = server.getLastRequest('POST', '/api/auth/reset-password');
     expect(request?.jsonBody).toEqual({
-      token: 'reset-token',
+      email: 'samuca@soulsurf.com',
+      code: '123456',
       newPassword: 'nova-senha',
     });
   });
@@ -103,7 +104,7 @@ describe('authService integration (mock data + real HTTP call)', () => {
       {
         method: 'POST',
         path: '/api/auth/login',
-        response: { status: 401, body: { message: 'Credenciais inválidas' } },
+        response: { status: 401, body: { message: 'Credenciais invalidas' } },
       },
     ]);
 
@@ -117,7 +118,7 @@ describe('authService integration (mock data + real HTTP call)', () => {
       {
         method: 'POST',
         path: '/api/auth/signup',
-        response: { status: 400, body: { message: 'Usuário já existe' } },
+        response: { status: 400, body: { message: 'Usuario ja existe' } },
       },
     ]);
 
@@ -133,7 +134,7 @@ describe('authService integration (mock data + real HTTP call)', () => {
       {
         method: 'POST',
         path: '/api/auth/forgot-password',
-        response: { status: 404, body: { message: 'Usuário não encontrado' } },
+        response: { status: 404, body: { message: 'Usuario nao encontrado' } },
       },
     ]);
 
@@ -147,11 +148,11 @@ describe('authService integration (mock data + real HTTP call)', () => {
       {
         method: 'POST',
         path: '/api/auth/reset-password',
-        response: { status: 400, body: { message: 'Token inválido' } },
+        response: { status: 400, body: { message: 'Codigo invalido' } },
       },
     ]);
 
-    await expect(authService.resetPassword('token-invalido', '12345678')).rejects.toMatchObject({
+    await expect(authService.resetPassword('samuca@soulsurf.com', '000000', '12345678')).rejects.toMatchObject({
       response: { status: 400 },
     });
   });
