@@ -14,7 +14,14 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AppAlertProvider>
         <NotificationProvider>
-          <Stack>
+          <Stack
+            screenOptions={{
+              headerStyle: { backgroundColor: '#F6F4EB' },
+              headerTintColor: '#1F4A63',
+              headerTitleStyle: { fontWeight: 'bold' },
+              headerShadowVisible: false,
+            }}
+          >
             <Stack.Screen name="index" options={{ headerShown: false }} />
             <Stack.Screen name="register" options={{ headerShown: false }} />
             <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
