@@ -174,7 +174,6 @@ export default function MapScreen() {
         nome: '',
         descricao: '',
         localizacao: '',
-        nivelExperiencia: 'Intermediario',
     });
     const [poiForm, setPoiForm] = useState<{
         nome: string;
@@ -387,7 +386,7 @@ export default function MapScreen() {
                 latitude: lat,
                 longitude: lng,
                 descricao: beachForm.descricao.trim() || 'Praia cadastrada pela gestao.',
-                nivelExperiencia: beachForm.nivelExperiencia.trim() || 'Intermediario',
+                nivelExperiencia: 'Intermediario',
             })
                 .then(async () => {
                     await reloadPins();
@@ -398,7 +397,6 @@ export default function MapScreen() {
                         nome: '',
                         descricao: '',
                         localizacao: '',
-                        nivelExperiencia: 'Intermediario',
                     });
                     showAlert('Pronto', 'Praia criada no mapa.');
                 })
@@ -676,13 +674,7 @@ export default function MapScreen() {
                                         onChangeText={(localizacao) => setBeachForm((current) => ({ ...current, localizacao }))}
                                         style={styles.modalInput}
                                     />
-                                    <TextInput
-                                        placeholder="Nivel de experiencia"
-                                        placeholderTextColor="#8BA1AA"
-                                        value={beachForm.nivelExperiencia}
-                                        onChangeText={(nivelExperiencia) => setBeachForm((current) => ({ ...current, nivelExperiencia }))}
-                                        style={styles.modalInput}
-                                    />
+
                                     <TextInput
                                         placeholder="Descricao"
                                         placeholderTextColor="#8BA1AA"

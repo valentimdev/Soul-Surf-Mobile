@@ -20,8 +20,7 @@ export interface CreatePoiRequest {
   latitude: number;
   longitude: number;
   telefone?: string;
-  caminhoFoto?: string;
-  beachId?: number;
+  fotoUri?: string;
 }
 
 function normalizePoiList(raw: unknown): PointOfInterestDTO[] {
@@ -71,21 +70,40 @@ export const poiService = {
   },
 
   createPoi: async (payload: CreatePoiRequest): Promise<PointOfInterestDTO> => {
-    const requestBody: Record<string, unknown> = {
-      nome: payload.nome,
-      descricao: payload.descricao,
-      categoria: payload.categoria,
-      latitude: payload.latitude,
-      longitude: payload.longitude,
-      telefone: payload.telefone,
-      caminhoFoto: payload.caminhoFoto,
-    };
+    const formData = new FormData();
+    formData.append('nome', payload.nome);
+    formData.append('descricao', payload.descricao);
+    formData.append('categoria', payload.categoria);
+    formData.append('latitude', String(payload.latitude));
+    formData.append('longitude', String(payload.longitude));
 
-    if (payload.beachId) {
-      requestBody.beach = { id: payload.beachId };
+    if (payload.telefone) {
+      formData.append('telefone', payload.telefone);
     }
 
-    const response = await api.post('/api/pois', requestBody);
+    if (payload.fotoUri) {
+      const filename = payload.fotoUri.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename || '');
+      const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+      const safeFilename = filename && filename.length > 0 ? filename : 'poi.jpg';
+
+      formData.append('foto', {
+        uri: payload.fotoUri,
+        name: safeFilename,
+        type,
+      } as any);
+    }
+
+    const response = await api.post('/api/pois', formData, {
+      transformRequest: (data, headers) => {
+        if (headers) {
+          delete (headers as any)['Content-Type'];
+          delete (headers as any)['content-type'];
+        }
+        return data;
+      },
+    });
     return response.data;
   },
 };
+

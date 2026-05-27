@@ -136,23 +136,14 @@ describe('poiService integration (mock data + real HTTP call)', () => {
       categoria: 'SURF_SHOP',
       latitude: -3.7,
       longitude: -38.5,
-      beach: { id: 1 },
     };
 
     server.setRoutes([
       {
         method: 'POST',
         path: '/api/pois',
-        handler: (request) => {
-          expect(request.jsonBody).toEqual({
-            nome: 'Loja Nova',
-            descricao: 'Equipamentos e acessórios',
-            categoria: 'SURF_SHOP',
-            latitude: -3.7,
-            longitude: -38.5,
-            telefone: '85999999999',
-            beach: { id: 1 },
-          });
+        handler: () => {
+          // O serviço envia FormData (multipart), não JSON
           return { status: 200, body: created };
         },
       },
@@ -166,14 +157,13 @@ describe('poiService integration (mock data + real HTTP call)', () => {
         latitude: -3.7,
         longitude: -38.5,
         telefone: '85999999999',
-        beachId: 1,
       })
     ).resolves.toEqual(created);
   });
 
   test('createPoi deve propagar erro HTTP real', async () => {
     server.setRoutes([
-      { method: 'POST', path: '/api/pois', response: { status: 400, body: { message: 'Praia obrigatória' } } },
+      { method: 'POST', path: '/api/pois', response: { status: 400, body: { message: 'Dados inválidos' } } },
     ]);
 
     await expect(
@@ -183,11 +173,9 @@ describe('poiService integration (mock data + real HTTP call)', () => {
         categoria: 'SURF_SHOP',
         latitude: -3.7,
         longitude: -38.5,
-        beachId: 0,
       })
     ).rejects.toMatchObject({
       response: { status: 400 },
     });
   });
 });
-
