@@ -323,10 +323,10 @@ export default function DiscoverScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.headerTitle}>Descobrir</Text>
-        </View>
 
+        <View style={styles.header}>
+              <Text style={styles.title}>Descobrir</Text>
+           </View>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#5C9DB8" style={styles.searchIcon} />
           <TextInput
@@ -367,17 +367,32 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F6F4EB' },
-  container: { flex: 1, paddingTop: 10 },
-  headerContainer: { paddingHorizontal: 20, paddingBottom: 16 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1F4A63' },
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#F6F4EB'
+      },
+      container: {
+        flex: 1,
+        paddingHorizontal: 20,
+        paddingTop: 20
+      },
+      header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 20,
+      },
+      title: {
+        fontSize: 28,
+        fontWeight: 'bold',
+        color: '#1F4A63',
+      },
 
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 25,
-    marginHorizontal: 20,
     paddingHorizontal: 16,
     height: 50,
     marginBottom: 16,
@@ -393,12 +408,12 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 16, color: '#1F4A63', height: '100%' },
   clearButton: { padding: 4 },
 
-  tabsContainer: { flexDirection: 'row', paddingHorizontal: 20, marginBottom: 16, gap: 10 },
+  tabsContainer: { flexDirection: 'row', marginBottom: 16, gap: 10 },
   tabButton: { flex: 1, paddingVertical: 8, borderRadius: 20, backgroundColor: '#E2DEC3', alignItems: 'center' },
   tabButtonActive: { backgroundColor: '#1F4A63' },
   tabText: { fontSize: 14, fontWeight: '600', color: '#1F4A63' },
   tabTextActive: { color: '#FFFFFF' },
-  listContainer: { paddingHorizontal: 20, paddingBottom: 20, gap: 16 },
+  listContainer: {paddingBottom: 20, gap: 16 },
 
   postCard: { backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2DEC3', overflow: 'hidden' },
   postHeader: { flexDirection: 'row', alignItems: 'center', padding: 12 },

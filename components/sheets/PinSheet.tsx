@@ -120,7 +120,7 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 80 }}
+      contentContainerStyle={{ paddingBottom: 110 }}
     >
       <View style={styles.headerBlock}>
         <Text style={styles.label}>{TYPE_LABELS[pin.type]}</Text>
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2A4B7C',
     paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 40,
     shadowColor: '#1F4A63',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
