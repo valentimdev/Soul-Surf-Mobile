@@ -54,21 +54,25 @@ describe('poiService Unit Tests', () => {
       categoria: 'SURF_SHOP' as const,
       latitude: 10,
       longitude: 20,
-      beachId: 1,
+      telefone: '123456789',
+      fotoUri: 'file:///path/to/photo.jpg',
     };
     const mockResponse = { id: 5, ...payload };
     (api.post as jest.Mock).mockResolvedValue({ data: mockResponse });
 
     const result = await poiService.createPoi(payload);
 
-    expect(api.post).toHaveBeenCalledWith('/api/pois', expect.objectContaining({
-      nome: 'Nova Loja',
-      beach: { id: 1 }
-    }));
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/pois',
+      expect.any(FormData),
+      expect.objectContaining({
+        transformRequest: expect.any(Function),
+      })
+    );
     expect(result).toEqual(mockResponse);
   });
 
-  it('deve criar um POI sem praia vinculada', async () => {
+  it('deve criar um POI sem campos opcionais', async () => {
     const payload = {
       nome: 'Novo Ponto',
       descricao: 'Desc',
@@ -81,12 +85,13 @@ describe('poiService Unit Tests', () => {
 
     const result = await poiService.createPoi(payload);
 
-    const requestBody = (api.post as jest.Mock).mock.calls[0][1];
-    expect(api.post).toHaveBeenCalledWith('/api/pois', expect.objectContaining({
-      nome: 'Novo Ponto',
-      categoria: 'BOARD_REPAIR',
-    }));
-    expect(requestBody).not.toHaveProperty('beach');
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/pois',
+      expect.any(FormData),
+      expect.objectContaining({
+        transformRequest: expect.any(Function),
+      })
+    );
     expect(result).toEqual(mockResponse);
   });
 });
