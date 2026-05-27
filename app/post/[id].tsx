@@ -273,7 +273,7 @@ export default function PostDetailScreen() {
                     >
                       <Text style={styles.commentAuthorName}>{comment.usuario?.username || 'Surfista'}</Text>
                     </TouchableOpacity>
-                    <Text style={styles.commentDate}>{formatDate(comment.data)}</Text>
+                    <Text style={styles.commentDate}>{formatDateTimeWithYear(comment.data)}</Text>
                   </View>
                   <Text style={styles.commentText}>{comment.texto}</Text>
 
@@ -476,7 +476,8 @@ const styles = StyleSheet.create({
   },
   commentDate: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#5C7A85',
+    fontWeight: '600',
   },
   commentText: {
     fontSize: 14,

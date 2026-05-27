@@ -1,6 +1,6 @@
 import { ChatMessageResponse, chatService } from '@/services/chat/chatService';
 import { userService } from '@/services/users/userService';
-import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter, type Href } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AppState,
@@ -194,7 +194,7 @@ export default function ChatConversationScreen() {
           activeOpacity={0.8}
           onPress={() => {
             if (targetUserId) {
-              router.push(`/user/${targetUserId}`);
+              router.push(`/user/${targetUserId}` as Href);
             }
           }}
         >

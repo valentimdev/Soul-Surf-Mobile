@@ -1,10 +1,13 @@
 import { useAppAlert } from '@/components/AppAlert';
 import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
 import { adminService, AdminAuditLogDTO, AdminMetricsDTO } from '@/services/admin/adminService';
+import { beachService } from '@/services/beaches/beachService';
+import { poiService, PointOfInterestDTO } from '@/services/beaches/poiService';
 import { userService } from '@/services/users/userService';
 import { CommentDTO, PostDTO, UserDTO } from '@/types/api';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router, useFocusEffect } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,7 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 const POST_FALLBACK = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=800';
 
-type AdminTab = 'users' | 'posts' | 'comments' | 'audits';
+type AdminTab = 'users' | 'posts' | 'comments' | 'audits' | 'beaches';
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
@@ -43,6 +46,7 @@ const tabs: { key: AdminTab; label: string; icon: IconName }[] = [
   { key: 'users', label: 'Usuarios', icon: 'people-outline' },
   { key: 'posts', label: 'Posts', icon: 'images-outline' },
   { key: 'comments', label: 'Comentarios', icon: 'chatbubbles-outline' },
+  { key: 'beaches', label: 'Praias', icon: 'map-outline' },
   { key: 'audits', label: 'Auditoria', icon: 'document-text-outline' },
 ];
 
@@ -166,6 +170,25 @@ export default function AdminScreen() {
   const [comments, setComments] = useState<CommentDTO[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentActionId, setCommentActionId] = useState<number | null>(null);
+
+  // Beach creation
+  const [beachNome, setBeachNome] = useState('');
+  const [beachLocalizacao, setBeachLocalizacao] = useState('');
+  const [beachDescricao, setBeachDescricao] = useState('');
+  const [beachLat, setBeachLat] = useState('');
+  const [beachLon, setBeachLon] = useState('');
+  const [beachPhotoUri, setBeachPhotoUri] = useState<string | null>(null);
+  const [creatingBeach, setCreatingBeach] = useState(false);
+
+  // POI creation
+  const [poiNome, setPoiNome] = useState('');
+  const [poiDescricao, setPoiDescricao] = useState('');
+  const [poiLat, setPoiLat] = useState('');
+  const [poiLon, setPoiLon] = useState('');
+  const [poiBeachId, setPoiBeachId] = useState('');
+  const [poiCategoria, setPoiCategoria] = useState<PointOfInterestDTO['categoria']>('SURF_SCHOOL');
+  const [poiPhotoUri, setPoiPhotoUri] = useState<string | null>(null);
+  const [creatingPoi, setCreatingPoi] = useState(false);
 
   const flatComments = useMemo(() => flattenComments(comments), [comments]);
 
@@ -635,10 +658,275 @@ export default function AdminScreen() {
     </View>
   );
 
+  const handlePickBeachPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setBeachPhotoUri(result.assets[0].uri);
+    }
+  };
+
+  const handleCreateBeach = async () => {
+    if (!beachNome.trim() || !beachLocalizacao.trim()) {
+      showAlert('Aviso', 'Informe nome e localizacao da praia.');
+      return;
+    }
+    const lat = parseFloat(beachLat);
+    const lon = parseFloat(beachLon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      showAlert('Aviso', 'Informe latitude e longitude validas.');
+      return;
+    }
+    setCreatingBeach(true);
+    try {
+      await beachService.createBeach({
+        nome: beachNome.trim(),
+        localizacao: beachLocalizacao.trim(),
+        descricao: beachDescricao.trim() || 'Praia cadastrada pelo admin.',
+        nivelExperiencia: 'Intermediario',
+        latitude: lat,
+        longitude: lon,
+        fotoUri: beachPhotoUri ?? undefined,
+      });
+      setBeachNome('');
+      setBeachLocalizacao('');
+      setBeachDescricao('');
+      setBeachLat('');
+      setBeachLon('');
+      setBeachPhotoUri(null);
+      showAlert('Pronto', 'Praia criada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao criar praia:', error);
+      showAlert('Erro', 'Nao foi possivel criar a praia.');
+    } finally {
+      setCreatingBeach(false);
+    }
+  };
+
+  const handlePickPoiPhoto = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setPoiPhotoUri(result.assets[0].uri);
+    }
+  };
+
+  const handleCreatePoi = async () => {
+    if (!poiNome.trim()) {
+      showAlert('Aviso', 'Informe o nome do ponto de interesse.');
+      return;
+    }
+    const lat = parseFloat(poiLat);
+    const lon = parseFloat(poiLon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      showAlert('Aviso', 'Informe latitude e longitude validas.');
+      return;
+    }
+    setCreatingPoi(true);
+    try {
+      await poiService.createPoi({
+        nome: poiNome.trim(),
+        descricao: poiDescricao.trim() || 'Ponto cadastrado pelo admin.',
+        categoria: poiCategoria,
+        latitude: lat,
+        longitude: lon,
+        fotoUri: poiPhotoUri ?? undefined,
+      });
+      setPoiNome('');
+      setPoiDescricao('');
+      setPoiLat('');
+      setPoiLon('');
+      setPoiBeachId('');
+      setPoiPhotoUri(null);
+      showAlert('Pronto', 'Ponto de interesse criado!');
+    } catch (error) {
+      console.error('Erro ao criar POI:', error);
+      showAlert('Erro', 'Nao foi possivel criar o ponto de interesse.');
+    } finally {
+      setCreatingPoi(false);
+    }
+  };
+
+  const POI_CATEGORIES: { value: PointOfInterestDTO['categoria']; label: string }[] = [
+    { value: 'SURF_SCHOOL', label: 'Escola de Surf' },
+    { value: 'SWIMMING_SCHOOL', label: 'Escola de Natacao' },
+    { value: 'SURF_SHOP', label: 'Loja de Surf' },
+    { value: 'BOARD_REPAIR', label: 'Reparo de Prancha' },
+    { value: 'TOURIST_SPOT', label: 'Ponto Turistico' },
+  ];
+
+  const renderBeaches = () => (
+    <View style={styles.section}>
+      {/* Create Beach */}
+      <View style={styles.beachSubSection}>
+        <Text style={styles.beachSubTitle}>Criar Praia</Text>
+        <TextInput
+          value={beachNome}
+          onChangeText={setBeachNome}
+          placeholder="Nome da praia"
+          placeholderTextColor="#8BA1AA"
+          style={styles.idInput}
+        />
+        <TextInput
+          value={beachLocalizacao}
+          onChangeText={setBeachLocalizacao}
+          placeholder="Localizacao (ex: Fortaleza, CE)"
+          placeholderTextColor="#8BA1AA"
+          style={styles.idInput}
+        />
+        <TextInput
+          value={beachDescricao}
+          onChangeText={setBeachDescricao}
+          placeholder="Descricao (opcional)"
+          placeholderTextColor="#8BA1AA"
+          style={[styles.idInput, styles.multilineInput]}
+          multiline
+        />
+        <View style={styles.formRow}>
+          <TextInput
+            value={beachLat}
+            onChangeText={setBeachLat}
+            placeholder="Latitude"
+            placeholderTextColor="#8BA1AA"
+            keyboardType="numbers-and-punctuation"
+            style={[styles.idInput, { flex: 1 }]}
+          />
+          <TextInput
+            value={beachLon}
+            onChangeText={setBeachLon}
+            placeholder="Longitude"
+            placeholderTextColor="#8BA1AA"
+            keyboardType="numbers-and-punctuation"
+            style={[styles.idInput, { flex: 1 }]}
+          />
+        </View>
+
+        {beachPhotoUri ? (
+          <View style={styles.beachPhotoPreviewContainer}>
+            <Image source={{ uri: beachPhotoUri }} style={styles.beachPhotoPreview} />
+            <TouchableOpacity
+              style={styles.beachPhotoRemove}
+              onPress={() => setBeachPhotoUri(null)}
+            >
+              <Ionicons name="trash-outline" size={18} color="#FFF" />
+              <Text style={styles.beachPhotoRemoveText}>Remover</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.beachPhotoPickerBtn} onPress={handlePickBeachPhoto}>
+            <Ionicons name="image-outline" size={22} color="#5C9DB8" />
+            <Text style={styles.beachPhotoPickerText}>Adicionar foto da praia</Text>
+          </TouchableOpacity>
+        )}
+
+        <ActionButton
+          icon="add-circle-outline"
+          label="Criar praia"
+          onPress={() => void handleCreateBeach()}
+          loading={creatingBeach}
+        />
+      </View>
+
+      {/* Create POI */}
+      <View style={styles.beachSubSection}>
+        <Text style={styles.beachSubTitle}>Criar Ponto de Interesse</Text>
+        <TextInput
+          value={poiNome}
+          onChangeText={setPoiNome}
+          placeholder="Nome do ponto"
+          placeholderTextColor="#8BA1AA"
+          style={styles.idInput}
+        />
+        <TextInput
+          value={poiDescricao}
+          onChangeText={setPoiDescricao}
+          placeholder="Descricao (opcional)"
+          placeholderTextColor="#8BA1AA"
+          style={[styles.idInput, styles.multilineInput]}
+          multiline
+        />
+        <View style={styles.formRow}>
+          <TextInput
+            value={poiLat}
+            onChangeText={setPoiLat}
+            placeholder="Latitude"
+            placeholderTextColor="#8BA1AA"
+            keyboardType="numbers-and-punctuation"
+            style={[styles.idInput, { flex: 1 }]}
+          />
+          <TextInput
+            value={poiLon}
+            onChangeText={setPoiLon}
+            placeholder="Longitude"
+            placeholderTextColor="#8BA1AA"
+            keyboardType="numbers-and-punctuation"
+            style={[styles.idInput, { flex: 1 }]}
+          />
+        </View>
+
+        {poiPhotoUri ? (
+          <View style={styles.beachPhotoPreviewContainer}>
+            <Image source={{ uri: poiPhotoUri }} style={styles.beachPhotoPreview} />
+            <TouchableOpacity
+              style={styles.beachPhotoRemove}
+              onPress={() => setPoiPhotoUri(null)}
+            >
+              <Ionicons name="trash-outline" size={18} color="#FFF" />
+              <Text style={styles.beachPhotoRemoveText}>Remover</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.beachPhotoPickerBtn} onPress={handlePickPoiPhoto}>
+            <Ionicons name="image-outline" size={22} color="#5C9DB8" />
+            <Text style={styles.beachPhotoPickerText}>Adicionar foto do ponto</Text>
+          </TouchableOpacity>
+        )}
+
+        <Text style={styles.categoryLabel}>Categoria</Text>
+        <View style={styles.categoryRow}>
+          {POI_CATEGORIES.map((cat) => (
+            <TouchableOpacity
+              key={cat.value}
+              onPress={() => setPoiCategoria(cat.value)}
+              style={[
+                styles.categoryChip,
+                poiCategoria === cat.value && styles.categoryChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.categoryChipText,
+                  poiCategoria === cat.value && styles.categoryChipTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {cat.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <ActionButton
+          icon="location-outline"
+          label="Criar ponto"
+          onPress={() => void handleCreatePoi()}
+          loading={creatingPoi}
+        />
+      </View>
+    </View>
+  );
+
   const renderActiveTab = () => {
     if (activeTab === 'users') return renderUsers();
     if (activeTab === 'posts') return renderPosts();
     if (activeTab === 'comments') return renderComments();
+    if (activeTab === 'beaches') return renderBeaches();
     return renderAudits();
   };
 
@@ -901,6 +1189,100 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E2DEC3',
     paddingVertical: 12,
+  },
+  beachSubSection: {
+    backgroundColor: '#F8F6EE',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E7E2D3',
+    padding: 12,
+    gap: 10,
+  },
+  beachSubTitle: {
+    color: '#1F4A63',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 2,
+  },
+  multilineInput: {
+    minHeight: 72,
+    textAlignVertical: 'top',
+    paddingTop: 10,
+  },
+  beachPhotoPickerBtn: {
+    minHeight: 52,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#BBD5DE',
+    borderStyle: 'dashed',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#F0F7FA',
+  },
+  beachPhotoPickerText: {
+    color: '#5C9DB8',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  beachPhotoPreviewContainer: {
+    borderRadius: 8,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  beachPhotoPreview: {
+    width: '100%',
+    height: 160,
+    backgroundColor: '#E2DEC3',
+  },
+  beachPhotoRemove: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(125,44,44,0.85)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  beachPhotoRemoveText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  categoryLabel: {
+    color: '#6E8792',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  categoryChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D7CDB9',
+  },
+  categoryChipActive: {
+    backgroundColor: '#1F4A63',
+    borderColor: '#1F4A63',
+  },
+  categoryChipText: {
+    color: '#1F4A63',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  categoryChipTextActive: {
+    color: '#FFF',
   },
   auditIcon: {
     width: 26,

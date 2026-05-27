@@ -1766,8 +1766,9 @@ const styles = StyleSheet.create({
   },
   messageDate: {
     fontSize: 11,
-    color: '#6B7280',
+    color: '#5C7A85',
     marginTop: 2,
+    fontWeight: '600',
   },
   messageText: {
     fontSize: 14,
@@ -1859,8 +1860,9 @@ const styles = StyleSheet.create({
   },
   postDate: {
     fontSize: 11,
-    color: '#6B7280',
+    color: '#5C7A85',
     marginTop: 2,
+    fontWeight: '600',
   },
   postImage: {
     width: '100%',
