@@ -25,6 +25,7 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS"
       ]
     },
@@ -36,6 +37,13 @@
       "@maplibre/maplibre-react-native",
       "expo-secure-store",
       "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permitir que o Soul Surf acesse suas fotos para publicar registros.",
+          "cameraPermission": "Permitir que o Soul Surf use a câmera para publicar registros."
+        }
+      ],
       [
         "expo-build-properties",
         {

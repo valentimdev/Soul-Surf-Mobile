@@ -658,15 +658,47 @@ export default function AdminScreen() {
     </View>
   );
 
-  const handlePickBeachPhoto = async () => {
+  const handleAdminImageResult = (
+    result: ImagePicker.ImagePickerResult,
+    setPhotoUri: React.Dispatch<React.SetStateAction<string | null>>
+  ) => {
+    if (!result.canceled && result.assets[0]) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  };
+
+  const handlePickAdminPhoto = async (
+    setPhotoUri: React.Dispatch<React.SetStateAction<string | null>>,
+    source: 'camera' | 'library'
+  ) => {
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        showAlert('Permissao necessaria', 'Permita o acesso a camera para adicionar uma imagem.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.7,
+      });
+      handleAdminImageResult(result, setPhotoUri);
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      showAlert('Permissao necessaria', 'Permita o acesso as fotos para adicionar uma imagem.');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
       quality: 0.7,
     });
-    if (!result.canceled && result.assets[0]) {
-      setBeachPhotoUri(result.assets[0].uri);
-    }
+    handleAdminImageResult(result, setPhotoUri);
   };
 
   const handleCreateBeach = async () => {
@@ -703,17 +735,6 @@ export default function AdminScreen() {
       showAlert('Erro', 'Nao foi possivel criar a praia.');
     } finally {
       setCreatingBeach(false);
-    }
-  };
-
-  const handlePickPoiPhoto = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 0.7,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setPoiPhotoUri(result.assets[0].uri);
     }
   };
 
@@ -819,10 +840,22 @@ export default function AdminScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity style={styles.beachPhotoPickerBtn} onPress={handlePickBeachPhoto}>
-            <Ionicons name="image-outline" size={22} color="#5C9DB8" />
-            <Text style={styles.beachPhotoPickerText}>Adicionar foto da praia</Text>
-          </TouchableOpacity>
+          <View style={styles.photoSourceRow}>
+            <TouchableOpacity
+              style={styles.beachPhotoPickerBtn}
+              onPress={() => void handlePickAdminPhoto(setBeachPhotoUri, 'camera')}
+            >
+              <Ionicons name="camera-outline" size={22} color="#5C9DB8" />
+              <Text style={styles.beachPhotoPickerText}>Camera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.beachPhotoPickerBtn}
+              onPress={() => void handlePickAdminPhoto(setBeachPhotoUri, 'library')}
+            >
+              <Ionicons name="image-outline" size={22} color="#5C9DB8" />
+              <Text style={styles.beachPhotoPickerText}>Galeria</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         <ActionButton
@@ -882,10 +915,22 @@ export default function AdminScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          <TouchableOpacity style={styles.beachPhotoPickerBtn} onPress={handlePickPoiPhoto}>
-            <Ionicons name="image-outline" size={22} color="#5C9DB8" />
-            <Text style={styles.beachPhotoPickerText}>Adicionar foto do ponto</Text>
-          </TouchableOpacity>
+          <View style={styles.photoSourceRow}>
+            <TouchableOpacity
+              style={styles.beachPhotoPickerBtn}
+              onPress={() => void handlePickAdminPhoto(setPoiPhotoUri, 'camera')}
+            >
+              <Ionicons name="camera-outline" size={22} color="#5C9DB8" />
+              <Text style={styles.beachPhotoPickerText}>Camera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.beachPhotoPickerBtn}
+              onPress={() => void handlePickAdminPhoto(setPoiPhotoUri, 'library')}
+            >
+              <Ionicons name="image-outline" size={22} color="#5C9DB8" />
+              <Text style={styles.beachPhotoPickerText}>Galeria</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         <Text style={styles.categoryLabel}>Categoria</Text>
@@ -1209,7 +1254,12 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
     paddingTop: 10,
   },
+  photoSourceRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
   beachPhotoPickerBtn: {
+    flex: 1,
     minHeight: 52,
     borderRadius: 8,
     borderWidth: 1.5,

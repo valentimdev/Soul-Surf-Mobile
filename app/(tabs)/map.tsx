@@ -14,11 +14,12 @@ import {
     MarkerView,
     PointAnnotation,
 } from '@maplibre/maplibre-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { GraduationCap, Locate, MapPin as MapPinIcon, Search, Store, Waves, Wrench } from 'lucide-react-native';
+import { Camera as CameraIcon, GraduationCap, Image as ImageIcon, Locate, MapPin as MapPinIcon, Search, Store, Trash2, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { ActivityIndicator, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView, TouchableOpacity } from 'react-native-gesture-handler';
 
 const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {
@@ -175,6 +176,7 @@ export default function MapScreen() {
         descricao: '',
         localizacao: '',
     });
+    const [beachPhotoUri, setBeachPhotoUri] = useState<string | null>(null);
     const [poiForm, setPoiForm] = useState<{
         nome: string;
         descricao: string;
@@ -186,6 +188,7 @@ export default function MapScreen() {
         telefone: '',
         categoria: 'SURF_SCHOOL',
     });
+    const [poiPhotoUri, setPoiPhotoUri] = useState<string | null>(null);
     const pickingLocation = pickingMode !== null;
     const cameraRef = useRef<CameraRef>(null);
     const initialCameraCenterRef = useRef<[number, number]>([-38.5016, -3.7172]);
@@ -357,6 +360,46 @@ export default function MapScreen() {
         setShowPoiModal(true);
     }, [pickingMode]);
 
+    const handlePickCreationPhoto = useCallback(async (
+        source: 'camera' | 'library',
+        setPhotoUri: React.Dispatch<React.SetStateAction<string | null>>
+    ) => {
+        if (source === 'camera') {
+            const permission = await ImagePicker.requestCameraPermissionsAsync();
+            if (!permission.granted) {
+                showAlert('Permissao necessaria', 'Permita o acesso a camera para adicionar uma foto.');
+                return;
+            }
+
+            const result = await ImagePicker.launchCameraAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                quality: 0.7,
+            });
+
+            if (!result.canceled && result.assets[0]) {
+                setPhotoUri(result.assets[0].uri);
+            }
+            return;
+        }
+
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+            showAlert('Permissao necessaria', 'Permita o acesso as fotos para adicionar uma imagem.');
+            return;
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: true,
+            quality: 0.7,
+        });
+
+        if (!result.canceled && result.assets[0]) {
+            setPhotoUri(result.assets[0].uri);
+        }
+    }, [showAlert]);
+
     const handleConfirmPoi = useCallback(() => {
         if (!pendingCoord || !pickingMode) return;
         const [lng, lat] = pendingCoord;
@@ -387,12 +430,14 @@ export default function MapScreen() {
                 longitude: lng,
                 descricao: beachForm.descricao.trim() || 'Praia cadastrada pela gestao.',
                 nivelExperiencia: 'Intermediario',
+                fotoUri: beachPhotoUri ?? undefined,
             })
                 .then(async () => {
                     await reloadPins();
                     setShowPoiModal(false);
                     setPickingMode(null);
                     setPendingCoord(null);
+                    setBeachPhotoUri(null);
                     setBeachForm({
                         nome: '',
                         descricao: '',
@@ -422,12 +467,14 @@ export default function MapScreen() {
             categoria: poiForm.categoria,
             descricao: poiForm.descricao.trim() || 'Ponto cadastrado pela gestao.',
             telefone: poiForm.telefone.trim() || undefined,
+            fotoUri: poiPhotoUri ?? undefined,
         })
             .then(async () => {
                 await reloadPins();
                 setShowPoiModal(false);
                 setPickingMode(null);
                 setPendingCoord(null);
+                setPoiPhotoUri(null);
                 setPoiForm({
                     nome: '',
                     descricao: '',
@@ -441,12 +488,14 @@ export default function MapScreen() {
                 showAlert('Erro', 'Nao foi possivel criar o ponto.');
             })
             .finally(() => setSavingLocation(false));
-    }, [GOOGLE_FORMS_URL, LAT_ENTRY, LNG_ENTRY, beachForm, pendingCoord, pickingMode, poiForm, reloadPins, showAlert]);
+    }, [GOOGLE_FORMS_URL, LAT_ENTRY, LNG_ENTRY, beachForm, beachPhotoUri, pendingCoord, pickingMode, poiForm, poiPhotoUri, reloadPins, showAlert]);
 
     const handleCancelPoi = useCallback(() => {
         setShowPoiModal(false);
         setPendingCoord(null);
         setPickingMode(null);
+        setBeachPhotoUri(null);
+        setPoiPhotoUri(null);
     }, []);
 
     const handlePinPress = useCallback((pin: MapPin) => {
@@ -683,6 +732,35 @@ export default function MapScreen() {
                                         style={[styles.modalInput, styles.modalInputMultiline]}
                                         multiline
                                     />
+                                    {beachPhotoUri ? (
+                                        <View style={styles.modalPhotoPreviewWrap}>
+                                            <Image source={{ uri: beachPhotoUri }} style={styles.modalPhotoPreview} />
+                                            <Pressable
+                                                style={styles.modalPhotoRemove}
+                                                onPress={() => setBeachPhotoUri(null)}
+                                            >
+                                                <Trash2 size={16} color="#fff" />
+                                                <Text style={styles.modalPhotoRemoveText}>Remover</Text>
+                                            </Pressable>
+                                        </View>
+                                    ) : (
+                                        <View style={styles.modalPhotoActions}>
+                                            <Pressable
+                                                style={styles.modalPhotoButton}
+                                                onPress={() => void handlePickCreationPhoto('camera', setBeachPhotoUri)}
+                                            >
+                                                <CameraIcon size={18} color={Colors.light.text} />
+                                                <Text style={styles.modalPhotoButtonText}>Camera</Text>
+                                            </Pressable>
+                                            <Pressable
+                                                style={styles.modalPhotoButton}
+                                                onPress={() => void handlePickCreationPhoto('library', setBeachPhotoUri)}
+                                            >
+                                                <ImageIcon size={18} color={Colors.light.text} />
+                                                <Text style={styles.modalPhotoButtonText}>Galeria</Text>
+                                            </Pressable>
+                                        </View>
+                                    )}
                                 </>
                             ) : pickingMode === 'createPoi' ? (
                                 <>
@@ -726,6 +804,35 @@ export default function MapScreen() {
                                         style={[styles.modalInput, styles.modalInputMultiline]}
                                         multiline
                                     />
+                                    {poiPhotoUri ? (
+                                        <View style={styles.modalPhotoPreviewWrap}>
+                                            <Image source={{ uri: poiPhotoUri }} style={styles.modalPhotoPreview} />
+                                            <Pressable
+                                                style={styles.modalPhotoRemove}
+                                                onPress={() => setPoiPhotoUri(null)}
+                                            >
+                                                <Trash2 size={16} color="#fff" />
+                                                <Text style={styles.modalPhotoRemoveText}>Remover</Text>
+                                            </Pressable>
+                                        </View>
+                                    ) : (
+                                        <View style={styles.modalPhotoActions}>
+                                            <Pressable
+                                                style={styles.modalPhotoButton}
+                                                onPress={() => void handlePickCreationPhoto('camera', setPoiPhotoUri)}
+                                            >
+                                                <CameraIcon size={18} color={Colors.light.text} />
+                                                <Text style={styles.modalPhotoButtonText}>Camera</Text>
+                                            </Pressable>
+                                            <Pressable
+                                                style={styles.modalPhotoButton}
+                                                onPress={() => void handlePickCreationPhoto('library', setPoiPhotoUri)}
+                                            >
+                                                <ImageIcon size={18} color={Colors.light.text} />
+                                                <Text style={styles.modalPhotoButtonText}>Galeria</Text>
+                                            </Pressable>
+                                        </View>
+                                    )}
                                 </>
                             ) : (
                                 <Text style={styles.modalBody}>
@@ -953,6 +1060,58 @@ const styles = StyleSheet.create({
     },
     modalTypeTextActive: {
         color: '#fff',
+    },
+    modalPhotoActions: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 4,
+    },
+    modalPhotoButton: {
+        flex: 1,
+        minHeight: 48,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        borderColor: '#BBD5DE',
+        borderRadius: 10,
+        backgroundColor: '#F0F7FA',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        gap: 6,
+    },
+    modalPhotoButtonText: {
+        color: Colors.light.text,
+        fontSize: 13,
+        fontWeight: '700',
+    },
+    modalPhotoPreviewWrap: {
+        height: 132,
+        borderRadius: 12,
+        overflow: 'hidden',
+        position: 'relative',
+        marginBottom: 4,
+        backgroundColor: '#E2DEC3',
+    },
+    modalPhotoPreview: {
+        width: '100%',
+        height: '100%',
+    },
+    modalPhotoRemove: {
+        position: 'absolute',
+        right: 8,
+        bottom: 8,
+        borderRadius: 8,
+        backgroundColor: 'rgba(125,44,44,0.88)',
+        paddingHorizontal: 10,
+        paddingVertical: 7,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    modalPhotoRemoveText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '700',
     },
     modalSectionLabel: {
         fontSize: 13,
