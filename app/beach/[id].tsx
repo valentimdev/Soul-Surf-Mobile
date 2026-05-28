@@ -496,7 +496,7 @@ function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
         <View style={styles.simpleSurfMetric}>
           <Ionicons name="thermometer-outline" size={18} color="#6B7280" style={styles.simpleSurfMetricIcon} />
           <View style={styles.simpleSurfMetricBody}>
-            <Text style={styles.simpleSurfLabel}>Temperatura</Text>
+            <Text style={styles.simpleSurfLabel}>Agua</Text>
             <Text style={styles.simpleSurfValue}>{waterTemp}</Text>
           </View>
         </View>
@@ -546,11 +546,11 @@ function SimpleSurfConditions({ data }: { data: SurfConditionsResponse }) {
       <View style={styles.simpleSurfWideMetric}>
         <Ionicons name="time-outline" size={18} color="#6B7280" />
         <View style={{ flex: 1 }}>
-          <Text style={styles.simpleSurfLabel}>Mare e melhor horario</Text>
-          <Text style={styles.simpleSurfValue}>{data.tide?.recommendationLabel ?? 'Sem leitura de mare'}</Text>
+          <Text style={styles.simpleSurfLabel}>Proxima virada da mare</Text>
+          <Text style={styles.simpleSurfValue}>{data.tide?.nextTurnLabel ?? 'Sem leitura de mare'}</Text>
           <Text style={styles.simpleSurfHelper}>
             {tideWindow
-              ? `${formatTideWindow(tideWindow)} - ${tideWindow.reason ?? 'mare enchendo em faixa favoravel.'}`
+              ? `Melhor janela: ${formatTideWindow(tideWindow)} - ${tideWindow.reason ?? 'mare enchendo em faixa favoravel.'}`
               : describeTide(data.tide)}
           </Text>
         </View>

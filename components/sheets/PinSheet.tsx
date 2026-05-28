@@ -1,7 +1,8 @@
 import { Colors } from '@/constants/theme';
-import { WeatherDTO, weatherService } from '@/services/weather/weatherService';
+import { surfConditionsService } from '@/services/weather/surfConditionsService';
 import { MapPin } from '@/types';
-import { toCompass } from '@/utils/surfConditionsInterpreter';
+import { SurfConditionsResponse } from '@/types/surfConditions';
+import { formatMetric, toCompass } from '@/utils/surfConditionsInterpreter';
 import {
   Instagram,
   MapPin as MapPinIcon,
@@ -40,32 +41,40 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
   const isEstablishment = !isSpot;
   const [longitude, latitude] = pin.coordinate;
 
-  const [weather, setWeather] = useState<WeatherDTO | null>(null);
-  const [weatherLoading, setWeatherLoading] = useState(false);
+  const [conditions, setConditions] = useState<SurfConditionsResponse | null>(null);
+  const [conditionsLoading, setConditionsLoading] = useState(false);
 
   useEffect(() => {
     if (!isSpot) return;
 
     let active = true;
-    setWeatherLoading(true);
+    setConditionsLoading(true);
 
-    weatherService
-      .getCurrentWeather(latitude, longitude)
+    surfConditionsService
+      .getSurfConditions({
+        lat: latitude,
+        lon: longitude,
+        beach: pin.beachName ?? pin.name,
+      })
       .then((data) => {
-        if (active) setWeather(data);
+        if (active) setConditions(data);
       })
       .catch((error) => {
-        console.error('Erro ao carregar clima da praia:', error);
-        if (active) setWeather(null);
+        console.error('Erro ao carregar condicoes da praia:', error);
+        if (active) setConditions(null);
       })
       .finally(() => {
-        if (active) setWeatherLoading(false);
+        if (active) setConditionsLoading(false);
       });
 
     return () => {
       active = false;
     };
-  }, [isSpot, latitude, longitude]);
+  }, [isSpot, latitude, longitude, pin.beachName, pin.name]);
+
+  const waterTemp = formatMetric(conditions?.marine?.seaSurfaceTemperatureC, 'C');
+  const windSpeed = formatMetric(conditions?.wind?.windSpeedKmh, 'km/h');
+  const windDirection = toCompass(conditions?.wind?.windDirectionDegrees);
 
   const openInstagram = () => {
     if (pin.instagram) {
@@ -150,19 +159,19 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
             <Text style={styles.conditionsTitle}>Condicoes Atuais</Text>
           </View>
 
-          {weatherLoading ? (
+          {conditionsLoading ? (
             <View style={styles.weatherState}>
               <ActivityIndicator size="small" color="#2A4B7C" />
-              <Text style={styles.weatherStateText}>Carregando clima...</Text>
+              <Text style={styles.weatherStateText}>Carregando condicoes...</Text>
             </View>
-          ) : weather ? (
+          ) : conditions ? (
             <View style={styles.conditionRow}>
               <View style={styles.conditionItem}>
                 <View style={styles.conditionIconRow}>
                   <Thermometer size={14} color="#6B7280" />
-                  <Text style={styles.conditionLabel}>Temperatura</Text>
+                  <Text style={styles.conditionLabel}>Agua</Text>
                 </View>
-                <Text style={styles.conditionValue}>{Math.round(weather.temp)} C</Text>
+                <Text style={styles.conditionValue}>{waterTemp}</Text>
               </View>
 
               <View style={styles.conditionItem}>
@@ -171,13 +180,13 @@ export default function PinSheet({ pin, onOpenBeachDetails }: PinSheetProps) {
                   <Text style={styles.conditionLabel}>Vento</Text>
                 </View>
                 <Text style={styles.conditionValue}>
-                  {weather.windSpeed} km/h {toCompass(weather.windDirection)}
+                  {windSpeed} {windDirection}
                 </Text>
               </View>
             </View>
           ) : (
             <View style={styles.weatherState}>
-              <Text style={styles.weatherStateText}>Sem dados de clima disponiveis.</Text>
+              <Text style={styles.weatherStateText}>Sem dados de condicoes disponiveis.</Text>
             </View>
           )}
         </View>

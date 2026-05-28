@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060" role="img" aria-labelledby="title desc">
+  <title id="title">Arquitetura geral do aplicativo Soul Surf Mobile</title>
+  <desc id="desc">Diagrama em camadas mostrando View, estado de apresentacao, servicos, infraestrutura local e sistemas externos.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#2f5361" />
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#1b3038" flood-opacity="0.14" />
+    </filter>
+    <style>
+      .bg { fill: #f7fbfc; }
+      .title { font-family: Arial, Helvetica, sans-serif; font-size: 42px; font-weight: 700; fill: #18323b; }
+      .subtitle { font-family: Arial, Helvetica, sans-serif; font-size: 22px; fill: #49656f; }
+      .section-label { font-family: Arial, Helvetica, sans-serif; font-size: 21px; font-weight: 700; letter-spacing: 1px; fill: #4f6b74; }
+      .layer-title { font-family: Arial, Helvetica, sans-serif; font-size: 28px; font-weight: 700; fill: #17323b; }
+      .layer-subtitle { font-family: Arial, Helvetica, sans-serif; font-size: 18px; fill: #5b7179; }
+      .item { font-family: Arial, Helvetica, sans-serif; font-size: 18px; fill: #263f47; }
+      .small { font-family: Arial, Helvetica, sans-serif; font-size: 16px; fill: #5a737c; }
+      .chip { font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 700; fill: #ffffff; }
+      .client { fill: #ffffff; stroke: #c4dce3; stroke-width: 3; }
+      .view { fill: #e8f4f7; stroke: #8ab8c5; stroke-width: 2; }
+      .state { fill: #fff2d8; stroke: #e0b761; stroke-width: 2; }
+      .service { fill: #ecf8ef; stroke: #80be8c; stroke-width: 2; }
+      .infra { fill: #f0eefc; stroke: #9b90d6; stroke-width: 2; }
+      .external { fill: #fff; stroke: #ccd7db; stroke-width: 2; }
+      .chip-blue { fill: #2f7f9b; }
+      .chip-green { fill: #4f985e; }
+      .chip-gold { fill: #b9892e; }
+      .chip-purple { fill: #7569b7; }
+      .arrow { stroke: #2f5361; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .arrow-soft { stroke: #75919a; stroke-width: 3; fill: none; stroke-dasharray: 10 10; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="1060" />
+  <text x="80" y="78" class="title">Arquitetura geral - Soul Surf Mobile</text>
+  <text x="82" y="118" class="subtitle">Arquitetura em camadas inspirada em MVVM para React Native/Expo Router</text>
+
+  <rect x="70" y="165" width="1010" height="800" rx="26" class="client" filter="url(#shadow)" />
+  <text x="105" y="215" class="section-label">CLIENTE MOBILE</text>
+  <text x="105" y="246" class="small">Expo 54, React Native 0.81, TypeScript, Expo Router</text>
+
+  <rect x="130" y="285" width="890" height="135" rx="18" class="view" />
+  <rect x="155" y="315" width="132" height="32" rx="16" class="chip-blue" />
+  <text x="186" y="337" class="chip">View</text>
+  <text x="315" y="327" class="layer-title">Telas e componentes de apresentacao</text>
+  <text x="315" y="362" class="item">app/(tabs)/map, discover, chat, notifications, profile</text>
+  <text x="315" y="391" class="item">app/beach/[id], app/post/[id], app/user/[id], components/*</text>
+
+  <rect x="130" y="465" width="890" height="135" rx="18" class="state" />
+  <rect x="155" y="495" width="186" height="32" rx="16" class="chip-gold" />
+  <text x="180" y="517" class="chip">ViewModel</text>
+  <text x="370" y="507" class="layer-title">Estado e logica de apresentacao</text>
+  <text x="370" y="542" class="item">Hooks React: useState, useEffect, useFocusEffect, useMemo</text>
+  <text x="370" y="571" class="item">Contexts: NotificationContext, AppAlertProvider, temas</text>
+
+  <rect x="130" y="645" width="890" height="135" rx="18" class="service" />
+  <rect x="155" y="675" width="154" height="32" rx="16" class="chip-green" />
+  <text x="181" y="697" class="chip">Model</text>
+  <text x="340" y="687" class="layer-title">Servicos de dominio e DTOs</text>
+  <text x="340" y="722" class="item">auth, users, beaches, posts, comments, chat, notifications</text>
+  <text x="340" y="751" class="item">types/api.ts, types/surfConditions.ts, utils/surfConditionsInterpreter.ts</text>
+
+  <rect x="130" y="825" width="890" height="105" rx="18" class="infra" />
+  <rect x="155" y="852" width="170" height="32" rx="16" class="chip-purple" />
+  <text x="184" y="874" class="chip">Infra</text>
+  <text x="355" y="865" class="layer-title">Acesso a dados e recursos nativos</text>
+  <text x="355" y="900" class="item">Axios + interceptors, SecureStore, STOMP/WebSocket, Location, ImagePicker, Push</text>
+
+  <path class="arrow" d="M575 421 L575 459" />
+  <path class="arrow" d="M575 601 L575 639" />
+  <path class="arrow" d="M575 781 L575 819" />
+  <path class="arrow-soft" d="M680 824 C715 785 715 650 680 602" />
+  <path class="arrow-soft" d="M680 644 C715 605 715 470 680 422" />
+
+  <rect x="1160" y="190" width="330" height="115" rx="18" class="external" filter="url(#shadow)" />
+  <text x="1192" y="235" class="layer-title">API REST</text>
+  <text x="1192" y="269" class="item">Backend Soul Surf</text>
+  <text x="1192" y="295" class="small">/api/auth, /api/beaches, /api/posts...</text>
+
+  <rect x="1160" y="350" width="330" height="115" rx="18" class="external" filter="url(#shadow)" />
+  <text x="1192" y="395" class="layer-title">WebSocket STOMP</text>
+  <text x="1192" y="429" class="item">Chat e notificacoes</text>
+  <text x="1192" y="455" class="small">/ws, /topic/conversations, /topic/notifications</text>
+
+  <rect x="1160" y="510" width="330" height="115" rx="18" class="external" filter="url(#shadow)" />
+  <text x="1192" y="555" class="layer-title">Servicos externos</text>
+  <text x="1192" y="589" class="item">Open-Meteo e mapas</text>
+  <text x="1192" y="615" class="small">Clima, MapLibre, OpenStreetMap</text>
+
+  <rect x="1160" y="670" width="330" height="115" rx="18" class="external" filter="url(#shadow)" />
+  <text x="1192" y="715" class="layer-title">Persistencia local</text>
+  <text x="1192" y="749" class="item">Expo SecureStore</text>
+  <text x="1192" y="775" class="small">JWT e cache de mensagens por praia</text>
+
+  <path class="arrow" d="M1020 873 C1095 873 1105 247 1154 247" />
+  <path class="arrow" d="M1020 873 C1095 873 1105 407 1154 407" />
+  <path class="arrow" d="M1020 873 C1095 873 1105 567 1154 567" />
+  <path class="arrow" d="M1020 873 C1085 873 1100 728 1154 728" />
+
+  <rect x="80" y="995" width="1440" height="40" rx="20" fill="#e6f1f4" />
+  <text x="110" y="1021" class="small">Regra de dependencia: as telas chamam hooks/contextos e servicos; os servicos isolam API, WebSocket e persistencia local; a UI nao acessa endpoints diretamente exceto casos pontuais de multipart.</text>
+</svg>

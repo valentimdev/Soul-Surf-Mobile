@@ -1,6 +1,8 @@
 import { Colors } from '@/constants/theme';
-import { WeatherDTO, weatherService } from '@/services/weather/weatherService';
+import { surfConditionsService } from '@/services/weather/surfConditionsService';
 import { SurfSpot } from '@/types';
+import { SurfConditionsResponse } from '@/types/surfConditions';
+import { formatMetric, toCompass } from '@/utils/surfConditionsInterpreter';
 import { MapPin, Thermometer, Waves } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
@@ -17,7 +19,7 @@ interface SpotSheetProps {
 }
 
 export default function SpotSheet({ spot }: SpotSheetProps) {
-  const [weather, setWeather] = useState<WeatherDTO | null>(null);
+  const [conditions, setConditions] = useState<SurfConditionsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [longitude, latitude] = spot.coordinate;
 
@@ -25,13 +27,17 @@ export default function SpotSheet({ spot }: SpotSheetProps) {
     let active = true;
     setLoading(true);
 
-    weatherService
-      .getCurrentWeather(latitude, longitude)
+    surfConditionsService
+      .getSurfConditions({
+        lat: latitude,
+        lon: longitude,
+        beach: spot.name,
+      })
       .then((data) => {
-        if (active) setWeather(data);
+        if (active) setConditions(data);
       })
       .catch((error) => {
-        console.error('Erro ao carregar clima do spot:', error);
+        console.error('Erro ao carregar condicoes do spot:', error);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -40,7 +46,11 @@ export default function SpotSheet({ spot }: SpotSheetProps) {
     return () => {
       active = false;
     };
-  }, [latitude, longitude]);
+  }, [latitude, longitude, spot.name]);
+
+  const waterTemp = formatMetric(conditions?.marine?.seaSurfaceTemperatureC, 'C');
+  const windSpeed = formatMetric(conditions?.wind?.windSpeedKmh, 'km/h');
+  const windDirection = toCompass(conditions?.wind?.windDirectionDegrees);
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -62,18 +72,18 @@ export default function SpotSheet({ spot }: SpotSheetProps) {
         {loading ? (
           <View style={styles.weatherState}>
             <ActivityIndicator size="small" color={Colors.light.icon} />
-            <Text style={styles.weatherText}>Carregando clima...</Text>
+            <Text style={styles.weatherText}>Carregando condicoes...</Text>
           </View>
-        ) : weather ? (
+        ) : conditions ? (
           <View style={styles.weatherState}>
             <View style={styles.weatherLine}>
               <Thermometer size={16} color={Colors.light.icon} />
-              <Text style={styles.weatherText}>{Math.round(weather.temp)} C</Text>
+              <Text style={styles.weatherText}>Agua: {waterTemp}</Text>
             </View>
-            <Text style={styles.weatherText}>{weather.windSpeed} km/h | Vento: {weather.windDirection}°</Text>
+            <Text style={styles.weatherText}>{windSpeed} | Vento: {windDirection}</Text>
           </View>
         ) : (
-          <Text style={styles.weatherText}>Sem dados de clima disponiveis.</Text>
+          <Text style={styles.weatherText}>Sem dados de condicoes disponiveis.</Text>
         )}
       </View>
 

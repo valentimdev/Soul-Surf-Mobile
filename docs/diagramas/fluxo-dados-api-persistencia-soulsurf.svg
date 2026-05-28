@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1050" viewBox="0 0 1600 1050" role="img" aria-labelledby="title desc">
+  <title id="title">Fluxo de dados, API e persistencia local do Soul Surf Mobile</title>
+  <desc id="desc">Diagrama mostrando requisicoes HTTP, interceptors, SecureStore, WebSocket, cache parcial e atualizacao da interface.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#274a54" />
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#16323c" flood-opacity="0.14" />
+    </filter>
+    <style>
+      .bg { fill: #fbfcf8; }
+      .title { font-family: Arial, Helvetica, sans-serif; font-size: 42px; font-weight: 700; fill: #18323b; }
+      .subtitle { font-family: Arial, Helvetica, sans-serif; font-size: 22px; fill: #52676e; }
+      .box { fill: #ffffff; stroke: #cddde2; stroke-width: 2; filter: url(#shadow); }
+      .ui { fill: #eaf5f7; stroke: #86b7c4; }
+      .service { fill: #edf8f0; stroke: #7fbd8c; }
+      .infra { fill: #f1eefc; stroke: #9b90d6; }
+      .api { fill: #fff2d8; stroke: #ddb35a; }
+      .cache { fill: #fef0ef; stroke: #d78179; }
+      .success { fill: #e8f6ed; stroke: #72b984; }
+      .label { font-family: Arial, Helvetica, sans-serif; font-size: 17px; font-weight: 700; fill: #ffffff; }
+      .h { font-family: Arial, Helvetica, sans-serif; font-size: 27px; font-weight: 700; fill: #17323b; }
+      .p { font-family: Arial, Helvetica, sans-serif; font-size: 18px; fill: #314a52; }
+      .small { font-family: Arial, Helvetica, sans-serif; font-size: 15px; fill: #5e747b; }
+      .arrow { stroke: #274a54; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .arrow-soft { stroke: #78929b; stroke-width: 3; fill: none; stroke-dasharray: 9 9; marker-end: url(#arrow); }
+      .badge-blue { fill: #2f7f9b; }
+      .badge-green { fill: #4f985e; }
+      .badge-purple { fill: #7569b7; }
+      .badge-gold { fill: #b9892e; }
+      .badge-red { fill: #b96058; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="1050" />
+  <text x="80" y="78" class="title">Projeto de dados - API e persistencia local</text>
+  <text x="82" y="118" class="subtitle">Fluxo atual do Soul Surf Mobile: API REST como fonte principal, estado reativo na UI e cache local parcial.</text>
+
+  <rect x="80" y="180" width="300" height="150" rx="20" class="box ui" />
+  <rect x="105" y="205" width="74" height="30" rx="15" class="badge-blue" />
+  <text x="123" y="226" class="label">1</text>
+  <text x="105" y="268" class="h">Tela / Hook</text>
+  <text x="105" y="300" class="p">Solicita dados ou acao</text>
+  <text x="105" y="325" class="small">map, beach, post, profile, chat</text>
+
+  <rect x="470" y="180" width="330" height="150" rx="20" class="box service" />
+  <rect x="495" y="205" width="74" height="30" rx="15" class="badge-green" />
+  <text x="513" y="226" class="label">2</text>
+  <text x="495" y="268" class="h">Service por dominio</text>
+  <text x="495" y="300" class="p">Monta request e normaliza DTOs</text>
+  <text x="495" y="325" class="small">beachService, postService, userService...</text>
+
+  <rect x="890" y="180" width="330" height="150" rx="20" class="box infra" />
+  <rect x="915" y="205" width="74" height="30" rx="15" class="badge-purple" />
+  <text x="933" y="226" class="label">3</text>
+  <text x="915" y="268" class="h">Axios API Client</text>
+  <text x="915" y="300" class="p">Base URL, timeout e interceptors</text>
+  <text x="915" y="325" class="small">Authorization: Bearer userToken</text>
+
+  <rect x="1290" y="180" width="250" height="150" rx="20" class="box api" />
+  <rect x="1315" y="205" width="74" height="30" rx="15" class="badge-gold" />
+  <text x="1333" y="226" class="label">4</text>
+  <text x="1315" y="268" class="h">API REST</text>
+  <text x="1315" y="300" class="p">Backend Soul Surf</text>
+  <text x="1315" y="325" class="small">/api/*</text>
+
+  <path class="arrow" d="M382 255 L462 255" />
+  <path class="arrow" d="M802 255 L882 255" />
+  <path class="arrow" d="M1222 255 L1282 255" />
+
+  <path class="arrow-soft" d="M1290 330 C1180 450 1010 460 910 350" />
+  <path class="arrow-soft" d="M890 345 C740 455 590 455 470 345" />
+  <path class="arrow-soft" d="M470 330 C360 445 230 440 225 340" />
+  <text x="624" y="430" class="small">Resposta volta como DTO e atualiza o estado da tela</text>
+
+  <rect x="120" y="505" width="390" height="175" rx="20" class="box cache" />
+  <rect x="145" y="530" width="130" height="30" rx="15" class="badge-red" />
+  <text x="170" y="551" class="label">Local</text>
+  <text x="145" y="592" class="h">SecureStore</text>
+  <text x="145" y="626" class="p">Persistencia local usada no app</text>
+  <text x="145" y="654" class="small">userToken</text>
+  <text x="245" y="654" class="small">beach_messages_{id}</text>
+
+  <rect x="615" y="505" width="380" height="175" rx="20" class="box success" />
+  <rect x="640" y="530" width="150" height="30" rx="15" class="badge-green" />
+  <text x="665" y="551" class="label">Cache</text>
+  <text x="640" y="592" class="h">Mensagens da praia</text>
+  <text x="640" y="626" class="p">Carrega cache antes da rede</text>
+  <text x="640" y="654" class="small">Salva as ultimas 80 mensagens ordenadas por data</text>
+
+  <rect x="1110" y="505" width="390" height="175" rx="20" class="box api" />
+  <rect x="1135" y="530" width="160" height="30" rx="15" class="badge-gold" />
+  <text x="1160" y="551" class="label">Tempo real</text>
+  <text x="1135" y="592" class="h">WebSocket STOMP</text>
+  <text x="1135" y="626" class="p">Chat e notificacoes em tempo real</text>
+  <text x="1135" y="654" class="small">/topic/conversations e /topic/notifications</text>
+
+  <path class="arrow" d="M1040 330 C930 440 500 425 340 500" />
+  <text x="603" y="388" class="small">Interceptor le token JWT</text>
+  <path class="arrow" d="M510 590 L607 590" />
+  <path class="arrow" d="M995 590 L1102 590" />
+  <path class="arrow-soft" d="M807 505 C750 430 365 405 245 335" />
+
+  <rect x="120" y="775" width="1380" height="150" rx="22" fill="#ffffff" stroke="#cddde2" stroke-width="2" filter="url(#shadow)" />
+  <text x="150" y="825" class="h">Observacao sobre offline</text>
+  <text x="150" y="862" class="p">Nesta versao, o suporte offline e parcial: o app preserva token e cache de mensagens de praia no SecureStore.</text>
+  <text x="150" y="895" class="p">Feed, praias, posts, usuarios e condicoes do mar sao recarregados da API e mantidos em estado de tela durante a sessao.</text>
+  <text x="150" y="925" class="small">Para cache completo de entidades, a evolucao indicada em Expo seria expo-sqlite ou outra base local dedicada.</text>
+</svg>
