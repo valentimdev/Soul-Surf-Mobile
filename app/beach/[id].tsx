@@ -895,7 +895,21 @@ export default function BeachDetailsScreen() {
     }
   }, [activeReplyTarget, beachId, loadBeachDetails, persistMessagesCache, replyDraft, showAlert]);
 
+  const handlePickedImage = (result: ImagePicker.ImagePickerResult) => {
+    if (!result.canceled && result.assets[0]) {
+      setNewPostPhotoUri(result.assets[0].uri);
+      setNewPostBase64(result.assets[0].base64 || null);
+    }
+  };
+
   const handlePickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      showAlert('Permissão necessária', 'Permita o acesso às fotos para escolher uma imagem da galeria.');
+      return;
+    }
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -903,10 +917,25 @@ export default function BeachDetailsScreen() {
       base64: true,
     });
 
-    if (!result.canceled && result.assets[0]) {
-      setNewPostPhotoUri(result.assets[0].uri);
-      setNewPostBase64(result.assets[0].base64 || null);
+    handlePickedImage(result);
+  };
+
+  const handleTakePhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      showAlert('Permissão necessária', 'Permita o acesso à câmera para tirar uma foto do registro.');
+      return;
     }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      quality: 0.2,
+      base64: true,
+    });
+
+    handlePickedImage(result);
   };
 
   const closePostModal = () => {
@@ -1251,10 +1280,16 @@ const handleCreatePost = async () => {
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity style={styles.addPhotoBtn} onPress={handlePickImage}>
-                <Ionicons name="image-outline" size={24} color="#5C9DB8" />
-                <Text style={styles.addPhotoText}>Adicionar foto</Text>
-              </TouchableOpacity>
+              <View style={styles.photoActions}>
+                <TouchableOpacity style={styles.addPhotoBtn} onPress={handleTakePhoto}>
+                  <Ionicons name="camera-outline" size={24} color="#5C9DB8" />
+                  <Text style={styles.addPhotoText}>Câmera</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.addPhotoBtn} onPress={handlePickImage}>
+                  <Ionicons name="image-outline" size={24} color="#5C9DB8" />
+                  <Text style={styles.addPhotoText}>Galeria</Text>
+                </TouchableOpacity>
+              </View>
             )}
 
             <TextInput
@@ -2012,8 +2047,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#F3F1EA',
   },
-  addPhotoBtn: {
+  photoActions: {
     flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  addPhotoBtn: {
+    flex: 1,
+    minHeight: 78,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F4FAFB',
@@ -2021,8 +2062,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderColor: '#8AB7C3',
     borderRadius: 16,
-    paddingVertical: 22,
-    marginBottom: 16,
+    paddingVertical: 16,
     gap: 10,
   },
   addPhotoText: {
