@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1060" viewBox="0 0 1600 1060" role="img" aria-labelledby="title desc">
+  <title id="title">Modelo de dados principal do Soul Surf Mobile</title>
+  <desc id="desc">Diagrama entidade-relacionamento simplificado com usuarios, praias, pontos de interesse, posts, comentarios e curtidas.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#274a54" />
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#16323c" flood-opacity="0.14" />
+    </filter>
+    <style>
+      .bg { fill: #f9fbfb; }
+      .title { font-family: Arial, Helvetica, sans-serif; font-size: 42px; font-weight: 700; fill: #18323b; }
+      .subtitle { font-family: Arial, Helvetica, sans-serif; font-size: 22px; fill: #52676e; }
+      .entity { fill: #ffffff; stroke: #cddde2; stroke-width: 2; filter: url(#shadow); }
+      .head-user { fill: #2f7f9b; }
+      .head-beach { fill: #4f985e; }
+      .head-post { fill: #b9892e; }
+      .head-comment { fill: #7569b7; }
+      .head-like { fill: #b96058; }
+      .head-poi { fill: #3f8f8c; }
+      .entity-title { font-family: Arial, Helvetica, sans-serif; font-size: 22px; font-weight: 700; fill: #ffffff; }
+      .field { font-family: Arial, Helvetica, sans-serif; font-size: 17px; fill: #263f47; }
+      .pk { font-family: Arial, Helvetica, sans-serif; font-size: 16px; font-weight: 700; fill: #18323b; }
+      .note { font-family: Arial, Helvetica, sans-serif; font-size: 16px; fill: #52676e; }
+      .rel { stroke: #274a54; stroke-width: 4; fill: none; marker-end: url(#arrow); }
+      .rel-soft { stroke: #78929b; stroke-width: 3; fill: none; stroke-dasharray: 8 8; marker-end: url(#arrow); }
+      .card-note { fill: #fff8e8; stroke: #dfbd6b; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="1060" />
+  <text x="80" y="78" class="title">Modelo de dados principal</text>
+  <text x="82" y="118" class="subtitle">Entidades versionadas em database/schema.sql e consumidas pelos DTOs do app.</text>
+
+  <g transform="translate(90 190)">
+    <rect width="330" height="260" rx="18" class="entity" />
+    <rect width="330" height="58" rx="18" class="head-user" />
+    <text x="24" y="37" class="entity-title">users</text>
+    <text x="24" y="92" class="pk">PK id</text>
+    <text x="24" y="123" class="field">username UNIQUE</text>
+    <text x="24" y="154" class="field">email UNIQUE</text>
+    <text x="24" y="185" class="field">password</text>
+    <text x="24" y="216" class="field">foto, bio, created_at</text>
+  </g>
+
+  <g transform="translate(1180 190)">
+    <rect width="330" height="260" rx="18" class="entity" />
+    <rect width="330" height="58" rx="18" class="head-beach" />
+    <text x="24" y="37" class="entity-title">beaches</text>
+    <text x="24" y="92" class="pk">PK id</text>
+    <text x="24" y="123" class="field">nome</text>
+    <text x="24" y="154" class="field">latitude, longitude</text>
+    <text x="24" y="185" class="field">localizacao, descricao</text>
+    <text x="24" y="216" class="field">caminho_foto, created_at</text>
+  </g>
+
+  <g transform="translate(635 435)">
+    <rect width="330" height="285" rx="18" class="entity" />
+    <rect width="330" height="58" rx="18" class="head-post" />
+    <text x="24" y="37" class="entity-title">posts</text>
+    <text x="24" y="92" class="pk">PK id</text>
+    <text x="24" y="123" class="field">descricao</text>
+    <text x="24" y="154" class="field">publico, foto</text>
+    <text x="24" y="185" class="field">FK user_id - users.id</text>
+    <text x="24" y="216" class="field">FK beach_id - beaches.id</text>
+    <text x="24" y="247" class="field">created_at</text>
+  </g>
+
+  <g transform="translate(90 760)">
+    <rect width="330" height="210" rx="18" class="entity" />
+    <rect width="330" height="58" rx="18" class="head-comment" />
+    <text x="24" y="37" class="entity-title">comments</text>
+    <text x="24" y="92" class="pk">PK id</text>
+    <text x="24" y="123" class="field">FK post_id - posts.id</text>
+    <text x="24" y="154" class="field">FK user_id - users.id</text>
+    <text x="24" y="185" class="field">texto, created_at</text>
+  </g>
+
+  <g transform="translate(635 810)">
+    <rect width="330" height="160" rx="18" class="entity" />
+    <rect width="330" height="58" rx="18" class="head-like" />
+    <text x="24" y="37" class="entity-title">likes</text>
+    <text x="24" y="92" class="pk">PK id</text>
+    <text x="24" y="123" class="field">FK post_id, FK user_id</text>
+    <text x="24" y="147" class="field">UNIQUE(post_id, user_id)</text>
+  </g>
+
+  <g transform="translate(1180 760)">
+    <rect width="330" height="210" rx="18" class="entity" />
+    <rect width="330" height="58" rx="18" class="head-poi" />
+    <text x="24" y="37" class="entity-title">pois</text>
+    <text x="24" y="92" class="pk">PK id</text>
+    <text x="24" y="123" class="field">nome, categoria</text>
+    <text x="24" y="154" class="field">latitude, longitude</text>
+    <text x="24" y="185" class="field">FK beach_id - beaches.id</text>
+  </g>
+
+  <path class="rel" d="M420 320 C555 320 565 525 628 555" />
+  <text x="470" y="343" class="note">1 usuario cria N posts</text>
+  <path class="rel" d="M1180 320 C1045 320 1035 525 972 555" />
+  <text x="993" y="343" class="note">1 praia possui N posts</text>
+  <path class="rel" d="M635 630 C500 675 470 810 428 850" />
+  <text x="455" y="735" class="note">1 post possui N comentarios</text>
+  <path class="rel" d="M635 650 C565 735 555 835 628 880" />
+  <text x="510" y="792" class="note">1 post recebe N curtidas</text>
+  <path class="rel" d="M1180 390 C1115 560 1415 655 1345 752" />
+  <text x="1280" y="585" class="note">1 praia possui N POIs</text>
+  <path class="rel-soft" d="M255 450 C260 600 265 705 255 752" />
+  <text x="285" y="625" class="note">usuario comenta e curte</text>
+
+  <rect x="520" y="190" width="560" height="125" rx="18" class="card-note" filter="url(#shadow)" />
+  <text x="552" y="235" class="pk">Observacao</text>
+  <text x="552" y="268" class="note">O app tambem consome mensagens, conversas, notificacoes e condicoes de surf.</text>
+  <text x="552" y="295" class="note">Esses dados aparecem nos servicos/DTOs, mas nem todas as tabelas estao no schema.sql local.</text>
+</svg>

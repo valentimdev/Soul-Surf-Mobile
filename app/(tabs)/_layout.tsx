@@ -1,10 +1,11 @@
 import { Colors } from '@/constants/theme';
-import { NotificationProvider, useNotifications } from '@/contexts/NotificationContext';
+import { useNotifications } from '@/contexts/NotificationContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Tabs } from 'expo-router';
 import { Map, MessageCircle, Bell, User, Compass } from 'lucide-react-native';
 import React from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Wrapper criado para dar o efeito de aba ativa
 const TabIconWrapper = ({ focused, children }: { focused: boolean; children: React.ReactNode }) => (
@@ -26,6 +27,8 @@ const TabIconWrapper = ({ focused, children }: { focused: boolean; children: Rea
 function TabNavigator() {
   const colorScheme = useColorScheme();
   const { unreadCount } = useNotifications();
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, Platform.OS === 'android' ? 24 : 0);
 
   return (
     <Tabs
@@ -36,9 +39,9 @@ function TabNavigator() {
         tabBarStyle: {
           backgroundColor: '#F6F4EB',
           borderTopColor: '#E2DEC3',
-          paddingBottom: 4,
-          paddingTop: 4,
-          height: 60,
+          paddingBottom: bottomInset + 8,
+          paddingTop: 6,
+          height: 64 + bottomInset,
         },
       }}>
       <Tabs.Screen
