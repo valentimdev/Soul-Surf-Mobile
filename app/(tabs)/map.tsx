@@ -19,7 +19,7 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { Camera as CameraIcon, GraduationCap, Image as ImageIcon, Locate, MapPin as MapPinIcon, Search, Store, Trash2, Waves, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { ActivityIndicator, Image, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView, TouchableOpacity } from 'react-native-gesture-handler';
 
 const POI_TYPE_MAP: Record<PointOfInterestDTO['categoria'], SpotType | null> = {
@@ -693,170 +693,179 @@ export default function MapScreen() {
                 >
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalCard}>
-                            <MapPinIcon size={32} color={Colors.light.text} style={{ marginBottom: 12 }} />
-                            <Text style={styles.modalTitle}>
-                                {pickingMode === 'createBeach'
-                                    ? 'Criar praia'
-                                    : pickingMode === 'createPoi'
-                                        ? 'Criar ponto'
-                                        : 'Sugerir local'}
-                            </Text>
-                            {pendingCoord ? (
-                                <Text style={styles.modalCoordText}>
-                                    Lat {pendingCoord[1].toFixed(6)} - Lng {pendingCoord[0].toFixed(6)}
+                            <ScrollView
+                                style={styles.modalScroll}
+                                contentContainerStyle={styles.modalScrollContent}
+                                showsVerticalScrollIndicator={false}
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                <MapPinIcon size={32} color={Colors.light.text} style={{ marginBottom: 12, alignSelf: 'center' }} />
+                                <Text style={styles.modalTitle}>
+                                    {pickingMode === 'createBeach'
+                                        ? 'Criar praia'
+                                        : pickingMode === 'createPoi'
+                                            ? 'Criar ponto'
+                                            : 'Sugerir local'}
                                 </Text>
-                            ) : null}
-
-                            {pickingMode === 'createBeach' ? (
-                                <>
-                                    <TextInput
-                                        placeholder="Nome da praia"
-                                        placeholderTextColor="#8BA1AA"
-                                        value={beachForm.nome}
-                                        onChangeText={(nome) => setBeachForm((current) => ({ ...current, nome }))}
-                                        style={styles.modalInput}
-                                    />
-                                    <TextInput
-                                        placeholder="Localizacao"
-                                        placeholderTextColor="#8BA1AA"
-                                        value={beachForm.localizacao}
-                                        onChangeText={(localizacao) => setBeachForm((current) => ({ ...current, localizacao }))}
-                                        style={styles.modalInput}
-                                    />
-
-                                    <TextInput
-                                        placeholder="Descricao"
-                                        placeholderTextColor="#8BA1AA"
-                                        value={beachForm.descricao}
-                                        onChangeText={(descricao) => setBeachForm((current) => ({ ...current, descricao }))}
-                                        style={[styles.modalInput, styles.modalInputMultiline]}
-                                        multiline
-                                    />
-                                    {beachPhotoUri ? (
-                                        <View style={styles.modalPhotoPreviewWrap}>
-                                            <Image source={{ uri: beachPhotoUri }} style={styles.modalPhotoPreview} />
-                                            <Pressable
-                                                style={styles.modalPhotoRemove}
-                                                onPress={() => setBeachPhotoUri(null)}
-                                            >
-                                                <Trash2 size={16} color="#fff" />
-                                                <Text style={styles.modalPhotoRemoveText}>Remover</Text>
-                                            </Pressable>
-                                        </View>
-                                    ) : (
-                                        <View style={styles.modalPhotoActions}>
-                                            <Pressable
-                                                style={styles.modalPhotoButton}
-                                                onPress={() => void handlePickCreationPhoto('camera', setBeachPhotoUri)}
-                                            >
-                                                <CameraIcon size={18} color={Colors.light.text} />
-                                                <Text style={styles.modalPhotoButtonText}>Camera</Text>
-                                            </Pressable>
-                                            <Pressable
-                                                style={styles.modalPhotoButton}
-                                                onPress={() => void handlePickCreationPhoto('library', setBeachPhotoUri)}
-                                            >
-                                                <ImageIcon size={18} color={Colors.light.text} />
-                                                <Text style={styles.modalPhotoButtonText}>Galeria</Text>
-                                            </Pressable>
-                                        </View>
-                                    )}
-                                </>
-                            ) : pickingMode === 'createPoi' ? (
-                                <>
-                                    <TextInput
-                                        placeholder="Nome do ponto"
-                                        placeholderTextColor="#8BA1AA"
-                                        value={poiForm.nome}
-                                        onChangeText={(nome) => setPoiForm((current) => ({ ...current, nome }))}
-                                        style={styles.modalInput}
-                                    />
-                                    <TextInput
-                                        placeholder="Telefone/WhatsApp"
-                                        placeholderTextColor="#8BA1AA"
-                                        value={poiForm.telefone}
-                                        onChangeText={(telefone) => setPoiForm((current) => ({ ...current, telefone }))}
-                                        style={styles.modalInput}
-                                        keyboardType="phone-pad"
-                                    />
-                                    <View style={styles.modalTypeRow}>
-                                        {POI_CATEGORY_OPTIONS.map(({ label, value, icon: Icon }) => {
-                                            const active = poiForm.categoria === value;
-                                            return (
-                                                <Pressable
-                                                    key={value}
-                                                    style={[styles.modalTypeButton, active && styles.modalTypeButtonActive]}
-                                                    onPress={() => setPoiForm((current) => ({ ...current, categoria: value }))}
-                                                >
-                                                    <Icon size={16} color={active ? '#fff' : Colors.light.text} />
-                                                    <Text style={[styles.modalTypeText, active && styles.modalTypeTextActive]}>
-                                                        {label}
-                                                    </Text>
-                                                </Pressable>
-                                            );
-                                        })}
-                                    </View>
-                                    <TextInput
-                                        placeholder="Descricao"
-                                        placeholderTextColor="#8BA1AA"
-                                        value={poiForm.descricao}
-                                        onChangeText={(descricao) => setPoiForm((current) => ({ ...current, descricao }))}
-                                        style={[styles.modalInput, styles.modalInputMultiline]}
-                                        multiline
-                                    />
-                                    {poiPhotoUri ? (
-                                        <View style={styles.modalPhotoPreviewWrap}>
-                                            <Image source={{ uri: poiPhotoUri }} style={styles.modalPhotoPreview} />
-                                            <Pressable
-                                                style={styles.modalPhotoRemove}
-                                                onPress={() => setPoiPhotoUri(null)}
-                                            >
-                                                <Trash2 size={16} color="#fff" />
-                                                <Text style={styles.modalPhotoRemoveText}>Remover</Text>
-                                            </Pressable>
-                                        </View>
-                                    ) : (
-                                        <View style={styles.modalPhotoActions}>
-                                            <Pressable
-                                                style={styles.modalPhotoButton}
-                                                onPress={() => void handlePickCreationPhoto('camera', setPoiPhotoUri)}
-                                            >
-                                                <CameraIcon size={18} color={Colors.light.text} />
-                                                <Text style={styles.modalPhotoButtonText}>Camera</Text>
-                                            </Pressable>
-                                            <Pressable
-                                                style={styles.modalPhotoButton}
-                                                onPress={() => void handlePickCreationPhoto('library', setPoiPhotoUri)}
-                                            >
-                                                <ImageIcon size={18} color={Colors.light.text} />
-                                                <Text style={styles.modalPhotoButtonText}>Galeria</Text>
-                                            </Pressable>
-                                        </View>
-                                    )}
-                                </>
-                            ) : (
-                                <Text style={styles.modalBody}>
-                                    Esse local sera enviado pelo formulario para avaliacao.
-                                </Text>
-                            )}
-                            <View style={styles.modalActions}>
-                                <Pressable style={styles.modalBtnOutline} onPress={handleCancelPoi}>
-                                    <Text style={styles.modalBtnOutlineText}>Cancelar</Text>
-                                </Pressable>
-                                <Pressable
-                                    style={[styles.modalBtnFill, savingLocation && styles.modalBtnDisabled]}
-                                    onPress={handleConfirmPoi}
-                                    disabled={savingLocation}
-                                >
-                                    <Text style={styles.modalBtnFillText}>
-                                        {savingLocation
-                                            ? 'Salvando...'
-                                            : pickingMode === 'suggest'
-                                                ? 'Abrir formulario'
-                                                : 'Criar'}
+                                {pendingCoord ? (
+                                    <Text style={styles.modalCoordText}>
+                                        Lat {pendingCoord[1].toFixed(6)} - Lng {pendingCoord[0].toFixed(6)}
                                     </Text>
-                                </Pressable>
-                            </View>
+                                ) : null}
+
+                                {pickingMode === 'createBeach' ? (
+                                    <>
+                                        <TextInput
+                                            placeholder="Nome da praia"
+                                            placeholderTextColor="#8BA1AA"
+                                            value={beachForm.nome}
+                                            onChangeText={(nome) => setBeachForm((current) => ({ ...current, nome }))}
+                                            style={styles.modalInput}
+                                        />
+                                        <TextInput
+                                            placeholder="Localizacao"
+                                            placeholderTextColor="#8BA1AA"
+                                            value={beachForm.localizacao}
+                                            onChangeText={(localizacao) => setBeachForm((current) => ({ ...current, localizacao }))}
+                                            style={styles.modalInput}
+                                        />
+
+                                        <TextInput
+                                            placeholder="Descricao"
+                                            placeholderTextColor="#8BA1AA"
+                                            value={beachForm.descricao}
+                                            onChangeText={(descricao) => setBeachForm((current) => ({ ...current, descricao }))}
+                                            style={[styles.modalInput, styles.modalInputMultiline]}
+                                            multiline
+                                        />
+                                        <Text style={styles.modalPhotoLabel}>Imagem da praia</Text>
+                                        {beachPhotoUri ? (
+                                            <View style={styles.modalPhotoPreviewWrap}>
+                                                <Image source={{ uri: beachPhotoUri }} style={styles.modalPhotoPreview} />
+                                                <Pressable
+                                                    style={styles.modalPhotoRemove}
+                                                    onPress={() => setBeachPhotoUri(null)}
+                                                >
+                                                    <Trash2 size={16} color="#fff" />
+                                                    <Text style={styles.modalPhotoRemoveText}>Remover</Text>
+                                                </Pressable>
+                                            </View>
+                                        ) : (
+                                            <View style={styles.modalPhotoActions}>
+                                                <Pressable
+                                                    style={styles.modalPhotoButton}
+                                                    onPress={() => void handlePickCreationPhoto('camera', setBeachPhotoUri)}
+                                                >
+                                                    <CameraIcon size={18} color={Colors.light.text} />
+                                                    <Text style={styles.modalPhotoButtonText}>Camera</Text>
+                                                </Pressable>
+                                                <Pressable
+                                                    style={styles.modalPhotoButton}
+                                                    onPress={() => void handlePickCreationPhoto('library', setBeachPhotoUri)}
+                                                >
+                                                    <ImageIcon size={18} color={Colors.light.text} />
+                                                    <Text style={styles.modalPhotoButtonText}>Galeria</Text>
+                                                </Pressable>
+                                            </View>
+                                        )}
+                                    </>
+                                ) : pickingMode === 'createPoi' ? (
+                                    <>
+                                        <TextInput
+                                            placeholder="Nome do ponto"
+                                            placeholderTextColor="#8BA1AA"
+                                            value={poiForm.nome}
+                                            onChangeText={(nome) => setPoiForm((current) => ({ ...current, nome }))}
+                                            style={styles.modalInput}
+                                        />
+                                        <TextInput
+                                            placeholder="Telefone/WhatsApp"
+                                            placeholderTextColor="#8BA1AA"
+                                            value={poiForm.telefone}
+                                            onChangeText={(telefone) => setPoiForm((current) => ({ ...current, telefone }))}
+                                            style={styles.modalInput}
+                                            keyboardType="phone-pad"
+                                        />
+                                        <View style={styles.modalTypeRow}>
+                                            {POI_CATEGORY_OPTIONS.map(({ label, value, icon: Icon }) => {
+                                                const active = poiForm.categoria === value;
+                                                return (
+                                                    <Pressable
+                                                        key={value}
+                                                        style={[styles.modalTypeButton, active && styles.modalTypeButtonActive]}
+                                                        onPress={() => setPoiForm((current) => ({ ...current, categoria: value }))}
+                                                    >
+                                                        <Icon size={16} color={active ? '#fff' : Colors.light.text} />
+                                                        <Text style={[styles.modalTypeText, active && styles.modalTypeTextActive]}>
+                                                            {label}
+                                                        </Text>
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </View>
+                                        <TextInput
+                                            placeholder="Descricao"
+                                            placeholderTextColor="#8BA1AA"
+                                            value={poiForm.descricao}
+                                            onChangeText={(descricao) => setPoiForm((current) => ({ ...current, descricao }))}
+                                            style={[styles.modalInput, styles.modalInputMultiline]}
+                                            multiline
+                                        />
+                                        <Text style={styles.modalPhotoLabel}>Imagem do ponto</Text>
+                                        {poiPhotoUri ? (
+                                            <View style={styles.modalPhotoPreviewWrap}>
+                                                <Image source={{ uri: poiPhotoUri }} style={styles.modalPhotoPreview} />
+                                                <Pressable
+                                                    style={styles.modalPhotoRemove}
+                                                    onPress={() => setPoiPhotoUri(null)}
+                                                >
+                                                    <Trash2 size={16} color="#fff" />
+                                                    <Text style={styles.modalPhotoRemoveText}>Remover</Text>
+                                                </Pressable>
+                                            </View>
+                                        ) : (
+                                            <View style={styles.modalPhotoActions}>
+                                                <Pressable
+                                                    style={styles.modalPhotoButton}
+                                                    onPress={() => void handlePickCreationPhoto('camera', setPoiPhotoUri)}
+                                                >
+                                                    <CameraIcon size={18} color={Colors.light.text} />
+                                                    <Text style={styles.modalPhotoButtonText}>Camera</Text>
+                                                </Pressable>
+                                                <Pressable
+                                                    style={styles.modalPhotoButton}
+                                                    onPress={() => void handlePickCreationPhoto('library', setPoiPhotoUri)}
+                                                >
+                                                    <ImageIcon size={18} color={Colors.light.text} />
+                                                    <Text style={styles.modalPhotoButtonText}>Galeria</Text>
+                                                </Pressable>
+                                            </View>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Text style={styles.modalBody}>
+                                        Esse local sera enviado pelo formulario para avaliacao.
+                                    </Text>
+                                )}
+                                <View style={styles.modalActions}>
+                                    <Pressable style={styles.modalBtnOutline} onPress={handleCancelPoi}>
+                                        <Text style={styles.modalBtnOutlineText}>Cancelar</Text>
+                                    </Pressable>
+                                    <Pressable
+                                        style={[styles.modalBtnFill, savingLocation && styles.modalBtnDisabled]}
+                                        onPress={handleConfirmPoi}
+                                        disabled={savingLocation}
+                                    >
+                                        <Text style={styles.modalBtnFillText}>
+                                            {savingLocation
+                                                ? 'Salvando...'
+                                                : pickingMode === 'suggest'
+                                                    ? 'Abrir formulario'
+                                                    : 'Criar'}
+                                        </Text>
+                                    </Pressable>
+                                </View>
+                            </ScrollView>
                         </View>
                     </View>
                 </Modal>
@@ -990,12 +999,20 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         padding: 24,
         width: '100%',
+        maxHeight: '88%',
         alignItems: 'stretch',
         elevation: 8,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
         shadowRadius: 8,
+    },
+    modalScroll: {
+        width: '100%',
+    },
+    modalScrollContent: {
+        alignItems: 'stretch',
+        paddingBottom: 2,
     },
     modalTitle: {
         fontSize: 17,
@@ -1065,6 +1082,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 8,
         marginBottom: 4,
+    },
+    modalPhotoLabel: {
+        color: Colors.light.text,
+        fontSize: 13,
+        fontWeight: '700',
+        marginBottom: 8,
     },
     modalPhotoButton: {
         flex: 1,

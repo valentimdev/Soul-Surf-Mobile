@@ -1,5 +1,6 @@
 import { BeachDTO } from '../../types/api';
 import api from '../api';
+import { multipartRequest } from '../multipartRequest';
 
 export interface PointOfInterestDTO {
   id: number;
@@ -94,16 +95,11 @@ export const poiService = {
       } as any);
     }
 
-    const response = await api.post('/api/pois', formData, {
-      transformRequest: (data, headers) => {
-        if (headers) {
-          delete (headers as any)['Content-Type'];
-          delete (headers as any)['content-type'];
-        }
-        return data;
-      },
+    return multipartRequest<PointOfInterestDTO>({
+      path: '/api/pois',
+      formData,
+      logLabel: 'CREATE_POI',
     });
-    return response.data;
   },
 };
 

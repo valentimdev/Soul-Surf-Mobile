@@ -161,9 +161,11 @@ export default function DiscoverScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    loadInitialData();
-  }, [loadInitialData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadInitialData();
+    }, [loadInitialData])
+  );
 
   useFocusEffect(
     useCallback(() => {

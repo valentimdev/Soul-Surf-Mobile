@@ -77,4 +77,9 @@ export const adminService = {
     const response = await api.delete(`/api/admin/users/${userId}`);
     return response.data;
   },
+
+  clearCache: async (): Promise<MessageResponse> => {
+    const response = await api.post('/api/admin/cache/clear');
+    return response.data;
+  },
 };
