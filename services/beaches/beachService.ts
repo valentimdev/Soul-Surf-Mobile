@@ -1,4 +1,5 @@
 import api from '../api';
+import { multipartRequest } from '../multipartRequest';
 import { BeachDTO, PostDTO, PageResponse } from '../../types/api';
 
 export interface BeachMessageDTO {
@@ -114,15 +115,10 @@ export const beachService = {
       } as any);
     }
 
-    const response = await api.post('/api/beaches/', formData, {
-      transformRequest: (data, headers) => {
-        if (headers) {
-          delete (headers as any)['Content-Type'];
-          delete (headers as any)['content-type'];
-        }
-        return data;
-      },
+    return multipartRequest<BeachDTO>({
+      path: '/api/beaches/',
+      formData,
+      logLabel: 'CREATE_BEACH',
     });
-    return response.data;
   },
 };

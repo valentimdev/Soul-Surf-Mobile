@@ -64,6 +64,7 @@ jest.mock('react-native', () => {
     },
     Modal: make('Modal'),
     Pressable: make('Pressable'),
+    ScrollView: make('ScrollView'),
     StyleSheet: {
       create: (styles: any) => styles,
       absoluteFillObject: {},
@@ -71,6 +72,7 @@ jest.mock('react-native', () => {
     Text: make('Text'),
     TextInput: make('TextInput'),
     View: make('View'),
+    Image: make('Image'),
   };
 });
 
@@ -81,10 +83,13 @@ jest.mock('lucide-react-native', () => {
 
   return {
     GraduationCap: Icon,
+    Camera: Icon,
+    Image: Icon,
     Locate: Icon,
     MapPin: Icon,
     Search: Icon,
     Store: Icon,
+    Trash2: Icon,
     Waves: Icon,
     Wrench: Icon,
   };

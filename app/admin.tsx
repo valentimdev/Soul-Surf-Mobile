@@ -154,6 +154,7 @@ export default function AdminScreen() {
   const [metrics, setMetrics] = useState<AdminMetricsDTO | null>(null);
   const [audits, setAudits] = useState<AdminAuditLogDTO[]>([]);
   const [loadingDashboard, setLoadingDashboard] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
 
   const [users, setUsers] = useState<UserDTO[]>([]);
   const [userQuery, setUserQuery] = useState('');
@@ -224,6 +225,20 @@ export default function AdminScreen() {
       setLoadingUsers(false);
     }
   }, [showAlert]);
+
+  const handleClearCache = useCallback(async () => {
+    setClearingCache(true);
+    try {
+      await adminService.clearCache();
+      await loadDashboard();
+      showAlert('Pronto', 'Cache limpo. Os feeds vao buscar dados atualizados.');
+    } catch (error) {
+      console.error('Erro ao limpar cache:', error);
+      showAlert('Erro', 'Nao foi possivel limpar o cache.');
+    } finally {
+      setClearingCache(false);
+    }
+  }, [loadDashboard, showAlert]);
 
   const verifyAccess = useCallback(async () => {
     setCheckingAccess(true);
@@ -828,6 +843,7 @@ export default function AdminScreen() {
           />
         </View>
 
+        <Text style={styles.photoFieldLabel}>Imagem da praia</Text>
         {beachPhotoUri ? (
           <View style={styles.beachPhotoPreviewContainer}>
             <Image source={{ uri: beachPhotoUri }} style={styles.beachPhotoPreview} />
@@ -903,6 +919,7 @@ export default function AdminScreen() {
           />
         </View>
 
+        <Text style={styles.photoFieldLabel}>Imagem do ponto</Text>
         {poiPhotoUri ? (
           <View style={styles.beachPhotoPreviewContainer}>
             <Image source={{ uri: poiPhotoUri }} style={styles.beachPhotoPreview} />
@@ -1018,6 +1035,13 @@ export default function AdminScreen() {
         </View>
         <TouchableOpacity onPress={() => void loadDashboard()} style={styles.iconButton}>
           <Ionicons name="refresh-outline" size={22} color="#1F4A63" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => void handleClearCache()} style={styles.iconButton} disabled={clearingCache}>
+          {clearingCache ? (
+            <ActivityIndicator size="small" color="#1F4A63" />
+          ) : (
+            <Ionicons name="sync-outline" size={22} color="#1F4A63" />
+          )}
         </TouchableOpacity>
       </View>
 
@@ -1275,6 +1299,11 @@ const styles = StyleSheet.create({
     color: '#5C9DB8',
     fontSize: 13,
     fontWeight: '800',
+  },
+  photoFieldLabel: {
+    color: '#1F4A63',
+    fontSize: 12,
+    fontWeight: '900',
   },
   beachPhotoPreviewContainer: {
     borderRadius: 8,
