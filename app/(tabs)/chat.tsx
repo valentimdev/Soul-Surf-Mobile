@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { useAppAlert } from '@/components/AppAlert';
+import { formatDateShort, formatTime, getBrazilDayDifference, parseDateInBrazil } from '@/utils/formatters';
 
 type ConversationItemView = {
   id: string;
@@ -27,19 +28,11 @@ type ConversationItemView = {
   unread: boolean;
 };
 
-function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
 function formatConversationTime(createdAt?: string) {
   if (!createdAt) return '';
 
-  const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) return '';
+  const date = parseDateInBrazil(createdAt);
+  if (!date) return '';
 
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -49,21 +42,11 @@ function formatConversationTime(createdAt?: string) {
   const diffMinutes = Math.floor(diffMs / (60 * 1000));
   if (diffMinutes < 60) return `${diffMinutes} min`;
 
-  if (isSameDay(now, date)) {
-    return date.toLocaleTimeString('pt-BR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  const diffDays = getBrazilDayDifference(createdAt, now);
+  if (diffDays === 0) return formatTime(createdAt);
+  if (diffDays === 1) return 'Ontem';
 
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (isSameDay(yesterday, date)) return 'Ontem';
-
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-  });
+  return formatDateShort(createdAt);
 }
 
 function toConversationView(item: ConversationResponse, currentUserId: string): ConversationItemView {

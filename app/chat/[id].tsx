@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getUserAvatarSource } from '@/constants/defaultImages';
+import { formatDate, formatTime, getBrazilDateKey, getBrazilDayDifference, parseDateInBrazil } from '@/utils/formatters';
 
 const CHAT_POLL_INTERVAL_MS = 1000;
 
@@ -28,53 +29,27 @@ function parseStringParam(value?: string | string[]): string {
 }
 
 function toTimeLabel(value?: string): string {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return date.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function startOfLocalDay(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return formatTime(value);
 }
 
 function toDateKey(value?: string): string {
-  if (!value) return 'invalid-date';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'invalid-date';
-
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${date.getFullYear()}-${month}-${day}`;
+  return getBrazilDateKey(value);
 }
 
 function toDateSeparatorLabel(value?: string): string {
-  if (!value) return '';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  const today = startOfLocalDay(new Date());
-  const messageDay = startOfLocalDay(date);
-  const diffInDays = Math.round((today.getTime() - messageDay.getTime()) / 86400000);
+  const diffInDays = getBrazilDayDifference(value);
+  if (diffInDays === null) return '';
 
   if (diffInDays === 0) return 'Hoje';
   if (diffInDays === 1) return 'Ontem';
 
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
+  return formatDate(value);
 }
 
 function sortMessages(items: ChatMessageResponse[]): ChatMessageResponse[] {
   return [...items].sort((a, b) => {
-    const first = new Date(a.createdAt).getTime();
-    const second = new Date(b.createdAt).getTime();
+    const first = parseDateInBrazil(a.createdAt)?.getTime() ?? 0;
+    const second = parseDateInBrazil(b.createdAt)?.getTime() ?? 0;
 
     const safeFirst = Number.isNaN(first) ? 0 : first;
     const safeSecond = Number.isNaN(second) ? 0 : second;

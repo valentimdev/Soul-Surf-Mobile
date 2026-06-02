@@ -16,6 +16,7 @@ import {
   Image,
 } from 'react-native';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { formatDateShort, parseDateInBrazil } from '@/utils/formatters';
 
 type NotificationVisualType = 'review' | 'message' | 'alert';
 
@@ -58,8 +59,8 @@ function formatNotificationAction(item: NotificationDTO) {
 }
 
 function formatTimeAgo(createdAt: string) {
-  const date = new Date(createdAt);
-  if (Number.isNaN(date.getTime())) return '';
+  const date = parseDateInBrazil(createdAt);
+  if (!date) return '';
 
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -76,7 +77,7 @@ function formatTimeAgo(createdAt: string) {
   if (diffDays === 1) return 'ontem';
   if (diffDays < 7) return `${diffDays} dias atrás`;
 
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  return formatDateShort(createdAt);
 }
 
 function NotificationCard({

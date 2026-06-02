@@ -7,6 +7,7 @@ import {
   SurfConditionsTideEvent,
   SurfConditionsTideWindow,
 } from '@/types/surfConditions';
+import { formatDateShort, formatTime } from './formatters';
 
 function isValidNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -105,15 +106,12 @@ export function formatTideWindow(window: SurfConditionsTideWindow | null | undef
 }
 
 function formatIsoTime(value: string | null | undefined): string | null {
-  const match = value?.match(/T(\d{2}):(\d{2})/);
-  if (!match) return null;
-  return `${match[1]}h${match[2]}`;
+  const time = formatTime(value ?? undefined);
+  return time ? time.replace(':', 'h') : null;
 }
 
 function formatIsoDate(value: string | null | undefined): string | null {
-  const match = value?.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return null;
-  return `${match[3]}/${match[2]}`;
+  return formatDateShort(value ?? undefined) || null;
 }
 
 function hasGoodTideNow(tide: SurfConditionsTide | undefined): boolean {
