@@ -1,7 +1,7 @@
 import { beachService, BeachMessageDTO } from '@/services/beaches/beachService';
 import { useAppAlert } from '@/components/AppAlert';
 import { getUserAvatarResizeMode, getUserAvatarSource, getUserAvatarZoomStyle } from '@/constants/defaultImages';
-import { formatDate, formatDateTime, formatDateTimeWithYear } from '@/utils/formatters';
+import { formatDate, formatDateTime, formatDateTimeWithYear, parseDateInBrazil } from '@/utils/formatters';
 import { BeachDTO, PostDTO, CommentDTO, UserDTO } from '@/types/api';
 import { surfConditionsService } from '@/services/weather/surfConditionsService';
 import { SurfConditionsResponse } from '@/types/surfConditions';
@@ -57,27 +57,12 @@ function sortMessagesByDateDesc(messages: (BeachMessageDTO | null | undefined)[]
   return messages
     .filter((message): message is BeachMessageDTO => Boolean(message))
     .sort((a, b) => {
-      const first = new Date(a.data).getTime();
-      const second = new Date(b.data).getTime();
+      const first = parseDateInBrazil(a.data)?.getTime() ?? 0;
+      const second = parseDateInBrazil(b.data)?.getTime() ?? 0;
       const safeFirst = Number.isNaN(first) ? 0 : first;
       const safeSecond = Number.isNaN(second) ? 0 : second;
       return safeSecond - safeFirst;
     });
-}
-
-function isMessageFromToday(value?: string): boolean {
-  if (!value) return false;
-
-  const messageDate = new Date(value);
-  if (Number.isNaN(messageDate.getTime())) return false;
-
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-
-  const endOfToday = new Date(startOfToday);
-  endOfToday.setHours(23, 59, 59, 999);
-
-  return messageDate >= startOfToday && messageDate <= endOfToday;
 }
 
 function getMentionedUsername(text: string): string | null {
@@ -104,8 +89,8 @@ function groupRepliesUnderMessages(items: BeachMessageDTO[]): BeachMessageDTO[] 
     const messageReplies = replies
       .filter((reply) => !usedReplyIds.has(reply.id) && getMentionedUsername(reply.texto) === authorName)
       .sort((a, b) => {
-        const first = new Date(a.data).getTime();
-        const second = new Date(b.data).getTime();
+        const first = parseDateInBrazil(a.data)?.getTime() ?? 0;
+        const second = parseDateInBrazil(b.data)?.getTime() ?? 0;
         return (Number.isNaN(first) ? 0 : first) - (Number.isNaN(second) ? 0 : second);
       });
 
@@ -137,6 +122,14 @@ function parseCachedMessages(raw: string | null): BeachMessageDTO[] {
   } catch {
     return [];
   }
+}
+
+function ensureMessageDate(message: BeachMessageDTO): BeachMessageDTO {
+  if (parseDateInBrazil(message.data)) return message;
+  return {
+    ...message,
+    data: new Date().toISOString(),
+  };
 }
 
 export function PostCard({ 
@@ -635,14 +628,9 @@ export default function BeachDetailsScreen() {
     return getBeachMessagesCacheKey(beachId);
   }, [beachId]);
 
-  const todayMessages = useMemo(
-    () => messages.filter((message) => isMessageFromToday(message.data)),
+  const displayedMessages = useMemo(
+    () => groupRepliesUnderMessages(messages),
     [messages]
-  );
-
-  const displayedTodayMessages = useMemo(
-    () => groupRepliesUnderMessages(todayMessages),
-    [todayMessages]
   );
 
   const persistMessagesCache = useCallback(async (nextMessages: BeachMessageDTO[]) => {
@@ -833,7 +821,7 @@ export default function BeachDetailsScreen() {
 
     setSendingMessage(true);
     try {
-      const created = await beachService.postBeachMessage(beachId, trimmedMessage);
+      const created = ensureMessageDate(await beachService.postBeachMessage(beachId, trimmedMessage));
       setMessages((prev) => {
         const next = sortMessagesByDateDesc([created, ...prev]);
         void persistMessagesCache(next);
@@ -878,7 +866,7 @@ export default function BeachDetailsScreen() {
 
     setSendingReplyId(activeReplyTarget.id);
     try {
-      const created = await beachService.postBeachMessage(beachId, outgoingMessage);
+      const created = ensureMessageDate(await beachService.postBeachMessage(beachId, outgoingMessage));
       setMessages((prev) => {
         const next = sortMessagesByDateDesc([created, ...prev]);
         void persistMessagesCache(next);
@@ -1117,7 +1105,7 @@ const handleCreatePost = async () => {
                         activeBeachTab === 'comments' && styles.beachTabCountTextActive,
                       ]}
                     >
-                      {todayMessages.length}
+                      {messages.length}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -1179,7 +1167,7 @@ const handleCreatePost = async () => {
                   <View style={styles.relevanceHint}>
                     <Ionicons name="trending-up-outline" size={15} color="#6B7280" />
                     <Text style={styles.relevanceHintText}>
-                      Comentarios recentes aparecem primeiro para mostrar o que esta rolando agora.
+                      Comentarios recentes aparecem primeiro para mostrar o que esta rolando no pico.
                     </Text>
                   </View>
 
@@ -1193,16 +1181,16 @@ const handleCreatePost = async () => {
                       multiline
                     />
                     <TouchableOpacity
-                      style={[styles.sendButton, sendingMessage && { opacity: 0.6 }]}
+                      style={[styles.sendButton, (!newMessage.trim() || sendingMessage) && { opacity: 0.6 }]}
                       onPress={handleSendMessage}
-                      disabled={sendingMessage}
+                      disabled={!newMessage.trim() || sendingMessage}
                     >
                       <Text style={styles.sendButtonText}>{sendingMessage ? 'Enviando...' : 'Publicar'}</Text>
                     </TouchableOpacity>
                   </View>
 
-                  {todayMessages.length === 0 ? (
-                    <Text style={styles.emptyStateText}>Ainda nao ha comentarios de hoje neste mural.</Text>
+                  {messages.length === 0 ? (
+                    <Text style={styles.emptyStateText}>Ainda nao ha comentarios neste mural.</Text>
                   ) : (
                     <ScrollView
                       style={styles.messagesList}
@@ -1210,7 +1198,7 @@ const handleCreatePost = async () => {
                       nestedScrollEnabled
                       showsVerticalScrollIndicator={false}
                     >
-                      {displayedTodayMessages.map((message, index) => (
+                      {displayedMessages.map((message, index) => (
                         <MessageCard
                           key={message.id ?? `message-${index}`}
                           message={message}

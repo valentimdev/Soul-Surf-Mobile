@@ -5,6 +5,7 @@ import { beachService } from '@/services/beaches/beachService';
 import { poiService, PointOfInterestDTO } from '@/services/beaches/poiService';
 import { userService } from '@/services/users/userService';
 import { CommentDTO, PostDTO, UserDTO } from '@/types/api';
+import { formatDateTime } from '@/utils/formatters';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, router, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -56,15 +57,7 @@ function parseId(value: string): number | null {
 }
 
 function formatDate(value?: string): string {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatDateTime(value) || value || '-';
 }
 
 function actionLabel(action: string): string {

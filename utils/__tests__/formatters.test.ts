@@ -1,13 +1,24 @@
-import { formatDate, formatDateTime, formatDateTimeWithYear } from '../formatters';
+import {
+  formatDate,
+  formatDateShort,
+  formatDateTime,
+  formatDateTimeWithYear,
+  formatTime,
+  getBrazilDateKey,
+  getBrazilDayDifference,
+} from '../formatters';
 
 describe('formatDate', () => {
-  it('converte corretamente uma string ISO para o formato brasileiro (DD/MM/AAAA)', () => {
-    // Usa T12:00:00Z (meio-dia UTC) para evitar que o fuso -03:00 mude o dia
-    expect(formatDate('2026-04-15T12:00:00Z')).toBe('15/04/2026');
+  it('converte uma string ISO UTC para a data no fuso brasileiro', () => {
+    expect(formatDate('2026-04-15T03:00:00Z')).toBe('15/04/2026');
   });
 
-  it('converte datas no final do ano corretamente', () => {
-    expect(formatDate('2026-12-31T12:00:00Z')).toBe('31/12/2026');
+  it('aplica a virada de dia do Brasil para valores UTC', () => {
+    expect(formatDate('2026-04-15T02:59:00Z')).toBe('14/04/2026');
+  });
+
+  it('trata LocalDateTime sem offset como horario brasileiro', () => {
+    expect(formatDateTimeWithYear('2026-04-15T12:30:00')).toBe('15/04/2026, 12:30');
   });
 
   it('retorna string vazia para valor undefined', () => {
@@ -18,16 +29,14 @@ describe('formatDate', () => {
     expect(formatDate('')).toBe('');
   });
 
-  it('retorna string vazia para data inválida', () => {
+  it('retorna string vazia para data invalida', () => {
     expect(formatDate('data-invalida')).toBe('');
   });
 });
 
 describe('formatDateTime', () => {
-  it('formata corretamente uma string ISO com hora para o padrão brasileiro', () => {
-    // Usa uma data/hora em UTC e valida apenas o padrão do retorno (DD/MM, HH:mm)
-    const result = formatDateTime('2026-04-15T12:30:00Z');
-    expect(result).toMatch(/^\d{2}\/\d{2},\s\d{2}:\d{2}$/);
+  it('formata data e hora no fuso brasileiro', () => {
+    expect(formatDateTime('2026-04-15T12:30:00Z')).toBe('15/04, 09:30');
   });
 
   it('retorna string vazia para valor undefined', () => {
@@ -38,15 +47,14 @@ describe('formatDateTime', () => {
     expect(formatDateTime('')).toBe('');
   });
 
-  it('retorna string vazia para data inválida', () => {
+  it('retorna string vazia para data invalida', () => {
     expect(formatDateTime('nao-e-uma-data')).toBe('');
   });
 });
 
 describe('formatDateTimeWithYear', () => {
-  it('formata corretamente uma string ISO com data completa e hora', () => {
-    const result = formatDateTimeWithYear('2026-04-15T12:30:00Z');
-    expect(result).toMatch(/^\d{2}\/\d{2}\/\d{4},\s\d{2}:\d{2}$/);
+  it('formata data completa e hora no fuso brasileiro', () => {
+    expect(formatDateTimeWithYear('2026-04-15T12:30:00Z')).toBe('15/04/2026, 09:30');
   });
 
   it('retorna string vazia para valor undefined', () => {
@@ -57,7 +65,28 @@ describe('formatDateTimeWithYear', () => {
     expect(formatDateTimeWithYear('')).toBe('');
   });
 
-  it('retorna string vazia para data inválida', () => {
+  it('retorna string vazia para data invalida', () => {
     expect(formatDateTimeWithYear('nao-e-uma-data')).toBe('');
+  });
+});
+
+describe('formatTime e datas curtas', () => {
+  it('formata somente hora no Brasil', () => {
+    expect(formatTime('2026-04-15T12:30:00Z')).toBe('09:30');
+  });
+
+  it('formata somente dia e mes no Brasil', () => {
+    expect(formatDateShort('2026-04-15T02:59:00Z')).toBe('14/04');
+  });
+});
+
+describe('getBrazilDateKey e getBrazilDayDifference', () => {
+  it('gera chave de data pelo calendario brasileiro', () => {
+    expect(getBrazilDateKey('2026-04-15T02:59:00Z')).toBe('2026-04-14');
+  });
+
+  it('calcula diferenca de dias pelo calendario brasileiro', () => {
+    const now = new Date('2026-04-16T03:30:00Z');
+    expect(getBrazilDayDifference('2026-04-15T03:30:00Z', now)).toBe(1);
   });
 });
